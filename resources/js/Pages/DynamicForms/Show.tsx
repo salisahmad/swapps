@@ -59,20 +59,20 @@ export default function Show({ event, dynamicForms }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8 px-4 dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8 px-4 from-stone-900 to-stone-800">
             <Head title={`Berita Acara - ${event.name}`} />
 
             <div className="mx-auto max-w-2xl">
                 {/* Header */}
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Shofi Wedding</h1>
-                    <p className="mt-2 text-lg text-gray-600 dark:text-gray-300">Berita Acara</p>
-                    <div className="mt-4 rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
-                        <p className="text-xl font-semibold text-gray-900 dark:text-white">{event.name}</p>
-                        <p className="text-gray-600 dark:text-gray-400">{event.date} {event.time ? `• ${event.time}` : ''}</p>
-                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{event.package_description || 'Paket Wedding'}</p>
-                        <p className="mt-2 font-semibold text-indigo-600 dark:text-indigo-400">{formatRupiah(event.total_amount)}</p>
-                        <span className={`mt-2 inline-block rounded px-2 py-1 text-xs font-semibold ${event.is_fully_paid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'}`}>
+                    <h1 className="text-3xl font-bold text-stone-900 text-white">Shofi Wedding</h1>
+                    <p className="mt-2 text-lg text-stone-600 text-stone-300">Berita Acara</p>
+                    <div className="mt-4 rounded-lg bg-white p-4 shadow-sm bg-stone-800">
+                        <p className="text-xl font-semibold text-stone-900 text-white">{event.name}</p>
+                        <p className="text-stone-600 text-stone-400">{event.date} {event.time ? `• ${event.time}` : ''}</p>
+                        <p className="mt-2 text-sm text-stone-500 text-stone-400">{event.package_description || 'Paket Wedding'}</p>
+                        <p className="mt-2 font-semibold text-rose-400 text-rose-400">{formatRupiah(event.total_amount)}</p>
+                        <span className={`mt-2 inline-block rounded px-2 py-1 text-xs font-semibold ${event.is_fully_paid ? 'bg-green-100 text-green-800 bg-green-900 text-green-300' : 'bg-yellow-100 text-yellow-800 bg-yellow-900 text-yellow-300'}`}>
                             {event.is_fully_paid ? 'LUNAS' : 'BELUM LUNAS'}
                         </span>
                     </div>
@@ -80,29 +80,29 @@ export default function Show({ event, dynamicForms }: PageProps) {
 
                 {/* Form */}
                 {submitted ? (
-                    <div className="rounded-lg bg-green-50 p-6 text-center dark:bg-green-900/20">
-                        <p className="text-xl font-semibold text-green-700 dark:text-green-300">✅ Berita Acara Berhasil Disimpan!</p>
-                        <p className="mt-2 text-green-600 dark:text-green-400">Terima kasih telah mengisi form ini.</p>
-                        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">Anda dapat menutup halaman ini.</p>
+                    <div className="rounded-lg bg-green-50 p-6 text-center bg-green-900/20">
+                        <p className="text-xl font-semibold text-green-700 text-green-300">✅ Berita Acara Berhasil Disimpan!</p>
+                        <p className="mt-2 text-green-600 text-green-400">Terima kasih telah mengisi form ini.</p>
+                        <p className="mt-4 text-sm text-stone-500 text-stone-400">Anda dapat menutup halaman ini.</p>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                        <h2 className="mb-6 text-lg font-semibold text-gray-900 dark:text-white">Isi Berita Acara</h2>
+                    <form onSubmit={handleSubmit} className="rounded-lg bg-white p-6 shadow-sm bg-stone-800">
+                        <h2 className="mb-6 text-lg font-semibold text-stone-900 text-white">Isi Berita Acara</h2>
 
                         <div className="space-y-4">
                             {dynamicForms.length === 0 && (
-                                <p className="text-center text-gray-500 dark:text-gray-400">Belum ada form yang tersedia.</p>
+                                <p className="text-center text-stone-500 text-stone-400">Belum ada form yang tersedia.</p>
                             )}
                             {dynamicForms.map((field) => (
                                 <div key={field.id}>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <label className="block text-sm font-medium text-stone-700 text-stone-300">
                                         {field.field_label} {field.is_required && <span className="text-red-500">*</span>}
                                     </label>
                                     {field.field_type === 'textarea' ? (
                                         <textarea
                                             value={values[field.id] || ''}
                                             onChange={(e) => handleChange(field.id, e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                            className="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300"
                                             rows={3}
                                             required={field.is_required}
                                         />
@@ -110,7 +110,7 @@ export default function Show({ event, dynamicForms }: PageProps) {
                                         <select
                                             value={values[field.id] || ''}
                                             onChange={(e) => handleChange(field.id, e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                            className="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300"
                                             required={field.is_required}
                                         >
                                             <option value="">Pilih...</option>
@@ -123,7 +123,7 @@ export default function Show({ event, dynamicForms }: PageProps) {
                                             type={field.field_type}
                                             value={values[field.id] || ''}
                                             onChange={(e) => handleChange(field.id, e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
+                                            className="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300"
                                             required={field.is_required}
                                         />
                                     )}
@@ -134,7 +134,7 @@ export default function Show({ event, dynamicForms }: PageProps) {
                         <div className="mt-6">
                             <button
                                 type="submit"
-                                className="w-full rounded bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                                className="w-full rounded bg-rose-400 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500"
                             >
                                 Simpan Berita Acara
                             </button>

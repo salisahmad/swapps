@@ -55,13 +55,13 @@ export default function Edit({ event, items }: PageProps) {
         );
     };
 
-    const inputClass = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300';
-    const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300';
+    const inputClass = 'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300';
+    const labelClass = 'block text-sm font-medium text-stone-700 text-stone-300';
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
                     Edit Booking: {event.name}
                 </h2>
             }
@@ -70,7 +70,7 @@ export default function Edit({ event, items }: PageProps) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm dark:bg-gray-800 sm:rounded-lg">
+                    <div className="bg-white p-6 shadow-sm bg-stone-800 sm:rounded-lg">
                         <form onSubmit={submit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
@@ -184,19 +184,19 @@ export default function Edit({ event, items }: PageProps) {
                                             key={item.id}
                                             className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 ${
                                                 data.item_ids.includes(item.id)
-                                                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
-                                                    : 'border-gray-200 dark:border-gray-700'
+                                                    ? 'border-rose-400 bg-rose-50 bg-rose-500/20'
+                                                    : 'border-stone-200 border-stone-700'
                                             }`}
                                         >
                                             <input
                                                 type="checkbox"
                                                 checked={data.item_ids.includes(item.id)}
                                                 onChange={() => toggleItem(item.id)}
-                                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                             />
                                             <div>
-                                                <p className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{item.code} {item.type_name ? `• ${item.type_name}` : ''}</p>
+                                                <p className="text-sm font-medium text-stone-900 text-white">{item.name}</p>
+                                                <p className="text-xs text-stone-500 text-stone-400">{item.code} {item.type_name ? `• ${item.type_name}` : ''}</p>
                                             </div>
                                         </label>
                                     ))}
@@ -207,13 +207,13 @@ export default function Edit({ event, items }: PageProps) {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="rounded bg-indigo-600 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                                    className="rounded bg-rose-400 px-6 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
                                 >
                                     Update Booking
                                 </button>
                                 <Link
                                     href={route('events.index')}
-                                    className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400"
+                                    className="text-sm text-stone-600 hover:text-stone-900 text-stone-400"
                                 >
                                     Batal
                                 </Link>

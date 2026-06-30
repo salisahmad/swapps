@@ -82,19 +82,19 @@ export default function Edit({ event }: PageProps) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
                         Berita Acara: {event.name}
                     </h2>
                     <div className="flex gap-2">
                         <button
                             onClick={() => setShowAdd(true)}
-                            className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                            className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500"
                         >
                             + Tambah Field
                         </button>
                         <Link
                             href={route('events.show', event.id)}
-                            className="rounded bg-gray-200 px-4 py-2 text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                            className="rounded bg-stone-200 px-4 py-2 text-sm text-stone-700 bg-stone-700 text-stone-300"
                         >
                             Kembali
                         </Link>
@@ -106,26 +106,26 @@ export default function Edit({ event }: PageProps) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm dark:bg-gray-800 sm:rounded-lg">
-                        <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="bg-white p-6 shadow-sm bg-stone-800 sm:rounded-lg">
+                        <p className="mb-4 text-sm text-stone-500 text-stone-400">
                             Susun form berita acara untuk client. Client akan mengisi form ini.
                         </p>
 
                         <div className="space-y-3">
                             {fields.map((field, index) => (
-                                <div key={field.id} className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                                <div key={field.id} className="flex items-center gap-3 rounded-lg border border-stone-200 p-3 border-stone-700">
                                     <div className="flex flex-col gap-1">
-                                        <button onClick={() => moveField(index, -1)} disabled={index === 0} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">▲</button>
-                                        <button onClick={() => moveField(index, 1)} disabled={index === fields.length - 1} className="text-gray-400 hover:text-gray-600 disabled:opacity-30">▼</button>
+                                        <button onClick={() => moveField(index, -1)} disabled={index === 0} className="text-stone-400 hover:text-stone-600 disabled:opacity-30">▲</button>
+                                        <button onClick={() => moveField(index, 1)} disabled={index === fields.length - 1} className="text-stone-400 hover:text-stone-600 disabled:opacity-30">▼</button>
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                            <label className="text-sm font-medium text-gray-900 dark:text-white">
+                                            <label className="text-sm font-medium text-stone-900 text-white">
                                                 {field.field_label} {field.is_required && <span className="text-red-500">*</span>}
                                             </label>
-                                            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-400">{field.field_type}</span>
+                                            <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600 bg-stone-700 text-stone-400">{field.field_type}</span>
                                         </div>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{field.field_name}</p>
+                                        <p className="text-xs text-stone-500 text-stone-400">{field.field_name}</p>
                                     </div>
                                     <button onClick={() => removeField(index)} className="text-red-500 hover:text-red-700">✕</button>
                                 </div>
@@ -133,21 +133,21 @@ export default function Edit({ event }: PageProps) {
                         </div>
 
                         {fields.length === 0 && (
-                            <p className="text-center text-gray-500 dark:text-gray-400 py-8">Belum ada field. Klik "Tambah Field" untuk mulai.</p>
+                            <p className="text-center text-stone-500 text-stone-400 py-8">Belum ada field. Klik "Tambah Field" untuk mulai.</p>
                         )}
 
                         {showAdd && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                                <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
-                                    <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Tambah Field</h3>
+                                <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl bg-stone-800">
+                                    <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">Tambah Field</h3>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Label Field</label>
-                                            <input type="text" value={newField.field_label} onChange={(e) => setNewField({ ...newField, field_label: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" placeholder="Contoh: Nama Pengantin" autoFocus />
+                                            <label className="block text-sm font-medium text-stone-700 text-stone-300">Label Field</label>
+                                            <input type="text" value={newField.field_label} onChange={(e) => setNewField({ ...newField, field_label: e.target.value })} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300" placeholder="Contoh: Nama Pengantin" autoFocus />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipe Field</label>
-                                            <select value={newField.field_type} onChange={(e) => setNewField({ ...newField, field_type: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                                            <label className="block text-sm font-medium text-stone-700 text-stone-300">Tipe Field</label>
+                                            <select value={newField.field_type} onChange={(e) => setNewField({ ...newField, field_type: e.target.value })} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300">
                                                 <option value="text">Text</option>
                                                 <option value="textarea">Textarea</option>
                                                 <option value="number">Number</option>
@@ -158,17 +158,17 @@ export default function Edit({ event }: PageProps) {
                                         </div>
                                         {newField.field_type === 'select' && (
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Opsi (pisah dengan koma)</label>
-                                                <textarea value={newField.field_options} onChange={(e) => setNewField({ ...newField, field_options: e.target.value })} className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" placeholder="Ya, Tidak, Mungkin" rows={2} />
+                                                <label className="block text-sm font-medium text-stone-700 text-stone-300">Opsi (pisah dengan koma)</label>
+                                                <textarea value={newField.field_options} onChange={(e) => setNewField({ ...newField, field_options: e.target.value })} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300" placeholder="Ya, Tidak, Mungkin" rows={2} />
                                             </div>
                                         )}
                                         <div className="flex items-center gap-2">
-                                            <input type="checkbox" checked={newField.is_required} onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })} className="rounded border-gray-300 text-indigo-600" />
-                                            <label className="text-sm text-gray-700 dark:text-gray-300">Wajib diisi</label>
+                                            <input type="checkbox" checked={newField.is_required} onChange={(e) => setNewField({ ...newField, is_required: e.target.checked })} className="rounded border-stone-300 text-rose-400" />
+                                            <label className="text-sm text-stone-700 text-stone-300">Wajib diisi</label>
                                         </div>
                                         <div className="flex justify-end gap-2">
-                                            <button onClick={() => setShowAdd(false)} className="rounded bg-gray-200 px-4 py-2 text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-300">Batal</button>
-                                            <button onClick={addField} className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700">Tambah</button>
+                                            <button onClick={() => setShowAdd(false)} className="rounded bg-stone-200 px-4 py-2 text-sm text-stone-700 bg-stone-700 text-stone-300">Batal</button>
+                                            <button onClick={addField} className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500">Tambah</button>
                                         </div>
                                     </div>
                                 </div>

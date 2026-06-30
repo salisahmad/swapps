@@ -10,7 +10,6 @@ interface Event {
     total_amount: number;
     is_fully_paid: boolean;
     order_type_name: string;
-    payments?: { amount: string }[];
 }
 
 interface Schedule {
@@ -37,166 +36,171 @@ interface PageProps {
     todayEvents: Event[];
     todaySchedules: Schedule[];
     upcomingEvents: Event[];
-    unpaidEventsList: Event[];
+    unpaidEventsList: (Event & { bookings: { payments: { amount: string }[] }[] })[];
 }
 
 export default function Dashboard({ stats, todayEvents, todaySchedules, upcomingEvents, unpaidEventsList }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
-    const Card = ({ title, value, color }: { title: string; value: string | number; color: string }) => (
-        <div className={`rounded-lg p-4 ${color}`}>
-            <p className="text-sm opacity-80">{title}</p>
-            <p className="mt-1 text-2xl font-bold">{value}</p>
+    const StatCard = ({ title, value, color, icon }: { title: string; value: string; color: string; icon: string }) => (
+        <div className={`stat-card flex items-center gap-3 ${color}`}>
+            <span className="text-2xl">{icon}</span>
+            <div className="min-w-0">
+                <p className="text-xs text-stone-400">{title}</p>
+                <p className="truncate text-lg font-bold text-stone-800">{value}</p>
+            </div>
         </div>
     );
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Dashboard Shofi Wedding
-                </h2>
-            }
-        >
+        <AuthenticatedLayout>
             <Head title="Dashboard" />
 
-            <div className="py-6">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    {/* Statistik Utama */}
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <Card title="Total Booking" value={stats.total_events} color="bg-white shadow dark:bg-gray-800" />
-                        <Card title="Pemasukan Bulan Ini" value={formatRupiah(stats.earnings)} color="bg-green-100 dark:bg-green-900/30" />
-                        <Card title="Pengeluaran Bulan Ini" value={formatRupiah(stats.expenses)} color="bg-red-100 dark:bg-red-900/30" />
-                        <Card title="Profit Bulan Ini" value={formatRupiah(stats.profit)} color="bg-blue-100 dark:bg-blue-900/30" />
+            <div className="space-y-5">
+                {/* Welcome */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="page-title">Shofi Wedding</h1>
+                        <p className="text-sm text-stone-400">Ringkasan hari ini</p>
                     </div>
+                    <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">
+                        + Booking
+                    </Link>
+                </div>
 
-                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <Card title="Booking Baru (Bulan Ini)" value={stats.new_events_this_month} color="bg-white shadow dark:bg-gray-800" />
-                        <Card title="Belum Lunas" value={`${stats.unpaid_events} client`} color="bg-yellow-100 dark:bg-yellow-900/30" />
-                        <Card title="Total Piutang" value={formatRupiah(stats.total_unpaid_amount)} color="bg-orange-100 dark:bg-orange-900/30" />
+                {/* Stat Cards - Horizontal scroll on mobile */}
+                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
+                    <div className="snap-start">
+                        <StatCard title="Total Booking" value={String(stats.total_events)} color="border-l-4 border-rose-300" icon="💍" />
                     </div>
-
-                    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        {/* Event Hari Ini */}
-                        <div className="bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Event Hari Ini ({todayEvents.length})
-                                </h3>
-                            </div>
-                            <div className="p-4">
-                                {todayEvents.length === 0 ? (
-                                    <p className="text-gray-500 dark:text-gray-400">Tidak ada event hari ini.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {todayEvents.map((e) => (
-                                            <div key={e.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                                                <div>
-                                                    <p className="font-medium text-gray-900 dark:text-white">{e.name}</p>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {e.time} — {e.location ?? 'Lokasi belum diisi'}
-                                                    </p>
-                                                </div>
-                                                <span className={`rounded px-2 py-1 text-xs font-semibold ${e.is_fully_paid ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'}`}>
-                                                    {e.is_fully_paid ? 'LUNAS' : 'BELUM LUNAS'}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Jadwal Fitting/Konsultasi Hari Ini */}
-                        <div className="bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                            <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Jadwal Hari Ini ({todaySchedules.length})
-                                </h3>
-                            </div>
-                            <div className="p-4">
-                                {todaySchedules.length === 0 ? (
-                                    <p className="text-gray-500 dark:text-gray-400">Tidak ada jadwal hari ini.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {todaySchedules.map((s) => (
-                                            <div key={s.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="font-medium text-gray-900 dark:text-white">{s.event.name}</p>
-                                                    <span className="rounded bg-indigo-100 px-2 py-1 text-xs font-semibold text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300">
-                                                        {s.type_name}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {s.schedule_from ? new Date(s.schedule_from).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                                    {s.schedule_to ? ` - ${new Date(s.schedule_to).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                                                </p>
-                                                {s.description && <p className="text-sm text-gray-500 dark:text-gray-400">{s.description}</p>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                    <div className="snap-start">
+                        <StatCard title="Pemasukan" value={formatRupiah(stats.earnings)} color="border-l-4 border-emerald-300" icon="💰" />
                     </div>
+                    <div className="snap-start">
+                        <StatCard title="Pengeluaran" value={formatRupiah(stats.expenses)} color="border-l-4 border-red-300" icon="💸" />
+                    </div>
+                    <div className="snap-start">
+                        <StatCard title="Profit" value={formatRupiah(stats.profit)} color="border-l-4 border-sky-300" icon="📈" />
+                    </div>
+                    <div className="snap-start">
+                        <StatCard title="Belum Lunas" value={`${stats.unpaid_events}`} color="border-l-4 border-amber-300" icon="⏳" />
+                    </div>
+                </div>
 
-                    {/* Event Mendatang */}
-                    <div className="mt-6 bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Mendatang (7 Hari)</h3>
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    {/* Event Hari Ini */}
+                    <div className="card-elevated">
+                        <div className="flex items-center justify-between border-b border-stone-50 px-4 py-3">
+                            <h2 className="section-title">📅 Event Hari Ini</h2>
+                            <span className="badge-pink">{todayEvents.length}</span>
                         </div>
-                        <div className="p-4">
-                            {upcomingEvents.length === 0 ? (
-                                <p className="text-gray-500 dark:text-gray-400">Tidak ada event mendatang.</p>
+                        <div className="p-3">
+                            {todayEvents.length === 0 ? (
+                                <p className="py-6 text-center text-sm text-stone-400">Tidak ada event hari ini</p>
                             ) : (
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                                    {upcomingEvents.map((e) => (
-                                        <div key={e.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                                            <p className="font-medium text-gray-900 dark:text-white">{e.name}</p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{e.date} {e.time ? `• ${e.time}` : ''}</p>
-                                            <p className="mt-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400">
-                                                {formatRupiah(e.total_amount)}
-                                            </p>
-                                        </div>
+                                <div className="space-y-2">
+                                    {todayEvents.map((e) => (
+                                        <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
+                                                <p className="text-xs text-stone-400">{e.time || '--:--'} · {e.location || 'Lokasi belum diisi'}</p>
+                                            </div>
+                                            <span className={`badge ${e.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
+                                                {e.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                                            </span>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Client Belum Lunas */}
-                    <div className="mt-6 bg-white shadow-sm sm:rounded-lg dark:bg-gray-800">
-                        <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Client Belum Lunas</h3>
+                    {/* Jadwal Hari Ini */}
+                    <div className="card-elevated">
+                        <div className="flex items-center justify-between border-b border-stone-50 px-4 py-3">
+                            <h2 className="section-title">⏰ Jadwal Hari Ini</h2>
+                            <span className="badge-pink">{todaySchedules.length}</span>
                         </div>
-                        <div className="p-4">
-                            {unpaidEventsList.length === 0 ? (
-                                <p className="text-gray-500 dark:text-gray-400">Semua client sudah lunas! 🎉</p>
+                        <div className="p-3">
+                            {todaySchedules.length === 0 ? (
+                                <p className="py-6 text-center text-sm text-stone-400">Tidak ada jadwal</p>
                             ) : (
-                                <div className="space-y-3">
-                                    {unpaidEventsList.map((e) => {
-                                        const paid = e.payments?.reduce((s, p) => s + parseFloat(p.amount), 0) ?? 0;
-                                        const remaining = e.total_amount - paid;
-                                        return (
-                                            <div key={e.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                                                <div>
-                                                    <p className="font-medium text-gray-900 dark:text-white">{e.name}</p>
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">{e.date}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        Dibayar: {formatRupiah(paid)}
-                                                    </p>
-                                                    <p className="text-sm font-semibold text-red-600 dark:text-red-400">
-                                                        Sisa: {formatRupiah(remaining)}
-                                                    </p>
-                                                </div>
+                                <div className="space-y-2">
+                                    {todaySchedules.map((s) => (
+                                        <div key={s.id} className="flex items-center gap-3 rounded-xl bg-stone-50 p-3">
+                                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-lg">👗</span>
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-stone-800">{s.event.name}</p>
+                                                <p className="text-xs text-stone-400">
+                                                    {s.type_name} · {s.schedule_from ? new Date(s.schedule_from).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </p>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+
+                {/* Event Mendatang */}
+                <div className="card-elevated">
+                    <div className="flex items-center justify-between border-b border-stone-50 px-4 py-3">
+                        <h2 className="section-title">🔮 Event Mendatang</h2>
+                        <span className="text-xs text-stone-400">7 hari ke depan</span>
+                    </div>
+                    <div className="p-3">
+                        {upcomingEvents.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-stone-400">Tidak ada event mendatang</p>
+                        ) : (
+                            <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
+                                {upcomingEvents.map((e) => (
+                                    <Link key={e.id} href={route('events.show', e.id)} className="snap-start w-64 shrink-0 rounded-xl border border-stone-100 bg-stone-50 p-4 transition active:scale-95 hover:bg-stone-100">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-stone-800">{e.name}</p>
+                                            <span className={`badge ${e.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
+                                                {e.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-xs text-stone-400">{e.date} · {e.order_type_name}</p>
+                                        <p className="mt-2 text-sm font-bold text-rose-500">{formatRupiah(e.total_amount)}</p>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Client Belum Lunas */}
+                <div className="card-elevated">
+                    <div className="flex items-center justify-between border-b border-stone-50 px-4 py-3">
+                        <h2 className="section-title">⏳ Belum Lunas</h2>
+                        <span className="text-xs text-stone-400">Total piutang: {formatRupiah(stats.total_unpaid_amount)}</span>
+                    </div>
+                    <div className="p-3">
+                        {unpaidEventsList.length === 0 ? (
+                            <p className="py-6 text-center text-sm text-stone-400">🎉 Semua client sudah lunas!</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {unpaidEventsList.map((e) => {
+                                    const paid = e.bookings?.reduce((s, b) => s + b.payments.reduce((ps, p) => ps + parseFloat(p.amount), 0), 0) ?? 0;
+                                    const remaining = e.total_amount - paid;
+                                    return (
+                                        <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
+                                                <p className="text-xs text-stone-400">{e.date}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-stone-400">Sisa</p>
+                                                <p className="text-sm font-bold text-amber-600">{formatRupiah(remaining)}</p>
+                                            </div>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

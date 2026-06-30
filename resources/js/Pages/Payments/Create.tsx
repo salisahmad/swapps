@@ -30,15 +30,15 @@ export default function Create({ events, event_id }: PageProps) {
         post(route('payments.store'));
     };
 
-    const inputClass = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300';
-    const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300';
+    const inputClass = 'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300';
+    const labelClass = 'block text-sm font-medium text-stone-700 text-stone-300';
 
     const selectedEvent = events.find((e) => String(e.id) === data.event_id);
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
                     Catat Transaksi
                 </h2>
             }
@@ -47,7 +47,7 @@ export default function Create({ events, event_id }: PageProps) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm dark:bg-gray-800 sm:rounded-lg">
+                    <div className="bg-white p-6 shadow-sm bg-stone-800 sm:rounded-lg">
                         <form onSubmit={submit} className="space-y-4">
                             <div>
                                 <label className={labelClass}>Event / Client</label>
@@ -68,8 +68,8 @@ export default function Create({ events, event_id }: PageProps) {
                             </div>
 
                             {selectedEvent && (
-                                <div className="rounded bg-indigo-50 p-3 dark:bg-indigo-900/20">
-                                    <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                                <div className="rounded bg-rose-50 p-3 bg-rose-500/20">
+                                    <p className="text-sm text-rose-500 text-rose-200">
                                         Total Harga Deal: Rp {selectedEvent.total_amount.toLocaleString('id-ID')}
                                     </p>
                                 </div>
@@ -157,13 +157,13 @@ export default function Create({ events, event_id }: PageProps) {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="rounded bg-indigo-600 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                                    className="rounded bg-rose-400 px-6 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
                                 >
                                     Simpan Transaksi
                                 </button>
                                 <Link
                                     href={route('payments.index')}
-                                    className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400"
+                                    className="text-sm text-stone-600 hover:text-stone-900 text-stone-400"
                                 >
                                     Batal
                                 </Link>

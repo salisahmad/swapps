@@ -24,12 +24,12 @@ export default function Index({ clients }: PageProps) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+                    <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
                         Client Wedding
                     </h2>
                     <Link
                         href={route('clients.create')}
-                        className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                        className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500"
                     >
                         + Tambah Client
                     </Link>
@@ -40,37 +40,37 @@ export default function Index({ clients }: PageProps) {
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm dark:bg-gray-800 sm:rounded-lg">
+                    <div className="overflow-hidden bg-white shadow-sm bg-stone-800 sm:rounded-lg">
                         <div className="p-6">
-                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <table className="min-w-full divide-y divide-stone-200 divide-stone-700">
                                 <thead>
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Nama</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Telepon</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Tanggal Event</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Jenis</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Lokasi</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 dark:text-gray-400">Aksi</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Nama</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Telepon</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Tanggal Event</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Jenis</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Lokasi</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tbody className="divide-y divide-stone-200 divide-stone-700">
                                     {clients.data.map((client) => (
                                         <tr key={client.id}>
-                                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{client.name}</td>
-                                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{client.phone}</td>
-                                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{client.event_date ?? '-'}</td>
-                                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100 capitalize">{client.event_type}</td>
-                                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{client.event_location ?? '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.name}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.phone}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.event_date ?? '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100 capitalize">{client.event_type}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.event_location ?? '-'}</td>
                                             <td className="px-4 py-2 text-sm">
                                                 <Link
                                                     href={route('clients.edit', client.id)}
-                                                    className="mr-2 text-indigo-600 hover:text-indigo-900 dark:text-indigo-400"
+                                                    className="mr-2 text-rose-400 hover:text-rose-500 text-rose-400"
                                                 >
                                                     Edit
                                                 </Link>
                                                 <Link
                                                     href={route('clients.show', client.id)}
-                                                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400"
+                                                    className="text-stone-600 hover:text-stone-900 text-stone-400"
                                                 >
                                                     Detail
                                                 </Link>
@@ -88,15 +88,15 @@ export default function Index({ clients }: PageProps) {
                                             href={link.url}
                                             className={`rounded px-3 py-1 text-sm ${
                                                 link.active
-                                                    ? 'bg-indigo-600 text-white'
-                                                    : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                                                    ? 'bg-rose-400 text-white'
+                                                    : 'bg-stone-200 text-stone-700 bg-stone-700 text-stone-300'
                                             }`}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     ) : (
                                         <span
                                             key={i}
-                                            className="rounded px-3 py-1 text-sm bg-gray-100 text-gray-400 dark:bg-gray-800"
+                                            className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-stone-800"
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     ),
