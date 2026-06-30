@@ -11,7 +11,7 @@ class Payment extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'event_id', 'is_expense', 'type', 'payment_at', 'payment_type', 'amount', 'description', 'status', 'created_by',
+        'event_id', 'is_expense', 'type', 'payment_at', 'payment_type', 'amount', 'operational_cut', 'receipt_image', 'description', 'status', 'created_by',
     ];
 
     protected $casts = [
@@ -20,6 +20,7 @@ class Payment extends Model
         'payment_at' => 'datetime:Y-m-d',
         'payment_type' => 'integer',
         'amount' => 'double',
+        'operational_cut' => 'double',
         'status' => 'integer',
     ];
 
@@ -54,14 +55,14 @@ class Payment extends Model
     ];
 
     const PAYMENT_CASH = 0;
-    const PAYMENT_TRANSFER = 1;
+    const PAYMENT_BCA = 1;
     const PAYMENT_QRIS = 2;
     const PAYMENT_EWALLET = 3;
     const PAYMENT_OTHER = 4;
 
     const PAYMENT_TYPES = [
         self::PAYMENT_CASH => 'Cash',
-        self::PAYMENT_TRANSFER => 'Transfer',
+        self::PAYMENT_BCA => 'BCA',
         self::PAYMENT_QRIS => 'QRIS',
         self::PAYMENT_EWALLET => 'E-Wallet',
         self::PAYMENT_OTHER => 'Lainnya',
@@ -80,5 +81,10 @@ class Payment extends Model
     public function getPaymentTypeNameAttribute(): string
     {
         return self::PAYMENT_TYPES[$this->payment_type] ?? 'Unknown';
+    }
+
+    public function getNetAmountAttribute(): float
+    {
+        return $this->amount - $this->operational_cut;
     }
 }

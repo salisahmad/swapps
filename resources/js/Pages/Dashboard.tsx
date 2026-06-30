@@ -23,12 +23,23 @@ interface Schedule {
 
 interface Stats {
     total_events: number;
-    new_events_this_month: number;
     earnings: number;
     expenses: number;
     profit: number;
     unpaid_events: number;
     total_unpaid_amount: number;
+    // New stats
+    last_year_earnings: number;
+    last_year_total_events: number;
+    this_year_earnings: number;
+    this_year_total_events: number;
+    this_month_earnings: number;
+    this_month_total_events: number;
+    next_year_total_events: number;
+    hutang_amount: number;
+    hutang_count: number;
+    closing_today: number;
+    closing_yesterday: number;
 }
 
 interface PageProps {
@@ -36,18 +47,19 @@ interface PageProps {
     todayEvents: Event[];
     todaySchedules: Schedule[];
     upcomingEvents: Event[];
-    unpaidEventsList: (Event & { bookings: { payments: { amount: string }[] }[] })[];
+    unpaidEventsList: (Event & { payments: { amount: string }[] })[];
 }
 
 export default function Dashboard({ stats, todayEvents, todaySchedules, upcomingEvents, unpaidEventsList }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
-    const StatCard = ({ title, value, color, icon }: { title: string; value: string; color: string; icon: string }) => (
+    const StatCard = ({ title, value, sub, color, icon }: { title: string; value: string; sub?: string; color: string; icon: string }) => (
         <div className={`stat-card flex items-center gap-3 ${color}`}>
             <span className="text-2xl">{icon}</span>
             <div className="min-w-0">
-                <p className="text-xs text-stone-400">{title}</p>
-                <p className="truncate text-lg font-bold text-stone-800">{value}</p>
+                <p className="text-xs text-stone-400 truncate">{title}</p>
+                <p className="text-lg font-bold text-stone-800 truncate">{value}</p>
+                {sub && <p className="text-xs text-stone-400">{sub}</p>}
             </div>
         </div>
     );
@@ -57,34 +69,29 @@ export default function Dashboard({ stats, todayEvents, todaySchedules, upcoming
             <Head title="Dashboard" />
 
             <div className="space-y-5">
-                {/* Welcome */}
+                {/* Welcome + Quick Action */}
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="page-title">Shofi Wedding</h1>
-                        <p className="text-sm text-stone-400">Ringkasan hari ini</p>
+                        <p className="text-sm text-stone-400">Dashboard</p>
                     </div>
                     <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">
                         + Booking
                     </Link>
                 </div>
 
-                {/* Stat Cards - Horizontal scroll on mobile */}
-                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide snap-x snap-mandatory">
-                    <div className="snap-start">
-                        <StatCard title="Total Booking" value={String(stats.total_events)} color="border-l-4 border-rose-300" icon="💍" />
-                    </div>
-                    <div className="snap-start">
-                        <StatCard title="Pemasukan" value={formatRupiah(stats.earnings)} color="border-l-4 border-emerald-300" icon="💰" />
-                    </div>
-                    <div className="snap-start">
-                        <StatCard title="Pengeluaran" value={formatRupiah(stats.expenses)} color="border-l-4 border-red-300" icon="💸" />
-                    </div>
-                    <div className="snap-start">
-                        <StatCard title="Profit" value={formatRupiah(stats.profit)} color="border-l-4 border-sky-300" icon="📈" />
-                    </div>
-                    <div className="snap-start">
-                        <StatCard title="Belum Lunas" value={`${stats.unpaid_events}`} color="border-l-4 border-amber-300" icon="⏳" />
-                    </div>
+                {/* Stat Cards — 2 columns on mobile, 5 on desktop, scrollable */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                    <StatCard title="Omset Tahun Lalu" value={formatRupiah(stats.last_year_earnings)} color="border-l-4 border-amber-300" icon="📅" />
+                    <StatCard title="Client Tahun Lalu" value={String(stats.last_year_total_events)} color="border-l-4 border-stone-300" icon="👥" />
+                    <StatCard title="Omset Tahun Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
+                    <StatCard title="Client Tahun Ini" value={String(stats.this_year_total_events)} color="border-l-4 border-stone-300" icon="👥" />
+                    <StatCard title="Omset Bulan Ini" value={formatRupiah(stats.this_month_earnings)} color="border-l-4 border-emerald-300" icon="💰" />
+                    <StatCard title="Client Bulan Ini" value={String(stats.this_month_total_events)} color="border-l-4 border-stone-300" icon="👥" />
+                    <StatCard title="Client Tahun Depan" value={String(stats.next_year_total_events)} color="border-l-4 border-violet-300" icon="🔮" />
+                    <StatCard title="Hutang" value={formatRupiah(stats.hutang_amount)} sub={`${stats.hutang_count} event belum terlaksana`} color="border-l-4 border-red-300" icon="💸" />
+                    <StatCard title="Closing Hari Ini" value={String(stats.closing_today)} color="border-l-4 border-sky-300" icon="🎯" />
+                    <StatCard title="Closing Kemarin" value={String(stats.closing_yesterday)} color="border-l-4 border-blue-300" icon="📊" />
                 </div>
 
                 {/* Two Column Layout */}
@@ -184,7 +191,7 @@ export default function Dashboard({ stats, todayEvents, todaySchedules, upcoming
                         ) : (
                             <div className="space-y-2">
                                 {unpaidEventsList.map((e) => {
-                                    const paid = e.bookings?.reduce((s, b) => s + b.payments.reduce((ps, p) => ps + parseFloat(p.amount), 0), 0) ?? 0;
+                                    const paid = e.payments?.reduce((s, p) => s + parseFloat(p.amount), 0) ?? 0;
                                     const remaining = e.total_amount - paid;
                                     return (
                                         <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">

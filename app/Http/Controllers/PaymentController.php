@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Payment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Intervention\Image\Laravel\Facades\Image;
 
 class PaymentController extends Controller
 {
@@ -14,17 +16,18 @@ class PaymentController extends Controller
     {
         $query = Payment::with('event:id,name');
 
-        // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by type (earning/expense)
         if ($request->filled('is_expense')) {
             $query->where('is_expense', $request->is_expense);
         }
 
-        // Date range
+        if ($request->filled('payment_type')) {
+            $query->where('payment_type', $request->payment_type);
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('payment_at', '>=', $request->date_from);
         }
@@ -34,7 +37,6 @@ class PaymentController extends Controller
 
         $payments = $query->latest()->paginate(15)->withQueryString();
 
-        // Summary stats
         $totalEarnings = Payment::where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
             ->sum('amount');
@@ -46,7 +48,7 @@ class PaymentController extends Controller
 
         return Inertia::render('Payments/Index', [
             'payments' => $payments,
-            'filters' => $request->only(['status', 'is_expense', 'date_from', 'date_to']),
+            'filters' => $request->only(['status', 'is_expense', 'payment_type', 'date_from', 'date_to']),
             'stats' => [
                 'total_earnings' => (float) $totalEarnings,
                 'total_expenses' => (float) $totalExpenses,
@@ -73,24 +75,26 @@ class PaymentController extends Controller
             'payment_at' => 'required|date',
             'payment_type' => 'required|integer|in:0,1,2,3,4',
             'amount' => 'required|numeric|min:0',
+            'operational_cut' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
             'status' => 'required|integer|in:0,1,2',
+            'receipt_image' => 'nullable|image|max:5120', // 5MB max
         ]);
+
+        $receiptPath = null;
+        if ($request->hasFile('receipt_image')) {
+            $receiptPath = $this->compressAndStoreImage($request->file('receipt_image'));
+        }
 
         Payment::create([
             ...$validated,
+            'receipt_image' => $receiptPath,
+            'operational_cut' => $validated['operational_cut'] ?? 0,
             'created_by' => auth()->id(),
         ]);
 
-        // Update event is_fully_paid if needed
-        $event = Event::find($validated['event_id']);
-        $paid = $event->payments()
-            ->where('is_expense', Payment::EARNING)
-            ->where('status', Payment::STATUS_CONFIRMED)
-            ->sum('amount');
-        if ($paid >= $event->total_amount) {
-            $event->update(['is_fully_paid' => true]);
-        }
+        // Update event paid status
+        $this->updateEventPaidStatus($validated['event_id']);
 
         $redirect = $request->event_id ? route('events.show', $request->event_id) : route('payments.index');
         return redirect($redirect)->with('success', 'Pembayaran berhasil dicatat.');
@@ -113,19 +117,28 @@ class PaymentController extends Controller
             'payment_at' => 'required|date',
             'payment_type' => 'required|integer|in:0,1,2,3,4',
             'amount' => 'required|numeric|min:0',
+            'operational_cut' => 'nullable|numeric|min:0',
             'description' => 'nullable|string',
             'status' => 'required|integer|in:0,1,2',
+            'receipt_image' => 'nullable|image|max:5120',
         ]);
 
-        $payment->update($validated);
+        $receiptPath = $payment->receipt_image;
+        if ($request->hasFile('receipt_image')) {
+            // Delete old
+            if ($receiptPath) {
+                Storage::disk('public')->delete($receiptPath);
+            }
+            $receiptPath = $this->compressAndStoreImage($request->file('receipt_image'));
+        }
 
-        // Recalculate event paid status
-        $event = Event::find($validated['event_id']);
-        $paid = $event->payments()
-            ->where('is_expense', Payment::EARNING)
-            ->where('status', Payment::STATUS_CONFIRMED)
-            ->sum('amount');
-        $event->update(['is_fully_paid' => $paid >= $event->total_amount]);
+        $payment->update([
+            ...$validated,
+            'receipt_image' => $receiptPath,
+            'operational_cut' => $validated['operational_cut'] ?? 0,
+        ]);
+
+        $this->updateEventPaidStatus($validated['event_id']);
 
         return redirect()->route('payments.index')->with('success', 'Pembayaran berhasil diupdate.');
     }
@@ -133,15 +146,13 @@ class PaymentController extends Controller
     public function destroy(Payment $payment)
     {
         $eventId = $payment->event_id;
+        
+        if ($payment->receipt_image) {
+            Storage::disk('public')->delete($payment->receipt_image);
+        }
+        
         $payment->delete();
-
-        // Recalculate event paid status
-        $event = Event::find($eventId);
-        $paid = $event->payments()
-            ->where('is_expense', Payment::EARNING)
-            ->where('status', Payment::STATUS_CONFIRMED)
-            ->sum('amount');
-        $event->update(['is_fully_paid' => $paid >= $event->total_amount]);
+        $this->updateEventPaidStatus($eventId);
 
         return redirect()->route('payments.index')->with('success', 'Pembayaran berhasil dihapus.');
     }
@@ -149,28 +160,40 @@ class PaymentController extends Controller
     public function confirm(Payment $payment)
     {
         $payment->update(['status' => Payment::STATUS_CONFIRMED]);
-
-        $event = Event::find($payment->event_id);
-        $paid = $event->payments()
-            ->where('is_expense', Payment::EARNING)
-            ->where('status', Payment::STATUS_CONFIRMED)
-            ->sum('amount');
-        $event->update(['is_fully_paid' => $paid >= $event->total_amount]);
-
+        $this->updateEventPaidStatus($payment->event_id);
         return redirect()->back()->with('success', 'Pembayaran dikonfirmasi.');
     }
 
     public function reject(Payment $payment)
     {
         $payment->update(['status' => Payment::STATUS_REJECTED]);
+        $this->updateEventPaidStatus($payment->event_id);
+        return redirect()->back()->with('success', 'Pembayaran ditolak.');
+    }
 
-        $event = Event::find($payment->event_id);
+    private function compressAndStoreImage($file): string
+    {
+        $image = Image::read($file);
+        
+        // Resize to max 800px width, keep aspect ratio
+        $image->scaleDown(width: 800);
+        
+        // Compress to 80% quality
+        $filename = 'receipts/' . uniqid() . '.jpg';
+        
+        Storage::disk('public')->makeDirectory('receipts');
+        Storage::disk('public')->put($filename, $image->encodeByExtension('jpg', quality: 80));
+        
+        return $filename;
+    }
+
+    private function updateEventPaidStatus(int $eventId): void
+    {
+        $event = Event::find($eventId);
         $paid = $event->payments()
             ->where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
             ->sum('amount');
         $event->update(['is_fully_paid' => $paid >= $event->total_amount]);
-
-        return redirect()->back()->with('success', 'Pembayaran ditolak.');
     }
 }

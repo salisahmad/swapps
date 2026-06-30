@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 interface PaymentItem {
     id: number;
@@ -8,9 +9,11 @@ interface PaymentItem {
     payment_at: string | null;
     payment_type_name: string;
     amount: number;
+    operational_cut: number;
     description: string | null;
     status: number;
     status_name: string;
+    receipt_image: string | null;
     event: { id: number; name: string };
 }
 
@@ -22,6 +25,7 @@ interface PageProps {
     filters: {
         status?: string;
         is_expense?: string;
+        payment_type?: string;
         date_from?: string;
         date_to?: string;
     };
@@ -37,9 +41,12 @@ export default function Index({ payments, filters, stats }: PageProps) {
     const { data, setData, get, post } = useForm({
         status: filters.status || '',
         is_expense: filters.is_expense || '',
+        payment_type: filters.payment_type || '',
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
     });
+
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,6 +115,16 @@ export default function Index({ payments, filters, stats }: PageProps) {
                             <option value="0">Pemasukan</option>
                             <option value="1">Pengeluaran</option>
                         </select>
+                        <select value={data.payment_type} onChange={(e) => setData('payment_type', e.target.value)} className="input-field w-auto">
+                            <option value="">Semua Metode</option>
+                            <option value="0">💵 Cash</option>
+                            <option value="1">🏦 BCA</option>
+                            <option value="2">📱 QRIS</option>
+                            <option value="3">📲 E-Wallet</option>
+                            <option value="4">📝 Lainnya</option>
+                        </select>
+                        <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="input-field w-auto" placeholder="Dari" />
+                        <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="input-field w-auto" placeholder="Sampai" />
                         <button type="submit" className="btn-primary py-2 px-4">Filter</button>
                         <Link href={route('payments.index')} className="btn-secondary py-2 px-4">Reset</Link>
                     </form>
@@ -125,13 +142,27 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                     <p className="text-xs text-stone-400">{p.description || '-'}</p>
                                     <div className="mt-2 flex flex-wrap gap-1">
                                         <span className={`badge ${p.is_expense === 0 ? 'badge-green' : 'badge-red'}`}>{p.type_name}</span>
+                                        <span className="badge-pink">{p.payment_type_name}</span>
                                         <span className={`badge ${p.status === 1 ? 'badge-blue' : p.status === 2 ? 'badge-red' : 'badge-yellow'}`}>{p.status_name}</span>
                                     </div>
-                                    <p className="mt-1 text-xs text-stone-400">{p.payment_at} · {p.payment_type_name}</p>
+                                    <p className="mt-1 text-xs text-stone-400">{p.payment_at}</p>
+                                    {p.operational_cut > 0 && (
+                                        <p className="text-xs text-amber-600">Potongan: {formatRupiah(p.operational_cut)}</p>
+                                    )}
                                 </div>
-                                <p className={`text-lg font-bold shrink-0 ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                    {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}
-                                </p>
+                                <div className="text-right shrink-0">
+                                    <p className={`text-lg font-bold ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                        {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}
+                                    </p>
+                                    {p.receipt_image && (
+                                        <button
+                                            onClick={() => setPreviewImage(`/storage/${p.receipt_image}`)}
+                                            className="mt-1 text-xs text-rose-500 underline"
+                                        >
+                                            📷 Lihat Bukti
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                             {p.status === 0 && (
                                 <div className="mt-3 flex gap-2">
@@ -159,6 +190,7 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Jenis</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Jumlah</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Bukti</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Aksi</th>
                                 </tr>
                             </thead>
@@ -168,6 +200,9 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                         <td className="px-4 py-3">
                                             <Link href={route('events.show', p.event.id)} className="text-sm font-medium text-rose-500 hover:underline">{p.event.name}</Link>
                                             <p className="text-xs text-stone-400">{p.description || '-'}</p>
+                                            {p.operational_cut > 0 && (
+                                                <p className="text-xs text-amber-600">Potongan: {formatRupiah(p.operational_cut)}</p>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className={`badge ${p.is_expense === 0 ? 'badge-green' : 'badge-red'}`}>{p.type_name}</span>
@@ -178,6 +213,15 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`badge ${p.status === 1 ? 'badge-blue' : p.status === 2 ? 'badge-red' : 'badge-yellow'}`}>{p.status_name}</span>
+                                        </td>
+                                        <td className="px-4 py-3 text-center">
+                                            {p.receipt_image ? (
+                                                <button onClick={() => setPreviewImage(`/storage/${p.receipt_image}`)} className="text-rose-500 hover:text-rose-600">
+                                                    📷
+                                                </button>
+                                            ) : (
+                                                <span className="text-stone-300">—</span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-right text-sm">
                                             {p.status === 0 && (
@@ -191,7 +235,7 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                     </tr>
                                 ))}
                                 {payments.data.length === 0 && (
-                                    <tr><td colSpan={5} className="px-4 py-12 text-center text-stone-400">📭 Tidak ada transaksi</td></tr>
+                                    <tr><td colSpan={6} className="px-4 py-12 text-center text-stone-400">📭 Tidak ada transaksi</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -207,6 +251,16 @@ export default function Index({ payments, filters, stats }: PageProps) {
                     ))}
                 </div>
             </div>
+
+            {/* Image Preview Modal */}
+            {previewImage && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewImage(null)}>
+                    <div className="relative">
+                        <img src={previewImage} alt="Bukti pembayaran" className="max-h-[80vh] max-w-full rounded-lg" />
+                        <button onClick={() => setPreviewImage(null)} className="absolute -top-3 -right-3 rounded-full bg-white p-2 text-stone-800 shadow-lg">✕</button>
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }
