@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class TelegramSetting extends Model
+{
+    protected $fillable = [
+        'bot_token',
+        'chat_id',
+        'notify_new_event',
+        'notify_new_payment',
+        'notify_schedule',
+    ];
+
+    protected $casts = [
+        'notify_new_event' => 'boolean',
+        'notify_new_payment' => 'boolean',
+        'notify_schedule' => 'boolean',
+    ];
+
+    public static function getInstance(): ?self
+    {
+        return self::first();
+    }
+
+    public static function isConfigured(): bool
+    {
+        $settings = self::first();
+        return $settings && !empty($settings->bot_token) && !empty($settings->chat_id);
+    }
+}

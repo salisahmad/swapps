@@ -8,6 +8,9 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\DynamicFormController;
+use App\Http\Controllers\TelegramSettingController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StaffController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -40,6 +43,17 @@ Route::middleware('auth')->group(function () {
     Route::resource('payments', PaymentController::class);
     Route::post('/payments/{payment}/confirm', [PaymentController::class, 'confirm'])->name('payments.confirm');
     Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->name('payments.reject');
+
+    // Telegram Settings
+    Route::get('/telegram-settings', [TelegramSettingController::class, 'index'])->name('telegram.settings');
+    Route::patch('/telegram-settings', [TelegramSettingController::class, 'update'])->name('telegram.update');
+    Route::post('/telegram-test', [TelegramSettingController::class, 'test'])->name('telegram.test');
+
+    // Reports
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+    // Staff Management
+    Route::resource('staff', StaffController::class);
 
     // Dynamic Forms (Admin)
     Route::get('/events/{event}/dynamic-forms', [DynamicFormController::class, 'edit'])->name('dynamic-forms.edit');

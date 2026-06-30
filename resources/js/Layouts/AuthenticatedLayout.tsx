@@ -58,6 +58,18 @@ export default function Authenticated({
                                     Payments
                                 </NavLink>
                                 <NavLink
+                                    href={route('reports.index')}
+                                    active={route().current('reports.*')}
+                                >
+                                    Laporan
+                                </NavLink>
+                                <NavLink
+                                    href={route('staff.index')}
+                                    active={route().current('staff.*')}
+                                >
+                                    Staff
+                                </NavLink>
+                                <NavLink
                                     href={route('clients.index')}
                                     active={route().current('clients.*')}
                                 >
@@ -98,6 +110,11 @@ export default function Authenticated({
                                             href={route('profile.edit')}
                                         >
                                             Profile
+                                        </Dropdown.Link>
+                                        <Dropdown.Link
+                                            href={route('telegram.settings')}
+                                        >
+                                            ⚙️ Telegram
                                         </Dropdown.Link>
                                         <Dropdown.Link
                                             href={route('logout')}
