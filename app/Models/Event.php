@@ -93,12 +93,10 @@ class Event extends Model
 
     const TYPE_MUA = 1;
     const TYPE_GAUN = 2;
-    const TYPE_TIME_PERIOD = 3;
 
     const ORDER_TYPES = [
         self::TYPE_MUA => 'MUA',
-        self::TYPE_GAUN => 'Gaun',
-        self::TYPE_TIME_PERIOD => 'Time Period',
+        self::TYPE_GAUN => 'Sewa Gaun',
     ];
 
     public function getOrderTypeNameAttribute(): string

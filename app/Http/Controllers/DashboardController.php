@@ -112,6 +112,17 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // Closing lists
+        $closingTodayList = Event::whereDate('created_at', $today)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
+
+        $closingYesterdayList = Event::whereDate('created_at', $today->copy()->subDay())
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
+
         return Inertia::render('Dashboard', [
             'stats' => [
                 'total_events' => $totalEvents,
@@ -120,9 +131,6 @@ class DashboardController extends Controller
                 'profit' => (float) $profit,
                 'unpaid_events' => $unpaidEvents,
                 'total_unpaid_amount' => (float) $totalUnpaidAmount,
-                // New stats
-                'last_year_earnings' => (float) $lastYearEarnings,
-                'last_year_total_events' => $lastYearTotalEvents,
                 'this_year_earnings' => (float) $thisYearEarnings,
                 'this_year_total_events' => $thisYearTotalEvents,
                 'this_month_earnings' => (float) $thisMonthEarnings,
@@ -130,13 +138,25 @@ class DashboardController extends Controller
                 'next_year_total_events' => $nextYearTotalEvents,
                 'hutang_amount' => (float) $hutangAmount,
                 'hutang_count' => $hutangCount,
-                'closing_today' => $closingToday,
-                'closing_yesterday' => $closingYesterday,
+                // Combined last year card
+                'last_year_summary' => [
+                    'earnings' => (float) $lastYearEarnings,
+                    'clients' => $lastYearTotalEvents,
+                ],
             ],
             'todayEvents' => $todayEvents,
             'todaySchedules' => $todaySchedules,
             'upcomingEvents' => $upcomingEvents,
             'unpaidEventsList' => $unpaidEventsList,
+            'todayClients' => $todayClients,
+            'nextYearClients' => $nextYearClients,
+            'closingTodayList' => $closingTodayList,
+            'closingYesterdayList' => $closingYesterdayList,
+            'authUser' => [
+                'id' => auth()->id(),
+                'role' => auth()->user()->role,
+                'is_admin' => auth()->user()->isAdmin(),
+            ],
         ]);
     }
 }

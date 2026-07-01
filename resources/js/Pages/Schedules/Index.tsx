@@ -97,14 +97,14 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
     const formatDateTime = (date: string) => {
         const d = new Date(date);
-        return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return new Date(d).toISOString().split('T')[0];
     };
 
     return (
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
+                    <h2 className="text-xl font-semibold leading-tight text-stone-800">
                         Jadwal Fitting & Konsultasi
                     </h2>
                     <button
@@ -121,41 +121,41 @@ export default function Index({ schedules, filters, events }: PageProps) {
             <div className="py-6">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Filter */}
-                    <div className="mb-4 rounded-lg bg-white p-4 shadow-sm bg-stone-800">
+                    <div className="mb-4 rounded-lg bg-white p-4 shadow-sm bg-white">
                         <form onSubmit={submitFilter} className="grid grid-cols-1 gap-3 sm:grid-cols-5">
                             <select
                                 value={data.type}
                                 onChange={(e) => setData('type', e.target.value)}
-                                className="rounded-md border-stone-300 text-sm border-stone-700 bg-stone-900 text-stone-300"
+                                className="rounded-md border-stone-300 text-sm border-stone-200 bg-white text-stone-800"
                             >
                                 <option value="">Semua Jenis</option>
                                 <option value="1">Fitting</option>
                                 <option value="2">Konsultasi</option>
                             </select>
-                            <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="rounded-md border-stone-300 text-sm border-stone-700 bg-stone-900 text-stone-300" />
-                            <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="rounded-md border-stone-300 text-sm border-stone-700 bg-stone-900 text-stone-300" />
-                            <input type="text" placeholder="Cari client..." value={data.q} onChange={(e) => setData('q', e.target.value)} className="rounded-md border-stone-300 text-sm border-stone-700 bg-stone-900 text-stone-300" />
+                            <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="rounded-md border-stone-300 text-sm border-stone-200 bg-white text-stone-800" />
+                            <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="rounded-md border-stone-300 text-sm border-stone-200 bg-white text-stone-800" />
+                            <input type="text" placeholder="Cari client..." value={data.q} onChange={(e) => setData('q', e.target.value)} className="rounded-md border-stone-300 text-sm border-stone-200 bg-white text-stone-800" />
                             <div className="flex gap-2">
                                 <button type="submit" className="rounded bg-rose-400 px-4 py-2 text-sm text-white">Filter</button>
-                                <Link href={route('schedules.index')} className="rounded bg-stone-200 px-4 py-2 text-sm text-stone-700 bg-stone-700 text-stone-300">Reset</Link>
+                                <Link href={route('schedules.index')} className="rounded bg-stone-100 px-4 py-2 text-sm text-stone-700 bg-stone-100 text-stone-500">Reset</Link>
                             </div>
                         </form>
                     </div>
 
                     {/* Table */}
-                    <div className="overflow-hidden rounded-lg bg-white shadow-sm bg-stone-800">
+                    <div className="hidden card overflow-hidden sm:block">
                         <div className="p-6">
-                            <table className="min-w-full divide-y divide-stone-200 divide-stone-700">
+                            <table className="min-w-full divide-y divide-stone-100">
                                 <thead>
                                     <tr>
-                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500 text-stone-400">Client</th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500 text-stone-400">Jenis</th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500 text-stone-400">Tanggal & Waktu</th>
-                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500 text-stone-400">Keterangan</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium uppercase text-stone-500 text-stone-400">Aksi</th>
+                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Client</th>
+                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Jenis</th>
+                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Tanggal & Waktu</th>
+                                        <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Keterangan</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium uppercase text-stone-500">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-stone-200 divide-stone-700">
+                                <tbody className="divide-y divide-stone-100">
                                     {schedules.data.map((s) => (
                                         <tr key={s.id}>
                                             <td className="px-3 py-3">
@@ -186,9 +186,9 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
                             <div className="mt-4 flex justify-end gap-1">
                                 {schedules.links.map((link, i) => link.url ? (
-                                    <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-stone-200 text-stone-700 bg-stone-700 text-stone-300'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-stone-100 text-stone-600 bg-stone-100 text-stone-500'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
                                 ) : (
-                                    <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-stone-800" dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-white" dangerouslySetInnerHTML={{ __html: link.label }} />
                                 ))}
                             </div>
                         </div>
@@ -199,17 +199,17 @@ export default function Index({ schedules, filters, events }: PageProps) {
             {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl bg-stone-800">
+                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl bg-white">
                         <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
                         <form onSubmit={submitForm} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-stone-700 text-stone-300">Event / Client</label>
+                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Event / Client</label>
                                 <select
                                     value={data.event_id}
                                     onChange={(e) => setData('event_id', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300"
+                                    className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
                                     required
                                 >
                                     <option value="">Pilih Event...</option>
@@ -222,33 +222,33 @@ export default function Index({ schedules, filters, events }: PageProps) {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-300">Jenis</label>
-                                    <select value={data.schedule_type} onChange={(e) => setData('schedule_type', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300">
+                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Jenis</label>
+                                    <select value={data.schedule_type} onChange={(e) => setData('schedule_type', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800">
                                         <option value="1">Fitting</option>
                                         <option value="2">Konsultasi</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-300">Tanggal</label>
-                                    <input type="date" value={data.schedule_from} onChange={(e) => setData('schedule_from', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300" required />
+                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Tanggal</label>
+                                    <input type="date" value={data.schedule_from} onChange={(e) => setData('schedule_from', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-300">Jam Mulai</label>
-                                    <input type="time" value={data.time_from} onChange={(e) => setData('time_from', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300" required />
+                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Mulai</label>
+                                    <input type="time" value={data.time_from} onChange={(e) => setData('time_from', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-300">Jam Selesai</label>
-                                    <input type="time" value={data.time_to} onChange={(e) => setData('time_to', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300" />
+                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Selesai</label>
+                                    <input type="time" value={data.time_to} onChange={(e) => setData('time_to', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-stone-700 text-stone-300">Keterangan</label>
-                                <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 border-stone-700 bg-stone-900 text-stone-300" rows={2} />
+                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Keterangan</label>
+                                <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" rows={2} />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)} className="rounded bg-stone-200 px-4 py-2 text-sm text-stone-700 bg-stone-700 text-stone-300">Batal</button>
+                                <button type="button" onClick={() => setShowModal(false)} className="rounded bg-stone-100 px-4 py-2 text-sm text-stone-700 bg-stone-100 text-stone-500">Batal</button>
                                 <button type="submit" disabled={processing} className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500 disabled:opacity-50">{editMode ? 'Update' : 'Simpan'}</button>
                             </div>
                         </form>

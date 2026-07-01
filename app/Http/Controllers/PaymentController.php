@@ -55,14 +55,32 @@ class PaymentController extends Controller
                 'total_pending' => (float) $totalPending,
                 'profit' => (float) ($totalEarnings - $totalExpenses),
             ],
+            'authUser' => [
+                'id' => auth()->id(),
+                'role' => auth()->user()->role,
+                'is_admin' => auth()->user()->isAdmin(),
+            ],
         ]);
     }
 
     public function create(Request $request): Response
     {
+        // Exclude events that are fully paid AND past date (completed)
+        $events = Event::where(function ($q) {
+            $q->where('is_fully_paid', false)
+              ->orWhere('date', '>=', now()->toDateString());
+        })
+        ->orderBy('date', 'desc')
+        ->get(['id', 'name', 'date', 'total_amount']);
+
         return Inertia::render('Payments/Create', [
-            'events' => Event::orderBy('date', 'desc')->get(['id', 'name', 'date', 'total_amount']),
+            'events' => $events,
             'event_id' => $request->event_id,
+            'authUser' => [
+                'id' => auth()->id(),
+                'role' => auth()->user()->role,
+                'is_admin' => auth()->user()->isAdmin(),
+            ],
         ]);
     }
 
@@ -80,6 +98,11 @@ class PaymentController extends Controller
             'status' => 'required|integer|in:0,1,2',
             'receipt_image' => 'nullable|image|max:5120', // 5MB max
         ]);
+
+        // Staff can only create pending payments
+        if (auth()->user()->isStaff()) {
+            $validated['status'] = Payment::STATUS_PENDING;
+        }
 
         $receiptPath = null;
         if ($request->hasFile('receipt_image')) {
@@ -102,9 +125,21 @@ class PaymentController extends Controller
 
     public function edit(Payment $payment): Response
     {
+        $events = Event::where(function ($q) {
+            $q->where('is_fully_paid', false)
+              ->orWhere('date', '>=', now()->toDateString());
+        })
+        ->orderBy('date', 'desc')
+        ->get(['id', 'name', 'date', 'total_amount']);
+
         return Inertia::render('Payments/Edit', [
             'payment' => $payment,
-            'events' => Event::orderBy('date', 'desc')->get(['id', 'name', 'date', 'total_amount']),
+            'events' => $events,
+            'authUser' => [
+                'id' => auth()->id(),
+                'role' => auth()->user()->role,
+                'is_admin' => auth()->user()->isAdmin(),
+            ],
         ]);
     }
 
@@ -159,6 +194,9 @@ class PaymentController extends Controller
 
     public function confirm(Payment $payment)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Hanya admin yang dapat mengkonfirmasi pembayaran.');
+        }
         $payment->update(['status' => Payment::STATUS_CONFIRMED]);
         $this->updateEventPaidStatus($payment->event_id);
         return redirect()->back()->with('success', 'Pembayaran dikonfirmasi.');
@@ -166,6 +204,9 @@ class PaymentController extends Controller
 
     public function reject(Payment $payment)
     {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Hanya admin yang dapat menolak pembayaran.');
+        }
         $payment->update(['status' => Payment::STATUS_REJECTED]);
         $this->updateEventPaidStatus($payment->event_id);
         return redirect()->back()->with('success', 'Pembayaran ditolak.');

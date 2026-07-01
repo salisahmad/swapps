@@ -58,7 +58,7 @@ export default function Show({ client }: PageProps) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
+                    <h2 className="text-xl font-semibold leading-tight text-stone-800">
                         Detail Client: {client.name}
                     </h2>
                     <Link
@@ -75,74 +75,74 @@ export default function Show({ client }: PageProps) {
             <div className="py-12">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
                     <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
-                        <div className="bg-white p-4 shadow-sm bg-stone-800 sm:rounded-lg">
-                            <p className="text-sm text-stone-500 text-stone-400">Total Booking</p>
+                        <div className="bg-white p-4 shadow-sm bg-white sm:rounded-lg">
+                            <p className="text-sm text-stone-500">Total Booking</p>
                             <p className="text-2xl font-bold text-stone-900 text-white">{client.bookings.length}</p>
                         </div>
-                        <div className="bg-white p-4 shadow-sm bg-stone-800 sm:rounded-lg">
-                            <p className="text-sm text-stone-500 text-stone-400">Total Harga</p>
+                        <div className="bg-white p-4 shadow-sm bg-white sm:rounded-lg">
+                            <p className="text-sm text-stone-500">Total Harga</p>
                             <p className="text-2xl font-bold text-stone-900 text-white">
                                 Rp {totalPrice.toLocaleString('id-ID')}
                             </p>
                         </div>
-                        <div className="bg-white p-4 shadow-sm bg-stone-800 sm:rounded-lg">
-                            <p className="text-sm text-stone-500 text-stone-400">Total Dibayar</p>
+                        <div className="bg-white p-4 shadow-sm bg-white sm:rounded-lg">
+                            <p className="text-sm text-stone-500">Total Dibayar</p>
                             <p className="text-2xl font-bold text-green-600 text-green-400">
                                 Rp {paidTotal.toLocaleString('id-ID')}
                             </p>
                         </div>
                     </div>
 
-                    <div className="mb-6 bg-white p-6 shadow-sm bg-stone-800 sm:rounded-lg">
+                    <div className="mb-6 bg-white p-6 shadow-sm bg-white sm:rounded-lg">
                         <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">Data Pribadi</h3>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <p className="text-sm text-stone-500 text-stone-400">Telepon</p>
+                                <p className="text-sm text-stone-500">Telepon</p>
                                 <p className="text-stone-900 text-stone-100">{client.phone}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-stone-500 text-stone-400">Email</p>
+                                <p className="text-sm text-stone-500">Email</p>
                                 <p className="text-stone-900 text-stone-100">{client.email ?? '-'}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-stone-500 text-stone-400">Tanggal Event</p>
+                                <p className="text-sm text-stone-500">Tanggal Event</p>
                                 <p className="text-stone-900 text-stone-100">{client.event_date ?? '-'}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-stone-500 text-stone-400">Lokasi</p>
+                                <p className="text-sm text-stone-500">Lokasi</p>
                                 <p className="text-stone-900 text-stone-100">{client.event_location ?? '-'}</p>
                             </div>
                         </div>
                         {client.address && (
                             <div className="mt-4">
-                                <p className="text-sm text-stone-500 text-stone-400">Alamat</p>
+                                <p className="text-sm text-stone-500">Alamat</p>
                                 <p className="text-stone-900 text-stone-100">{client.address}</p>
                             </div>
                         )}
                         {client.notes && (
                             <div className="mt-4">
-                                <p className="text-sm text-stone-500 text-stone-400">Catatan</p>
+                                <p className="text-sm text-stone-500">Catatan</p>
                                 <p className="text-stone-900 text-stone-100">{client.notes}</p>
                             </div>
                         )}
                     </div>
 
-                    <div className="bg-white p-6 shadow-sm bg-stone-800 sm:rounded-lg">
+                    <div className="bg-white p-6 shadow-sm bg-white sm:rounded-lg">
                         <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">Riwayat Booking</h3>
                         {client.bookings.length === 0 ? (
-                            <p className="text-stone-500 text-stone-400">Belum ada booking.</p>
+                            <p className="text-stone-500">Belum ada booking.</p>
                         ) : (
                             <div className="space-y-4">
                                 {client.bookings.map((booking) => {
                                     const paid = booking.payments.reduce((s, p) => s + parseFloat(p.amount), 0);
                                     return (
-                                        <div key={booking.id} className="rounded-lg border border-stone-200 p-4 border-stone-700">
+                                        <div key={booking.id} className="rounded-lg border border-stone-200 p-4 border-stone-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
                                                     <p className="font-medium text-stone-900 text-white">
                                                         {booking.service.name}
                                                     </p>
-                                                    <p className="text-sm text-stone-500 text-stone-400">
+                                                    <p className="text-sm text-stone-500">
                                                         {booking.booking_date} — {booking.location}
                                                     </p>
                                                 </div>

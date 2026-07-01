@@ -188,7 +188,7 @@ export default function Index({ events, filters }: PageProps) {
                         ) : (
                             <span
                                 key={i}
-                                className="rounded-lg px-3 py-1.5 text-sm bg-stone-100 text-stone-300"
+                                className="rounded-lg px-3 py-1.5 text-sm bg-stone-100 text-stone-500"
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                             />
                         ),

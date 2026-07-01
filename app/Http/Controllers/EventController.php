@@ -67,7 +67,7 @@ class EventController extends Controller
             'location' => 'nullable|string',
             'package_description' => 'nullable|string',
             'total_amount' => 'required|numeric|min:0',
-            'order_type' => 'required|integer|in:1,2,3',
+            'order_type' => 'required|integer|in:1,2',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
         ]);
@@ -119,7 +119,7 @@ class EventController extends Controller
             'location' => 'nullable|string',
             'package_description' => 'nullable|string',
             'total_amount' => 'required|numeric|min:0',
-            'order_type' => 'required|integer|in:1,2,3',
+            'order_type' => 'required|integer|in:1,2',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
         ]);

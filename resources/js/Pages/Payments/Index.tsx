@@ -29,15 +29,13 @@ interface PageProps {
         date_from?: string;
         date_to?: string;
     };
-    stats: {
-        total_earnings: number;
-        total_expenses: number;
-        total_pending: number;
-        profit: number;
+    authUser: {
+        id: number;
+        role: number;
+        is_admin: boolean;
     };
-}
 
-export default function Index({ payments, filters, stats }: PageProps) {
+export default function Index({ payments, filters, stats, authUser }: PageProps) {
     const { data, setData, get, post } = useForm({
         status: filters.status || '',
         is_expense: filters.is_expense || '',
@@ -164,7 +162,7 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                     )}
                                 </div>
                             </div>
-                            {p.status === 0 && (
+                            {p.status === 0 && authUser.is_admin && (
                                 <div className="mt-3 flex gap-2">
                                     <button onClick={() => handleConfirm(p.id)} className="btn-primary text-xs py-2 px-3 flex-1">✅ Konfirmasi</button>
                                     <button onClick={() => handleReject(p.id)} className="btn-danger text-xs py-2 px-3 flex-1">❌ Tolak</button>
@@ -220,11 +218,11 @@ export default function Index({ payments, filters, stats }: PageProps) {
                                                     📷
                                                 </button>
                                             ) : (
-                                                <span className="text-stone-300">—</span>
+                                                <span className="text-stone-500">—</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-right text-sm">
-                                            {p.status === 0 && (
+                                            {p.status === 0 && authUser.is_admin && (
                                                 <>
                                                     <button onClick={() => handleConfirm(p.id)} className="mr-2 text-emerald-600 hover:text-emerald-700 font-medium">Konfirmasi</button>
                                                     <button onClick={() => handleReject(p.id)} className="text-red-500 hover:text-red-600 font-medium">Tolak</button>
@@ -247,7 +245,7 @@ export default function Index({ payments, filters, stats }: PageProps) {
                     {payments.links.map((link, i) => link.url ? (
                         <Link key={i} href={link.url} className={`rounded-lg px-3 py-1.5 text-sm transition ${link.active ? 'bg-rose-400 text-white font-semibold' : 'bg-white text-stone-600 border border-stone-100 hover:bg-stone-50'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
                     ) : (
-                        <span key={i} className="rounded-lg px-3 py-1.5 text-sm bg-stone-100 text-stone-300" dangerouslySetInnerHTML={{ __html: link.label }} />
+                        <span key={i} className="rounded-lg px-3 py-1.5 text-sm bg-stone-100 text-stone-500" dangerouslySetInnerHTML={{ __html: link.label }} />
                     ))}
                 </div>
             </div>

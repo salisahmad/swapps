@@ -19,13 +19,13 @@ export default function Create() {
     };
 
     const inputClass =
-        'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300';
-    const labelClass = 'block text-sm font-medium text-stone-700 text-stone-300';
+        'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-200 bg-white text-stone-800';
+    const labelClass = 'block text-sm font-medium text-stone-700 text-stone-500';
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
+                <h2 className="text-xl font-semibold leading-tight text-stone-800">
                     Tambah Client Baru
                 </h2>
             }
@@ -34,7 +34,7 @@ export default function Create() {
 
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm bg-stone-800 sm:rounded-lg">
+                    <div className="bg-white p-6 shadow-sm bg-white sm:rounded-lg">
                         <form onSubmit={submit} className="space-y-4">
                             <div>
                                 <label className={labelClass}>Nama Client</label>

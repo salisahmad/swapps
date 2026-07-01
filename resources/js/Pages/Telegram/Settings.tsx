@@ -33,13 +33,13 @@ export default function Settings({ settings, flash }: PageProps) {
         post(route('telegram.test'));
     };
 
-    const inputClass = 'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-700 bg-stone-900 text-stone-300';
-    const labelClass = 'block text-sm font-medium text-stone-700 text-stone-300';
+    const inputClass = 'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-200 bg-white text-stone-800';
+    const labelClass = 'block text-sm font-medium text-stone-700 text-stone-500';
 
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
+                <h2 className="text-xl font-semibold leading-tight text-stone-800">
                     Pengaturan Notifikasi Telegram
                 </h2>
             }
@@ -59,7 +59,7 @@ export default function Settings({ settings, flash }: PageProps) {
                         </div>
                     )}
 
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm bg-stone-800">
+                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm bg-white">
                         <h3 className="mb-2 text-lg font-semibold text-stone-900 text-white">🤖 Cara Setup Telegram Bot</h3>
                         <ol className="ml-5 list-decimal space-y-2 text-sm text-stone-600 text-stone-400">
                             <li>Buka Telegram, cari <b>@BotFather</b> dan klik <b>/newbot</b></li>
@@ -71,7 +71,7 @@ export default function Settings({ settings, flash }: PageProps) {
                         </ol>
                     </div>
 
-                    <form onSubmit={submit} className="space-y-6 rounded-lg bg-white p-6 shadow-sm bg-stone-800">
+                    <form onSubmit={submit} className="space-y-6 rounded-lg bg-white p-6 shadow-sm bg-white">
                         <div>
                             <label className={labelClass}>Bot Token</label>
                             <input
@@ -81,7 +81,7 @@ export default function Settings({ settings, flash }: PageProps) {
                                 className={inputClass}
                                 placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
                             />
-                            <p className="mt-1 text-xs text-stone-500 text-stone-400">Dari @BotFather</p>
+                            <p className="mt-1 text-xs text-stone-500">Dari @BotFather</p>
                         </div>
 
                         <div>
@@ -93,7 +93,7 @@ export default function Settings({ settings, flash }: PageProps) {
                                 className={inputClass}
                                 placeholder="123456789 atau -1001234567890"
                             />
-                            <p className="mt-1 text-xs text-stone-500 text-stone-400">ID grup atau personal chat</p>
+                            <p className="mt-1 text-xs text-stone-500">ID grup atau personal chat</p>
                         </div>
 
                         <div className="space-y-3">
@@ -105,7 +105,7 @@ export default function Settings({ settings, flash }: PageProps) {
                                     onChange={(e) => setData('notify_new_event', e.target.checked)}
                                     className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                 />
-                                <span className="text-sm text-stone-700 text-stone-300">Booking Baru</span>
+                                <span className="text-sm text-stone-700 text-stone-500">Booking Baru</span>
                             </label>
                             <label className="flex items-center gap-2">
                                 <input
@@ -114,7 +114,7 @@ export default function Settings({ settings, flash }: PageProps) {
                                     onChange={(e) => setData('notify_new_payment', e.target.checked)}
                                     className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                 />
-                                <span className="text-sm text-stone-700 text-stone-300">Pembayaran Baru</span>
+                                <span className="text-sm text-stone-700 text-stone-500">Pembayaran Baru</span>
                             </label>
                             <label className="flex items-center gap-2">
                                 <input
@@ -123,7 +123,7 @@ export default function Settings({ settings, flash }: PageProps) {
                                     onChange={(e) => setData('notify_schedule', e.target.checked)}
                                     className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                 />
-                                <span className="text-sm text-stone-700 text-stone-300">Jadwal Fitting/Konsultasi</span>
+                                <span className="text-sm text-stone-700 text-stone-500">Jadwal Fitting/Konsultasi</span>
                             </label>
                         </div>
 

@@ -24,7 +24,7 @@ export default function Index({ clients }: PageProps) {
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-stone-800 text-stone-200">
+                    <h2 className="text-xl font-semibold leading-tight text-stone-800">
                         Client Wedding
                     </h2>
                     <Link
@@ -40,20 +40,20 @@ export default function Index({ clients }: PageProps) {
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm bg-stone-800 sm:rounded-lg">
+                    <div className="overflow-hidden bg-white shadow-sm bg-white sm:rounded-lg">
                         <div className="p-6">
-                            <table className="min-w-full divide-y divide-stone-200 divide-stone-700">
+                            <table className="min-w-full divide-y divide-stone-100">
                                 <thead>
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Nama</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Telepon</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Tanggal Event</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Jenis</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Lokasi</th>
-                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500 text-stone-400">Aksi</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500">Nama</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500">Telepon</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500">Tanggal Event</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500">Jenis</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500">Lokasi</th>
+                                        <th className="px-4 py-2 text-left text-sm font-medium text-stone-500">Aksi</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-stone-200 divide-stone-700">
+                                <tbody className="divide-y divide-stone-100">
                                     {clients.data.map((client) => (
                                         <tr key={client.id}>
                                             <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.name}</td>
@@ -89,14 +89,14 @@ export default function Index({ clients }: PageProps) {
                                             className={`rounded px-3 py-1 text-sm ${
                                                 link.active
                                                     ? 'bg-rose-400 text-white'
-                                                    : 'bg-stone-200 text-stone-700 bg-stone-700 text-stone-300'
+                                                    : 'bg-stone-100 text-stone-600 bg-stone-100 text-stone-500'
                                             }`}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     ) : (
                                         <span
                                             key={i}
-                                            className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-stone-800"
+                                            className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-white"
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     ),

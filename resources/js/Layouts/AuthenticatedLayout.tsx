@@ -11,6 +11,9 @@ const navItems = [
     { href: 'items.index', label: 'Katalog', icon: '👗', route: 'items.*' },
     { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
     { href: 'payments.index', label: 'Bayar', icon: '💰', route: 'payments.*' },
+];
+
+const adminNavItems = [
     { href: 'reports.index', label: 'Laporan', icon: '📈', route: 'reports.*' },
 ];
 
@@ -19,9 +22,10 @@ export default function Authenticated({
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
+    const isAdmin = user.role === 1 || user.role === 2; // Owner or Admin
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
-    return (
+    const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
         <div className="min-h-screen bg-[#faf9f7] pb-20 sm:pb-0">
             {/* Top Bar - Mobile optimized */}
             <nav className="sticky top-0 z-40 border-b border-stone-100 bg-white/80 backdrop-blur-lg safe-top">
@@ -39,7 +43,7 @@ export default function Authenticated({
 
                         {/* Desktop Nav */}
                         <div className="hidden items-center space-x-1 sm:flex">
-                            {navItems.map((item) => (
+                            {allNavItems.map((item) => (
                                 <NavLink
                                     key={item.href}
                                     href={route(item.href)}
@@ -72,9 +76,13 @@ export default function Authenticated({
                                 </Dropdown.Trigger>
                                 <Dropdown.Content>
                                     <Dropdown.Link href={route('profile.edit')}>👤 Profile</Dropdown.Link>
-                                    <Dropdown.Link href={route('staff.index')}>👥 Staff</Dropdown.Link>
-                                    <Dropdown.Link href={route('clients.index')}>📝 Clients</Dropdown.Link>
-                                    <Dropdown.Link href={route('telegram.settings')}>⚙️ Telegram</Dropdown.Link>
+                                    {isAdmin && (
+                                        <>
+                                            <Dropdown.Link href={route('staff.index')}>👥 Staff</Dropdown.Link>
+                                            <Dropdown.Link href={route('clients.index')}>📝 Clients</Dropdown.Link>
+                                            <Dropdown.Link href={route('telegram.settings')}>⚙️ Telegram</Dropdown.Link>
+                                        </>
+                                    )}
                                     <div className="border-t border-stone-100 my-1" />
                                     <Dropdown.Link href={route('logout')} method="post" as="button">🚪 Log Out</Dropdown.Link>
                                 </Dropdown.Content>
@@ -116,19 +124,23 @@ export default function Authenticated({
                             <ResponsiveNavLink href={route('payments.index')} active={route().current('payments.*')}>
                                 💰 Bayar
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink href={route('reports.index')} active={route().current('reports.*')}>
-                                📈 Laporan
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink href={route('staff.index')} active={route().current('staff.*')}>
-                                👥 Staff
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink href={route('clients.index')} active={route().current('clients.*')}>
-                                📝 Clients
-                            </ResponsiveNavLink>
+                            {isAdmin && (
+                                <>
+                                    <ResponsiveNavLink href={route('reports.index')} active={route().current('reports.*')}>
+                                        📈 Laporan
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('staff.index')} active={route().current('staff.*')}>
+                                        👥 Staff
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('clients.index')} active={route().current('clients.*')}>
+                                        📝 Clients
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('telegram.settings')}>
+                                        ⚙️ Telegram Settings
+                                    </ResponsiveNavLink>
+                                </>
+                            )}
                             <div className="border-t border-stone-100 pt-2">
-                                <ResponsiveNavLink href={route('telegram.settings')}>
-                                    ⚙️ Telegram Settings
-                                </ResponsiveNavLink>
                                 <ResponsiveNavLink href={route('profile.edit')}>
                                     👤 Profile
                                 </ResponsiveNavLink>
@@ -158,7 +170,7 @@ export default function Authenticated({
             {/* Bottom Navigation - iPhone Style */}
             <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-100 bg-white/95 backdrop-blur-lg safe-bottom sm:hidden">
                 <div className="flex items-center justify-around px-2 pb-2 pt-1">
-                    {navItems.slice(0, 5).map((item) => {
+                    {allNavItems.slice(0, 5).map((item) => {
                         const isActive = route().current(item.route);
                         return (
                             <Link

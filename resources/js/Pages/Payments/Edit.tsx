@@ -23,12 +23,19 @@ interface Payment {
     receipt_image: string | null;
 }
 
+interface AuthUser {
+    id: number;
+    role: number;
+    is_admin: boolean;
+}
+
 interface PageProps {
     payment: Payment;
     events: Event[];
+    authUser: AuthUser;
 }
 
-export default function Edit({ payment, events }: PageProps) {
+export default function Edit({ payment, events, authUser }: PageProps) {
     const { data, setData, post, processing, errors } = useForm({
         event_id: String(payment.event_id),
         is_expense: String(payment.is_expense),
@@ -38,7 +45,7 @@ export default function Edit({ payment, events }: PageProps) {
         amount: String(payment.amount),
         operational_cut: String(payment.operational_cut),
         description: payment.description || '',
-        status: String(payment.status),
+        status: String(authUser.is_admin ? payment.status : 0),
         receipt_image: null as File | null,
         _method: 'PUT',
     });
@@ -204,6 +211,7 @@ export default function Edit({ payment, events }: PageProps) {
                                 />
                             </div>
 
+                            {authUser.is_admin && (
                             <div>
                                 <label className="block text-sm font-medium text-stone-600">Status</label>
                                 <select
@@ -216,6 +224,7 @@ export default function Edit({ payment, events }: PageProps) {
                                     <option value="2">❌ Ditolak</option>
                                 </select>
                             </div>
+                            )}
 
                             <div>
                                 <label className="block text-sm font-medium text-stone-600">Bukti Pembayaran</label>
