@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->role === self::ROLE_OWNER;
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN || $this->role === self::ROLE_OWNER;
+    }
+
     public function isStaff(): bool
     {
         return $this->role === self::ROLE_STAFF;
@@ -54,3 +59,4 @@ class User extends Authenticatable
     {
         return $this->isAdmin();
     }
+}

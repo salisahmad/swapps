@@ -112,7 +112,9 @@ export default function Index({ events, filters }: PageProps) {
                                 </span>
                             </div>
                             <div className="mt-3 flex items-center justify-between">
-                                <span className="badge-pink">{event.order_type_name}</span>
+                                <span className={`badge ${event.order_type_name === 'MUA' ? 'bg-rose-100 text-rose-700' : 'bg-violet-100 text-violet-700'}`}>
+                                    {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
+                                </span>
                                 <p className="text-lg font-bold text-rose-500">{formatRupiah(event.total_amount)}</p>
                             </div>
                         </Link>
@@ -134,6 +136,7 @@ export default function Index({ events, filters }: PageProps) {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Client</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Tanggal</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Telepon</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Jenis</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Total</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Aksi</th>
@@ -144,10 +147,14 @@ export default function Index({ events, filters }: PageProps) {
                                     <tr key={event.id} className="transition hover:bg-stone-50">
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-stone-800">{event.name}</p>
-                                            <p className="text-xs text-stone-400">{event.order_type_name}</p>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-stone-600">{event.date} {event.time ? `· ${event.time}` : ''}</td>
                                         <td className="px-4 py-3 text-sm text-stone-600">{event.mobile_phone}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`badge ${event.order_type_name === 'MUA' ? 'badge-rose' : 'badge-violet'}`}>
+                                                {event.order_type_name}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.total_amount)}</td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
@@ -161,7 +168,7 @@ export default function Index({ events, filters }: PageProps) {
                                 ))}
                                 {events.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-12 text-center text-stone-400">
+                                        <td colSpan={7} className="px-4 py-12 text-center text-stone-400">
                                             📭 Tidak ada event
                                         </td>
                                     </tr>

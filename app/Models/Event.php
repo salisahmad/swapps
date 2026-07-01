@@ -18,7 +18,7 @@ class Event extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'datetime:Y-m-d',
         'time' => 'datetime:H:i',
         'total_amount' => 'double',
         'order_type' => 'integer',

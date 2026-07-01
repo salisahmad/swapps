@@ -34,6 +34,7 @@ interface PageProps {
         role: number;
         is_admin: boolean;
     };
+}
 
 export default function Index({ payments, filters, stats, authUser }: PageProps) {
     const { data, setData, get, post } = useForm({

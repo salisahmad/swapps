@@ -121,7 +121,9 @@ export default function Show({ event }: PageProps) {
                     <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
                         {event.is_fully_paid ? '✅ LUNAS' : '⏳ BELUM LUNAS'}
                     </span>
-                    <span className="badge-pink">{event.order_type_name}</span>
+                    <span className={`badge ${event.order_type_name === 'MUA' ? 'bg-rose-100 text-rose-700' : 'bg-violet-100 text-violet-700'}`}>
+                        {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
+                    </span>
                     <span className="badge-blue">{event.date}</span>
                 </div>
 

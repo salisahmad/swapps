@@ -123,6 +123,17 @@ class DashboardController extends Controller
             ->take(5)
             ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
 
+        // Client lists for dashboard
+        $todayClients = Event::whereDate('created_at', $today)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
+
+        $nextYearClients = Event::whereBetween('date', [$startOfNextYear, $endOfNextYear])
+            ->orderBy('date')
+            ->take(5)
+            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
+
         return Inertia::render('Dashboard', [
             'stats' => [
                 'total_events' => $totalEvents,

@@ -26,6 +26,8 @@ export default function Authenticated({
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
     const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
+
+    return (
         <div className="min-h-screen bg-[#faf9f7] pb-20 sm:pb-0">
             {/* Top Bar - Mobile optimized */}
             <nav className="sticky top-0 z-40 border-b border-stone-100 bg-white/80 backdrop-blur-lg safe-top">
