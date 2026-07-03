@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Event;
+use App\Models\ClientEvent;
 use App\Models\Schedule;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -36,7 +36,7 @@ class ScheduleController extends Controller
         $schedules = $query->paginate(15)->withQueryString();
 
         // Get upcoming events for dropdown
-        $events = Event::whereDate('date', '>=', Carbon::today())
+        $events = ClientEvent::whereDate('date', '>=', Carbon::today())
             ->orderBy('date')
             ->get(['id', 'name', 'date']);
 

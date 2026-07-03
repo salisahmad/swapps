@@ -22,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        \App\Models\Event::observe(\App\Observers\EventObserver::class);
+        // Observer for Client model will be added later if needed
         \App\Models\Payment::observe(\App\Observers\PaymentObserver::class);
         \App\Models\Schedule::observe(\App\Observers\ScheduleObserver::class);
     }

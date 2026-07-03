@@ -22,7 +22,7 @@ class Schedule extends Model
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(Event::class)->withTrashed();
+        return $this->belongsTo(ClientEvent::class)->withTrashed();
     }
 
     public function creator(): BelongsTo

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Event;
+use App\Models\ClientEvent;
 use App\Models\Payment;
 use App\Models\Schedule;
 use Carbon\Carbon;
@@ -30,7 +30,7 @@ class DashboardController extends Controller
             ->sum('amount');
 
         // ===== 2. Total Client Tahun Lalu =====
-        $lastYearTotalEvents = Event::whereBetween('created_at', [$startOfLastYear, $endOfLastYear])->count();
+        $lastYearTotalEvents = ClientEvent::whereBetween('created_at', [$startOfLastYear, $endOfLastYear])->count();
 
         // ===== 3. Omset Tahun Ini =====
         $thisYearEarnings = Payment::where('is_expense', Payment::EARNING)
@@ -39,7 +39,7 @@ class DashboardController extends Controller
             ->sum('amount');
 
         // ===== 4. Total Client Tahun Ini =====
-        $thisYearTotalEvents = Event::whereBetween('created_at', [$startOfYear, $endOfYear])->count();
+        $thisYearTotalEvents = ClientEvent::whereBetween('created_at', [$startOfYear, $endOfYear])->count();
 
         // ===== 5. Omset Bulan Ini =====
         $thisMonthEarnings = Payment::where('is_expense', Payment::EARNING)
@@ -48,14 +48,14 @@ class DashboardController extends Controller
             ->sum('amount');
 
         // ===== 6. Total Client Bulan Ini =====
-        $thisMonthTotalEvents = Event::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
+        $thisMonthTotalEvents = ClientEvent::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
 
         // ===== 7. Total Client Tahun Depan =====
-        $nextYearTotalEvents = Event::whereBetween('date', [$startOfNextYear, $endOfNextYear])->count();
+        $nextYearTotalEvents = ClientEvent::whereBetween('date', [$startOfNextYear, $endOfNextYear])->count();
 
         // ===== 8. Hutang (DP events yang belum terlaksana) =====
         // Events with date >= today (future or today) that are not fully paid
-        $hutangEvents = Event::where('date', '>=', $today)
+        $hutangEvents = ClientEvent::where('date', '>=', $today)
             ->where('is_fully_paid', false)
             ->get();
         $hutangAmount = 0;
@@ -69,15 +69,15 @@ class DashboardController extends Controller
         $hutangCount = $hutangEvents->count();
 
         // ===== 9. Closing Event Hari Ini =====
-        $closingToday = Event::whereDate('created_at', $today)->count();
+        $closingToday = ClientEvent::whereDate('created_at', $today)->count();
 
         // ===== 10. Closing Event Kemarin =====
-        $closingYesterday = Event::whereDate('created_at', $today->copy()->subDay())->count();
+        $closingYesterday = ClientEvent::whereDate('created_at', $today->copy()->subDay())->count();
 
         // Existing stats (keep for reference)
-        $totalEvents = Event::count();
-        $unpaidEvents = Event::where('is_fully_paid', false)->count();
-        $totalUnpaidAmount = Event::where('is_fully_paid', false)->sum('total_amount');
+        $totalEvents = ClientEvent::count();
+        $unpaidEvents = ClientEvent::where('is_fully_paid', false)->count();
+        $totalUnpaidAmount = ClientEvent::where('is_fully_paid', false)->sum('total_amount');
 
         $expenses = Payment::where('is_expense', Payment::EXPENSE)
             ->where('status', Payment::STATUS_CONFIRMED)
@@ -87,7 +87,7 @@ class DashboardController extends Controller
         $profit = $thisMonthEarnings - $expenses;
 
         // Events hari ini
-        $todayEvents = Event::whereDate('date', $today)
+        $todayEvents = ClientEvent::whereDate('date', $today)
             ->with(['payments' => function ($q) {
                 $q->where('is_expense', Payment::EARNING)->where('status', Payment::STATUS_CONFIRMED);
             }])
@@ -100,36 +100,36 @@ class DashboardController extends Controller
             ->get();
 
         // Upcoming events (7 hari)
-        $upcomingEvents = Event::whereBetween('date', [$today, $today->copy()->addDays(7)])
+        $upcomingEvents = ClientEvent::whereBetween('date', [$today, $today->copy()->addDays(7)])
             ->orderBy('date')
             ->take(5)
             ->get();
 
         // Unpaid events list
-        $unpaidEventsList = Event::where('is_fully_paid', false)
+        $unpaidEventsList = ClientEvent::where('is_fully_paid', false)
             ->with('payments')
             ->orderBy('date')
             ->take(5)
             ->get();
 
         // Closing lists
-        $closingTodayList = Event::whereDate('created_at', $today)
+        $closingTodayList = ClientEvent::whereDate('created_at', $today)
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
 
-        $closingYesterdayList = Event::whereDate('created_at', $today->copy()->subDay())
+        $closingYesterdayList = ClientEvent::whereDate('created_at', $today->copy()->subDay())
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
 
         // Client lists for dashboard
-        $todayClients = Event::whereDate('created_at', $today)
+        $todayClients = ClientEvent::whereDate('created_at', $today)
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
 
-        $nextYearClients = Event::whereBetween('date', [$startOfNextYear, $endOfNextYear])
+        $nextYearClients = ClientEvent::whereBetween('date', [$startOfNextYear, $endOfNextYear])
             ->orderBy('date')
             ->take(5)
             ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);

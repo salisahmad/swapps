@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\TelegramSetting;
 use Illuminate\Support\Facades\Http;
+use App\Models\ClientEvent; // Corrected model usage
 
 class TelegramNotification
 {
@@ -45,7 +46,7 @@ class TelegramNotification
         }
     }
 
-    public function notifyNewEvent(\App\Models\Event $event): bool
+    public function notifyNewEvent(ClientEvent $event): bool
     {
         $settings = TelegramSetting::getInstance();
         if (!$settings?->notify_new_event) return false;

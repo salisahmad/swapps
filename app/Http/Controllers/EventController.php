@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Event;
+use App\Models\Client;
 use App\Models\Item;
 use App\Models\Payment;
 use App\Models\Schedule;
@@ -10,12 +10,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Carbon\Carbon;
 
 class EventController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Event::query();
+        $query = Client::query();
 
         // Search
         if ($request->filled('q')) {
@@ -36,22 +37,22 @@ class EventController extends Controller
             $query->where('is_fully_paid', $request->paid === '1');
         }
 
-        // Order type
+        // Filter by order type (MUA/Sewa Gaun)
         if ($request->filled('order_type')) {
             $query->where('order_type', $request->order_type);
         }
 
-        $events = $query->latest()->paginate(15)->withQueryString();
+        $clients = $query->latest()->paginate(15)->withQueryString();
 
-        return Inertia::render('Events/Index', [
-            'events' => $events,
+        return Inertia::render('Clients/Index', [
+            'clients' => $clients,
             'filters' => $request->only(['q', 'date_from', 'date_to', 'paid', 'order_type']),
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('Events/Create', [
+        return Inertia::render('Clients/Create', [
             'items' => Item::where('is_sold', false)->get(),
         ]);
     }
@@ -61,7 +62,7 @@ class EventController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'mobile_phone' => 'required|string|max:20',
-            'date' => 'required|date',
+            'date' => 'required|date|after_or_equal:tomorrow', // Restrict date to tomorrow or later
             'time' => 'nullable',
             'address' => 'nullable|string',
             'location' => 'nullable|string',
@@ -70,25 +71,26 @@ class EventController extends Controller
             'order_type' => 'required|integer|in:1,2',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
+            'down_payment' => 'required|numeric|min:0', // New required field for DP
         ]);
 
-        $event = Event::create([
+        $client = Client::create([
             ...$validated,
             'uuid' => (string) Str::uuid(),
             'created_by' => auth()->id(),
         ]);
 
         if (!empty($validated['item_ids'])) {
-            $event->items()->attach($validated['item_ids']);
+            $client->items()->attach($validated['item_ids']);
         }
 
-        return redirect()->route('events.index')->with('success', 'Event berhasil dibuat.');
+        return redirect()->route('clients.index')->with('success', 'Client berhasil dibuat.');
     }
 
-    public function show(Event $event): Response
+    public function show(Client $client): Response
     {
-        return Inertia::render('Events/Show', [
-            'event' => $event->load([
+        return Inertia::render('Clients/Show', [
+            'client' => $client->load([
                 'items.type',
                 'schedules',
                 'payments' => function ($q) {
@@ -98,22 +100,22 @@ class EventController extends Controller
         ]);
     }
 
-    public function edit(Event $event): Response
+    public function edit(Client $client): Response
     {
-        return Inertia::render('Events/Edit', [
-            'event' => $event->load('items'),
-            'items' => Item::where('is_sold', false)->orWhereHas('events', function ($q) use ($event) {
-                $q->where('event_id', $event->id);
+        return Inertia::render('Clients/Edit', [
+            'client' => $client->load('items'),
+            'items' => Item::where('is_sold', false)->orWhereHas('clients', function ($q) use ($client) {
+                $q->where('client_id', $client->id);
             })->get(),
         ]);
     }
 
-    public function update(Request $request, Event $event)
+    public function update(Request $request, Client $client)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'mobile_phone' => 'required|string|max:20',
-            'date' => 'required|date',
+            'date' => 'required|date|after_or_equal:tomorrow', // Restrict date to tomorrow or later
             'time' => 'nullable',
             'address' => 'nullable|string',
             'location' => 'nullable|string',
@@ -122,20 +124,21 @@ class EventController extends Controller
             'order_type' => 'required|integer|in:1,2',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
+            'down_payment' => 'required|numeric|min:0', // New required field for DP
         ]);
 
-        $event->update($validated);
+        $client->update($validated);
 
         if (isset($validated['item_ids'])) {
-            $event->items()->sync($validated['item_ids']);
+            $client->items()->sync($validated['item_ids']);
         }
 
-        return redirect()->route('events.index')->with('success', 'Event berhasil diupdate.');
+        return redirect()->route('clients.index')->with('success', 'Client berhasil diupdate.');
     }
 
-    public function destroy(Event $event)
+    public function destroy(Client $client)
     {
-        $event->delete();
-        return redirect()->route('events.index')->with('success', 'Event berhasil dihapus.');
+        $client->delete();
+        return redirect()->route('clients.index')->with('success', 'Client berhasil dihapus.');
     }
 }
