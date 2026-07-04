@@ -6,6 +6,17 @@ import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler } from 'react';
 
+interface ProfilePageProps {
+    [key: string]: unknown;
+    auth: {
+        user: {
+            name: string;
+            email: string;
+            email_verified_at: string | null;
+        };
+    };
+}
+
 export default function UpdateProfileInformation({
     mustVerifyEmail,
     status,
@@ -15,7 +26,7 @@ export default function UpdateProfileInformation({
     status?: string;
     className?: string;
 }) {
-    const user = usePage().props.auth.user;
+    const user = usePage<ProfilePageProps>().props.auth.user;
 
     const { data, setData, patch, errors, processing, recentlySuccessful } =
         useForm({

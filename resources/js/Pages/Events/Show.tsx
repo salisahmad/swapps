@@ -33,8 +33,33 @@ interface PaymentItem {
     status_name: string;
 }
 
+interface EventPhoto {
+    id: number;
+    path: string;
+    url: string;
+    original_name: string | null;
+}
+
+interface EventAdditionalCost {
+    id: number;
+    type: string;
+    total: number;
+    notes: string | null;
+}
+
+interface ClientActivityLog {
+    id: number;
+    type: string;
+    message: string;
+    before: Record<string, unknown> | null;
+    after: Record<string, unknown> | null;
+    created_at: string;
+    user: { id: number; name: string } | null;
+}
+
 interface Event {
     id: number;
+    uuid: string;
     name: string;
     mobile_phone: string;
     date: string;
@@ -43,19 +68,32 @@ interface Event {
     location: string | null;
     package_description: string | null;
     total_amount: number;
+    discount_amount: number;
+    additional_cost_total: number;
+    grand_total: number;
     is_fully_paid: boolean;
     order_type_name: string;
     items: Item[];
     schedules: Schedule[];
     payments: PaymentItem[];
+    photos: EventPhoto[];
+    additional_costs: EventAdditionalCost[];
+    activity_logs?: ClientActivityLog[];
 }
 
 interface PageProps {
     event: Event;
+    authUser: {
+        id: number;
+        role: number;
+        is_admin: boolean;
+    };
 }
 
-export default function Show({ event }: PageProps) {
+export default function Show({ event, authUser }: PageProps) {
     const [activeTab, setActiveTab] = useState<'info' | 'payment' | 'schedule'>('info');
+    const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+    const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 
     const totalPaid = event.payments
@@ -64,14 +102,106 @@ export default function Show({ event }: PageProps) {
     const totalExpense = event.payments
         .filter((p) => p.is_expense === 1 && p.status === 1)
         .reduce((sum, p) => sum + p.amount, 0);
-    const remaining = event.total_amount - totalPaid;
+    const remaining = event.grand_total - totalPaid;
+    const orderTheme = event.order_type_name === 'MUA'
+        ? {
+            badge: 'bg-rose-100 text-rose-700 border border-rose-200',
+            accent: 'border-rose-300',
+            tab: 'bg-rose-400',
+            link: 'text-rose-500 hover:underline',
+        }
+        : {
+            badge: 'bg-violet-100 text-violet-700 border border-violet-200',
+            accent: 'border-violet-300',
+            tab: 'bg-violet-500',
+            link: 'text-violet-600 hover:underline',
+        };
 
-    const { delete: destroy, processing: deleteProcessing } = useForm();
+    const { delete: destroy, post, processing: deleteProcessing } = useForm();
+    const {
+        data: photoData,
+        setData: setPhotoData,
+        post: uploadPhotos,
+        delete: deletePhoto,
+        processing: photoProcessing,
+        reset: resetPhotoForm,
+        errors: photoErrors,
+    } = useForm({
+        photos: [] as File[],
+    });
 
     const handleDelete = () => {
-        if (confirm('Yakin hapus event ini?')) {
-            destroy(route('events.destroy', event.id));
+        const message = authUser.is_admin
+            ? 'Yakin hapus client ini?'
+            : 'Staff tidak bisa langsung menghapus client. Kirim permintaan hapus ke admin?';
+
+        if (confirm(message)) {
+            destroy(route('events.destroy', event.uuid));
         }
+    };
+
+    const handleApproveDelete = () => {
+        if (confirm('Setujui request hapus dan hapus client ini?')) {
+            post(route('events.approve-delete', event.uuid));
+        }
+    };
+
+    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        setPhotoData('photos', files);
+        setPhotoPreviews(files.map((file) => URL.createObjectURL(file)));
+    };
+
+    const submitPhotos = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (photoData.photos.length === 0) {
+            alert('Pilih foto dulu.');
+            return;
+        }
+
+        uploadPhotos(route('events.photos.store', event.uuid), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                resetPhotoForm('photos');
+                setPhotoPreviews([]);
+            },
+        });
+    };
+
+    const handleDeletePhoto = (photo: EventPhoto) => {
+        if (confirm('Hapus foto ini?')) {
+            deletePhoto(route('events.photos.destroy', [event.uuid, photo.id]), {
+                preserveScroll: true,
+            });
+        }
+    };
+
+    const logTypeClass = (type: string) => {
+        if (type === 'delete_requested' || type === 'delete_approved' || type === 'deleted') return 'bg-red-100 text-red-700';
+        if (type === 'payment_changed') return 'bg-emerald-100 text-emerald-700';
+        if (type === 'total_changed') return 'bg-amber-100 text-amber-700';
+        if (type === 'date_changed') return 'bg-blue-100 text-blue-700';
+        return 'bg-stone-100 text-stone-700';
+    };
+
+    const logTypeLabel = (type: string) => ({
+        created: 'Input Client',
+        total_changed: 'Total Harga',
+        date_changed: 'Tanggal',
+        payment_changed: 'Pembayaran',
+        delete_requested: 'Minta Hapus',
+        deleted: 'Dihapus',
+        delete_approved: 'Hapus Disetujui',
+    }[type] || type);
+
+    const formatLogValue = (value: Record<string, unknown> | null) => {
+        if (!value || Object.keys(value).length === 0) return '';
+
+        return Object.entries(value)
+            .map(([key, item]) => `${key}: ${String(item ?? '-')}`)
+            .join(', ');
     };
 
     return (
@@ -80,10 +210,10 @@ export default function Show({ event }: PageProps) {
                 <div className="flex items-center justify-between">
                     <h2 className="page-title">{event.name}</h2>
                     <div className="flex items-center gap-2">
-                        <Link href={route('dynamic-forms.edit', event.id)} className="btn-primary text-sm py-2 px-3">
+                        <Link href={route('dynamic-forms.show', event.uuid)} className="btn-primary text-sm py-2 px-3">
                             📝 Berita Acara
                         </Link>
-                        <Link href={route('events.edit', event.id)} className="btn-secondary text-sm py-2 px-3">
+                        <Link href={route('events.edit', event.uuid)} className="btn-secondary text-sm py-2 px-3">
                             Edit
                         </Link>
                         <button onClick={handleDelete} disabled={deleteProcessing} className="btn-danger text-sm py-2 px-3">
@@ -93,14 +223,15 @@ export default function Show({ event }: PageProps) {
                 </div>
             }
         >
-            <Head title={`Event - ${event.name}`} />
+            <Head title={`Client - ${event.name}`} />
 
             <div className="space-y-4">
                 {/* Summary Cards */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div className="stat-card border-l-4 border-rose-300">
-                        <p className="text-xs text-stone-400">Total</p>
-                        <p className="text-lg font-bold text-stone-800">{formatRupiah(event.total_amount)}</p>
+                    <div className={`stat-card border-l-4 ${orderTheme.accent}`}>
+                        <p className="text-xs text-stone-400">Grand Total</p>
+                        <p className="text-lg font-bold text-stone-800">{formatRupiah(event.grand_total)}</p>
+                        <p className="text-xs text-stone-400">Base {formatRupiah(event.total_amount)}</p>
                     </div>
                     <div className="stat-card border-l-4 border-emerald-300">
                         <p className="text-xs text-stone-400">Dibayar</p>
@@ -121,7 +252,7 @@ export default function Show({ event }: PageProps) {
                     <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
                         {event.is_fully_paid ? '✅ LUNAS' : '⏳ BELUM LUNAS'}
                     </span>
-                    <span className={`badge ${event.order_type_name === 'MUA' ? 'bg-rose-100 text-rose-700' : 'bg-violet-100 text-violet-700'}`}>
+                    <span className={`badge ${orderTheme.badge}`}>
                         {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
                     </span>
                     <span className="badge-blue">{event.date}</span>
@@ -135,7 +266,7 @@ export default function Show({ event }: PageProps) {
                             onClick={() => setActiveTab(tab)}
                             className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition ${
                                 activeTab === tab
-                                    ? 'bg-rose-400 text-white shadow-sm'
+                                    ? `${orderTheme.tab} text-white shadow-sm`
                                     : 'text-stone-500 hover:bg-stone-50'
                             }`}
                         >
@@ -153,7 +284,7 @@ export default function Show({ event }: PageProps) {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <p className="text-xs text-stone-400">📱 Telepon</p>
-                                    <a href={`https://wa.me/${event.mobile_phone}`} className="text-sm font-medium text-rose-500 hover:underline" target="_blank">
+                                    <a href={`https://wa.me/${event.mobile_phone}`} className={`text-sm font-medium ${orderTheme.link}`} target="_blank">
                                         {event.mobile_phone} ↗
                                     </a>
                                 </div>
@@ -171,7 +302,7 @@ export default function Show({ event }: PageProps) {
                             {event.location && (
                                 <div>
                                     <p className="text-xs text-stone-400">📍 Lokasi</p>
-                                    <a href={event.location} target="_blank" className="text-sm text-rose-500 hover:underline break-all">
+                                    <a href={event.location} target="_blank" className={`text-sm break-all ${orderTheme.link}`}>
                                         {event.location} ↗
                                     </a>
                                 </div>
@@ -182,6 +313,37 @@ export default function Show({ event }: PageProps) {
                                     <p className="text-sm text-stone-700">{event.package_description}</p>
                                 </div>
                             )}
+                            <div className="rounded-xl border border-stone-100 bg-stone-50 p-4">
+                                <p className="mb-3 text-sm font-semibold text-stone-800">Ringkasan Harga</p>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between gap-4">
+                                        <span className="text-stone-500">Total Harga</span>
+                                        <span className="font-semibold text-stone-800">{formatRupiah(event.total_amount)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                        <span className="text-stone-500">Biaya Tambahan</span>
+                                        <span className="font-semibold text-stone-800">{formatRupiah(event.additional_cost_total)}</span>
+                                    </div>
+                                    {event.additional_costs.length > 0 && (
+                                        <div className="space-y-1 rounded-lg bg-white p-3">
+                                            {event.additional_costs.map((cost) => (
+                                                <div key={cost.id} className="flex justify-between gap-3 text-xs text-stone-600">
+                                                    <span>{cost.type}{cost.notes ? ` - ${cost.notes}` : ''}</span>
+                                                    <span className="font-semibold">{formatRupiah(cost.total)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between gap-4">
+                                        <span className="text-stone-500">Diskon</span>
+                                        <span className="font-semibold text-red-500">-{formatRupiah(event.discount_amount)}</span>
+                                    </div>
+                                    <div className="border-t border-stone-200 pt-2 flex justify-between gap-4">
+                                        <span className="font-semibold text-stone-800">Grand Total</span>
+                                        <span className="font-bold text-rose-500">{formatRupiah(event.grand_total)}</span>
+                                    </div>
+                                </div>
+                            </div>
                             {event.items.length > 0 && (
                                 <div>
                                     <p className="text-xs text-stone-400">👗 Item / Gaun</p>
@@ -194,6 +356,87 @@ export default function Show({ event }: PageProps) {
                                     </div>
                                 </div>
                             )}
+
+                            <div>
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-xs text-stone-400">📷 Foto Client</p>
+                                        <p className="text-sm text-stone-600">Upload beberapa foto sekaligus, lalu hapus foto yang tidak diperlukan.</p>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={submitPhotos} className="mb-4 rounded-xl border border-dashed border-stone-200 bg-stone-50 p-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <label className="flex cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-medium text-stone-600 shadow-sm transition hover:bg-stone-100">
+                                            Pilih Foto
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                onChange={handlePhotoChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                        <button
+                                            type="submit"
+                                            disabled={photoProcessing || photoData.photos.length === 0}
+                                            className="btn-primary px-4 py-3 text-sm disabled:opacity-50"
+                                        >
+                                            Upload Foto
+                                        </button>
+                                    </div>
+                                    {photoData.photos.length > 0 && (
+                                        <p className="mt-2 text-xs text-stone-500">{photoData.photos.length} foto dipilih</p>
+                                    )}
+                                    {(photoErrors.photos || photoErrors['photos.0']) && (
+                                        <p className="mt-2 text-sm text-red-500">{photoErrors.photos || photoErrors['photos.0']}</p>
+                                    )}
+                                    {photoPreviews.length > 0 && (
+                                        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                                            {photoPreviews.map((src, index) => (
+                                                <img
+                                                    key={`${src}-${index}`}
+                                                    src={src}
+                                                    alt={`Preview foto ${index + 1}`}
+                                                    className="aspect-square rounded-lg object-cover"
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </form>
+
+                                {event.photos.length === 0 ? (
+                                    <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-stone-400">
+                                        Belum ada foto client.
+                                    </p>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                                        {event.photos.map((photo) => (
+                                            <div key={photo.id} className="group relative overflow-hidden rounded-xl border border-stone-100 bg-white">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPreviewPhoto(photo.url)}
+                                                    className="block w-full"
+                                                >
+                                                    <img
+                                                        src={photo.url}
+                                                        alt={photo.original_name || 'Foto client'}
+                                                        className="aspect-square w-full object-cover transition group-hover:scale-105"
+                                                    />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeletePhoto(photo)}
+                                                    disabled={photoProcessing}
+                                                    className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-1 text-xs font-bold text-white shadow disabled:opacity-50"
+                                                >
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -223,9 +466,14 @@ export default function Show({ event }: PageProps) {
                                                 <p className="mt-1 text-sm text-stone-700">{p.description || '-'}</p>
                                                 <p className="text-xs text-stone-400">{p.payment_at} · {p.payment_type_name}</p>
                                             </div>
-                                            <p className={`text-lg font-bold shrink-0 ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                                {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}
-                                            </p>
+                                            <div className="shrink-0 text-right">
+                                                <p className={`text-lg font-bold ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                                                    {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}
+                                                </p>
+                                                <Link href={route('payments.edit', p.id)} className="text-xs font-semibold text-rose-500 hover:text-rose-600">
+                                                    Edit
+                                                </Link>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -259,6 +507,75 @@ export default function Show({ event }: PageProps) {
                         </div>
                     )}
                 </div>
+
+                {authUser.is_admin && (
+                    <div className="card-elevated p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="font-semibold text-stone-800">Log Aktivitas Client</h3>
+                            <span className="rounded bg-stone-100 px-2 py-1 text-xs font-semibold text-stone-500">Admin Only</span>
+                        </div>
+                        {!event.activity_logs || event.activity_logs.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-stone-400">Belum ada log aktivitas.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                {event.activity_logs.map((log) => (
+                                    <div key={log.id} className="rounded-lg border border-stone-100 bg-white p-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className={`rounded px-2 py-1 text-xs font-semibold ${logTypeClass(log.type)}`}>
+                                                    {logTypeLabel(log.type)}
+                                                </span>
+                                                <p className="text-sm font-medium text-stone-800">{log.message}</p>
+                                            </div>
+                                            <p className="text-xs text-stone-400">{log.created_at}</p>
+                                        </div>
+                                        <p className="mt-1 text-xs text-stone-500">
+                                            Oleh: {log.user?.name || 'System'}
+                                        </p>
+                                        {(log.before || log.after) && (
+                                            <div className="mt-2 grid gap-2 text-xs text-stone-500 sm:grid-cols-2">
+                                                {log.before && <p>Sebelum: {formatLogValue(log.before)}</p>}
+                                                {log.after && <p>Sesudah: {formatLogValue(log.after)}</p>}
+                                            </div>
+                                        )}
+                                        {log.type === 'delete_requested' && (
+                                            <div className="mt-3 flex justify-end">
+                                                <button
+                                                    onClick={handleApproveDelete}
+                                                    disabled={deleteProcessing}
+                                                    className="btn-danger text-xs py-2 px-3 disabled:opacity-50"
+                                                >
+                                                    Konfirmasi Hapus
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {previewPhoto && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+                        onClick={() => setPreviewPhoto(null)}
+                    >
+                        <button
+                            type="button"
+                            className="absolute right-4 top-4 rounded-full bg-white px-3 py-2 text-sm font-semibold text-stone-700"
+                            onClick={() => setPreviewPhoto(null)}
+                        >
+                            Tutup
+                        </button>
+                        <img
+                            src={previewPhoto}
+                            alt="Preview foto client"
+                            className="max-h-[85vh] max-w-full rounded-xl object-contain"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );

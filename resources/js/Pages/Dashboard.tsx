@@ -3,30 +3,37 @@ import { Head, Link } from '@inertiajs/react';
 
 interface Event {
     id: number;
+    uuid: string;
     name: string;
     date: string;
     time: string | null;
     location: string | null;
     total_amount: number;
+    grand_total: number;
     is_fully_paid: boolean;
     order_type_name: string;
 }
 
 interface Schedule {
     id: number;
+    type?: number | string;
     type_name: string;
     schedule_from: string;
     schedule_to: string | null;
     description: string | null;
-    event: { name: string };
+    event: { id: number; uuid: string; name: string; date: string; time: string | null };
 }
 
 interface ClientList {
     id: number;
+    uuid: string;
     name: string;
     date: string;
     total_amount: number;
+    grand_total: number;
     is_fully_paid: boolean;
+    order_type?: number | string;
+    order_type_name?: string;
 }
 
 interface Stats {
@@ -34,18 +41,26 @@ interface Stats {
     earnings: number;
     expenses: number;
     profit: number;
-    unpaid_events: number;
-    total_unpaid_amount: number;
+    overdue_unpaid_count: number;
+    overdue_unpaid_total: number;
     this_year_earnings: number;
     this_year_total_events: number;
     this_month_earnings: number;
     this_month_total_events: number;
-    next_year_total_events: number;
-    hutang_amount: number;
-    hutang_count: number;
     last_year_summary: {
         earnings: number;
         clients: number;
+    };
+    this_month_summary: {
+        earnings: number;
+        clients: number;
+        mua_clients: number;
+        gown_clients: number;
+    };
+    this_year_client_summary: {
+        total: number;
+        mua_clients: number;
+        gown_clients: number;
     };
 }
 
@@ -57,19 +72,20 @@ interface AuthUser {
 
 interface PageProps {
     stats: Stats;
-    todayEvents: Event[];
-    todaySchedules: Schedule[];
-    upcomingEvents: Event[];
-    unpaidEventsList: (Event & { payments: { amount: string }[] })[];
-    todayClients: ClientList[];
-    nextYearClients: ClientList[];
+    todayFittingSchedules: Schedule[];
+    nextFittingSchedules: Schedule[];
+    nextClients: Event[];
+    overdueUnpaidClients: (Event & { payments: { amount: string }[] })[];
     closingTodayList: ClientList[];
     closingYesterdayList: ClientList[];
     authUser: AuthUser;
 }
 
-export default function Dashboard({ stats, todayEvents, todaySchedules, upcomingEvents, unpaidEventsList, todayClients, nextYearClients, closingTodayList, closingYesterdayList, authUser }: PageProps) {
+export default function Dashboard({ stats, todayFittingSchedules, nextFittingSchedules, nextClients, overdueUnpaidClients, closingTodayList, closingYesterdayList, authUser }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const formatDate = (value: string | null) => value
+        ? new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '-';
 
     const StatCard = ({ title, value, sub, color, icon }: { title: string; value: string; sub?: string; color: string; icon: string }) => (
         <div className={`rounded-xl bg-white border border-stone-100 p-3 flex items-center gap-3 ${color}`}>
@@ -82,20 +98,118 @@ export default function Dashboard({ stats, todayEvents, todaySchedules, upcoming
         </div>
     );
 
-    const ClientRow = ({ client }: { client: ClientList }) => (
-        <Link href={route('events.show', client.id)} className="flex items-center justify-between rounded-xl bg-white border border-stone-100 p-3 transition active:scale-[0.98] hover:bg-stone-50">
+    const getClientTypeName = (client: { order_type?: number | string; order_type_name?: string }) => {
+        if (client.order_type_name === 'MUA' || client.order_type_name === 'Sewa Gaun') {
+            return client.order_type_name;
+        }
+
+        return String(client.order_type) === '2' ? 'Sewa Gaun' : 'MUA';
+    };
+
+    const getClientTypeStyle = (client: { order_type?: number | string; order_type_name?: string }) => {
+        const typeName = getClientTypeName(client);
+
+        return typeName === 'MUA'
+            ? { icon: '💄', className: 'bg-rose-50 text-rose-700 border border-rose-100' }
+            : { icon: '👗', className: 'bg-violet-50 text-violet-700 border border-violet-100' };
+    };
+
+    const ClientRow = ({ client }: { client: ClientList }) => {
+        const typeName = getClientTypeName(client);
+        const typeStyle = getClientTypeStyle(client);
+
+        return (
+        <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-white border border-stone-100 p-3 transition active:scale-[0.98] hover:bg-stone-50">
             <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ${typeStyle.className}`}>
+                        {typeStyle.icon} {typeName}
+                    </span>
+                </div>
                 <p className="text-xs text-stone-500">{client.date}</p>
             </div>
             <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-rose-500">{formatRupiah(client.total_amount)}</p>
+                <p className="text-sm font-bold text-rose-500">{formatRupiah(client.grand_total ?? client.total_amount)}</p>
                 <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${client.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {client.is_fully_paid ? 'LUNAS' : 'BELUM'}
                 </span>
             </div>
         </Link>
+        );
+    };
+
+    const getScheduleTypeName = (schedule: Schedule) => {
+        if (schedule.type_name === 'Fitting' || schedule.type_name === 'Konsultasi') {
+            return schedule.type_name;
+        }
+
+        return String(schedule.type) === '1' ? 'Fitting' : 'Konsultasi';
+    };
+
+    const getScheduleStyle = (schedule: Schedule) => {
+        const typeName = getScheduleTypeName(schedule);
+
+        return typeName === 'Fitting'
+            ? { icon: '👗', iconClass: 'bg-rose-100 text-rose-600', badgeClass: 'bg-rose-50 text-rose-700' }
+            : { icon: '💬', iconClass: 'bg-sky-100 text-sky-600', badgeClass: 'bg-sky-50 text-sky-700' };
+    };
+
+    const ScheduleRow = ({ schedule }: { schedule: Schedule }) => {
+        const typeName = getScheduleTypeName(schedule);
+        const style = getScheduleStyle(schedule);
+
+        return (
+        <Link href={route('events.show', schedule.event.uuid)} className="flex items-center gap-3 rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${style.iconClass}`}>{style.icon}</span>
+            <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-stone-800">
+                        {schedule.event.name} / {formatDate(schedule.event.date)}
+                    </p>
+                    <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ${style.badgeClass}`}>
+                        {typeName}
+                    </span>
+                </div>
+                <p className="text-xs text-stone-500">
+                    {formatDate(schedule.schedule_from)} / {schedule.event.time || '-'}
+                </p>
+            </div>
+        </Link>
+        );
+    };
+
+    const NextClientRow = ({ client }: { client: Event }) => (
+        <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+            <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
+                <p className="text-xs text-stone-500">
+                    {client.date} {client.time ? `· ${client.time}` : ''} · {client.location || 'Lokasi belum diisi'}
+                </p>
+            </div>
+            <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${client.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                {client.is_fully_paid ? 'LUNAS' : 'BELUM'}
+            </span>
+        </Link>
     );
+
+    const UnpaidClientRow = ({ client }: { client: Event & { payments: { amount: string }[] } }) => {
+        const paid = client.payments?.reduce((sum, payment) => sum + parseFloat(payment.amount), 0) ?? 0;
+        const remaining = Math.max(0, (client.grand_total ?? client.total_amount) - paid);
+
+        return (
+            <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+                <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
+                    <p className="text-xs text-stone-500">{client.date}</p>
+                </div>
+                <div className="text-right shrink-0">
+                    <p className="text-xs text-stone-500">Sisa</p>
+                    <p className="text-sm font-bold text-amber-600">{formatRupiah(remaining)}</p>
+                </div>
+            </Link>
+        );
+    };
 
     const SectionCard = ({ title, icon, count, children }: { title: string; icon: string; count?: number; children: React.ReactNode }) => (
         <div className="rounded-xl bg-white border border-stone-100 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
@@ -119,230 +233,79 @@ export default function Dashboard({ stats, todayEvents, todaySchedules, upcoming
                         <p className="text-sm text-stone-500">Dashboard</p>
                     </div>
                     {authUser.is_admin && (
-                        <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">+ Booking</Link>
+                        <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">+ Client</Link>
                     )}
                 </div>
 
-                {/* Stat Cards */}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                    <StatCard title="Omset Th. Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
-                    <StatCard title="Client Th. Ini" value={String(stats.this_year_total_events)} color="border-l-4 border-stone-300" icon="👥" />
-                    <StatCard title="Omset Bln. Ini" value={formatRupiah(stats.this_month_earnings)} color="border-l-4 border-emerald-300" icon="💰" />
-                    <StatCard title="Client Bln. Ini" value={String(stats.this_month_total_events)} color="border-l-4 border-stone-300" icon="👥" />
-                    <StatCard title="Hutang" value={formatRupiah(stats.hutang_amount)} sub={`${stats.hutang_count} event`} color="border-l-4 border-red-300" icon="💸" />
-                    <StatCard title="Client Th. Depan" value={String(stats.next_year_total_events)} color="border-l-4 border-violet-300" icon="🔮" />
-                    {/* Combined Last Year - smaller */}
-                    <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-amber-300">
-                        <p className="text-xs text-stone-500">Th. Lalu</p>
-                        <p className="text-sm font-bold text-stone-800">{formatRupiah(stats.last_year_summary.earnings)}</p>
-                        <p className="text-xs text-stone-500">{stats.last_year_summary.clients} client</p>
+                {authUser.is_admin && (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <StatCard title="Omset Th. Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-stone-300">
+                            <p className="text-xs text-stone-500">Client Th. Ini</p>
+                            <p className="text-lg font-bold text-stone-800">{stats.this_year_client_summary.total}</p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                                <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_year_client_summary.mua_clients}</span>
+                                <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_year_client_summary.gown_clients}</span>
+                            </div>
+                        </div>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-emerald-300">
+                            <p className="text-xs text-stone-500">Bln. Ini</p>
+                            <p className="text-sm font-bold text-stone-800">{formatRupiah(stats.this_month_summary.earnings)}</p>
+                            <p className="text-xs text-stone-500">{stats.this_month_summary.clients} client</p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                                <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_month_summary.mua_clients}</span>
+                                <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_month_summary.gown_clients}</span>
+                            </div>
+                        </div>
+                        <StatCard title="Client Belum Lunas" value={formatRupiah(stats.overdue_unpaid_total)} sub={`${stats.overdue_unpaid_count} client`} color="border-l-4 border-red-300" icon="💸" />
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-amber-300">
+                            <p className="text-xs text-stone-500">Th. Lalu</p>
+                            <p className="text-sm font-bold text-stone-800">{formatRupiah(stats.last_year_summary.earnings)}</p>
+                            <p className="text-xs text-stone-500">{stats.last_year_summary.clients} client</p>
+                        </div>
                     </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <SectionCard title="Closing Hari Ini" icon="🎯" count={closingTodayList.length}>
+                        {closingTodayList.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-stone-500">Tidak ada closing hari ini</p>
+                        ) : closingTodayList.map((client) => <ClientRow key={client.id} client={client} />)}
+                    </SectionCard>
+                    <SectionCard title="Closing Kemarin" icon="📊" count={closingYesterdayList.length}>
+                        {closingYesterdayList.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-stone-500">Tidak ada closing kemarin</p>
+                        ) : closingYesterdayList.map((client) => <ClientRow key={client.id} client={client} />)}
+                    </SectionCard>
                 </div>
 
-                {/* Admin View: Full Dashboard */}
-                {authUser.is_admin ? (
-                    <>
-                        {/* Two Column: Closing Today & Yesterday */}
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <SectionCard title="Closing Hari Ini" icon="🎯" count={closingTodayList.length}>
-                                {closingTodayList.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada closing hari ini</p>
-                                ) : closingTodayList.map((c) => <ClientRow key={c.id} client={c} />)}
-                            </SectionCard>
-                            <SectionCard title="Closing Kemarin" icon="📊" count={closingYesterdayList.length}>
-                                {closingYesterdayList.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada closing kemarin</p>
-                                ) : closingYesterdayList.map((c) => <ClientRow key={c.id} client={c} />)}
-                            </SectionCard>
-                        </div>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <SectionCard title="Jadwal Hari Ini" icon="📅" count={todayFittingSchedules.length}>
+                        {todayFittingSchedules.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-stone-500">Tidak ada jadwal hari ini</p>
+                        ) : todayFittingSchedules.map((schedule) => <ScheduleRow key={schedule.id} schedule={schedule} />)}
+                    </SectionCard>
+                    <SectionCard title="Jadwal Selanjutnya" icon="🗓️" count={nextFittingSchedules.length}>
+                        {nextFittingSchedules.length === 0 ? (
+                            <p className="py-4 text-center text-sm text-stone-500">Tidak ada jadwal selanjutnya</p>
+                        ) : nextFittingSchedules.map((schedule) => <ScheduleRow key={schedule.id} schedule={schedule} />)}
+                    </SectionCard>
+                </div>
 
-                        {/* Two Column: Client Hari Ini & Th. Depan */}
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <SectionCard title="Client Baru Hari Ini" icon="🎯" count={todayClients.length}>
-                                {todayClients.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada client baru hari ini</p>
-                                ) : todayClients.map((c) => <ClientRow key={c.id} client={c} />)}
-                            </SectionCard>
-                            <SectionCard title="Client Th. Depan" icon="🔮" count={nextYearClients.length}>
-                                {nextYearClients.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Belum ada booking tahun depan</p>
-                                ) : nextYearClients.map((c) => <ClientRow key={c.id} client={c} />)}
-                            </SectionCard>
-                        </div>
+                <SectionCard title="Jadwal Client Selanjutnya" icon="🔮" count={nextClients.length}>
+                    {nextClients.length === 0 ? (
+                        <p className="py-4 text-center text-sm text-stone-500">Belum ada client selanjutnya</p>
+                    ) : nextClients.map((client) => <NextClientRow key={client.id} client={client} />)}
+                </SectionCard>
 
-                        {/* Two Column: Event Hari Ini & Jadwal */}
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <SectionCard title="Event Hari Ini" icon="📅" count={todayEvents.length}>
-                                {todayEvents.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada event hari ini</p>
-                                ) : todayEvents.map((e) => (
-                                    <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
-                                            <p className="text-xs text-stone-500">{e.time || '--:--'} · {e.location || 'Lokasi belum diisi'}</p>
-                                        </div>
-                                        <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${e.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {e.is_fully_paid ? 'LUNAS' : 'BELUM'}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </SectionCard>
-                            <SectionCard title="Jadwal Hari Ini" icon="⏰" count={todaySchedules.length}>
-                                {todaySchedules.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada jadwal</p>
-                                ) : todaySchedules.map((s) => (
-                                    <div key={s.id} className="flex items-center gap-3 rounded-xl bg-stone-50 p-3">
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-lg">👗</span>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{s.event.name}</p>
-                                            <p className="text-xs text-stone-500">{s.type_name} · {s.schedule_from ? new Date(s.schedule_from).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </SectionCard>
-                        </div>
-
-                        {/* Event Mendatang */}
-                        <SectionCard title="Event Mendatang" icon="🔮" count={upcomingEvents.length}>
-                            {upcomingEvents.length === 0 ? (
-                                <p className="py-4 text-center text-sm text-stone-500">Tidak ada event mendatang</p>
-                            ) : (
-                                <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory">
-                                    {upcomingEvents.map((e) => (
-                                        <Link key={e.id} href={route('events.show', e.id)} className="snap-start w-60 shrink-0 rounded-xl border border-stone-100 bg-stone-50 p-4 transition active:scale-95 hover:bg-stone-100">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-semibold text-stone-800">{e.name}</p>
-                                                <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${e.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                    {e.is_fully_paid ? 'LUNAS' : 'BELUM'}
-                                                </span>
-                                            </div>
-                                            <p className="mt-1 text-xs text-stone-500">{e.date} · {e.order_type_name}</p>
-                                            <p className="mt-2 text-sm font-bold text-rose-500">{formatRupiah(e.total_amount)}</p>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </SectionCard>
-
-                        {/* Client Belum Lunas */}
-                        <SectionCard title="Belum Lunas" icon="⏳" count={stats.unpaid_events}>
-                            {unpaidEventsList.length === 0 ? (
-                                <p className="py-4 text-center text-sm text-stone-500">🎉 Semua client sudah lunas!</p>
-                            ) : unpaidEventsList.map((e) => {
-                                const paid = e.payments?.reduce((s, p) => s + parseFloat(p.amount), 0) ?? 0;
-                                const remaining = e.total_amount - paid;
-                                return (
-                                    <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
-                                            <p className="text-xs text-stone-500">{e.date}</p>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-xs text-stone-500">Sisa</p>
-                                            <p className="text-sm font-bold text-amber-600">{formatRupiah(remaining)}</p>
-                                        </div>
-                                    </Link>
-                                );
-                            })}
-                        </SectionCard>
-                    </>
-                ) : (
-                    /* Staff View: Limited Dashboard */
-                    <>
-                        <SectionCard title="Client Belum Lunas" icon="⏳" count={unpaidEventsList.length}>
-                            {unpaidEventsList.length === 0 ? (
-                                <p className="py-4 text-center text-sm text-stone-500">🎉 Semua client sudah lunas!</p>
-                            ) : unpaidEventsList.slice(0, 5).map((e) => {
-                                const paid = e.payments?.reduce((s, p) => s + parseFloat(p.amount), 0) ?? 0;
-                                const remaining = e.total_amount - paid;
-                                return (
-                                    <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
-                                            <p className="text-xs text-stone-500">{e.date}</p>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-xs text-stone-500">Sisa</p>
-                                            <p className="text-sm font-bold text-amber-600">{formatRupiah(remaining)}</p>
-                                        </div>
-                                    </Link>
-                                );
-                            })}
-                        </SectionCard>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <SectionCard title="Event Hari Ini" icon="📅" count={todayEvents.length}>
-                                {todayEvents.length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada event hari ini</p>
-                                ) : todayEvents.map((e) => (
-                                    <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
-                                            <p className="text-xs text-stone-500">{e.time || '--:--'} · {e.location || 'Lokasi belum diisi'}</p>
-                                        </div>
-                                        <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${e.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {e.is_fully_paid ? 'LUNAS' : 'BELUM'}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </SectionCard>
-                            <SectionCard title="Event Besok" icon="📅" count={upcomingEvents.filter((e) => e.date === new Date().toISOString().split('T')[0]).length}>
-                                {upcomingEvents.filter((e) => {
-                                    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); return e.date === tomorrow.toISOString().split('T')[0];
-                                }).length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada event besok</p>
-                                ) : upcomingEvents.filter((e) => {
-                                    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); return e.date === tomorrow.toISOString().split('T')[0];
-                                }).map((e) => (
-                                    <Link key={e.id} href={route('events.show', e.id)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{e.name}</p>
-                                            <p className="text-xs text-stone-500">{e.time || '--:--'} · {e.location || 'Lokasi belum diisi'}</p>
-                                        </div>
-                                        <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${e.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                            {e.is_fully_paid ? 'LUNAS' : 'BELUM'}
-                                        </span>
-                                    </Link>
-                                ))}
-                            </SectionCard>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                            <SectionCard title="Kunjungan Gallery Hari Ini" icon="👗" count={todaySchedules.filter((s) => s.type_name === 'Fitting').length}>
-                                {todaySchedules.filter((s) => s.type_name === 'Fitting').length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada kunjungan hari ini</p>
-                                ) : todaySchedules.filter((s) => s.type_name === 'Fitting').map((s) => (
-                                    <div key={s.id} className="flex items-center gap-3 rounded-xl bg-stone-50 p-3">
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-lg">👗</span>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{s.event.name}</p>
-                                            <p className="text-xs text-stone-500">{s.type_name} · {s.schedule_from ? new Date(s.schedule_from).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </SectionCard>
-                            <SectionCard title="Kunjungan Gallery Besok" icon="👗" count={todaySchedules.filter((s) => s.type_name === 'Fitting').length}>
-                                {todaySchedules.filter((s) => s.type_name === 'Fitting').length === 0 ? (
-                                    <p className="py-4 text-center text-sm text-stone-500">Tidak ada kunjungan besok</p>
-                                ) : todaySchedules.filter((s) => s.type_name === 'Fitting').map((s) => (
-                                    <div key={s.id} className="flex items-center gap-3 rounded-xl bg-stone-50 p-3">
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-lg">👗</span>
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-stone-800">{s.event.name}</p>
-                                            <p className="text-xs text-stone-500">{s.type_name} · {s.schedule_from ? new Date(s.schedule_from).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : ''}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </SectionCard>
-                        </div>
-
-                        <SectionCard title="Closing Hari Ini" icon="🎯" count={closingTodayList.length}>
-                            {closingTodayList.length === 0 ? (
-                                <p className="py-4 text-center text-sm text-stone-500">Tidak ada closing hari ini</p>
-                            ) : closingTodayList.map((c) => <ClientRow key={c.id} client={c} />)}
-                        </SectionCard>
-                    </>
-                )}
+                <SectionCard title="Client Belum Lunas" icon="⏳" count={stats.overdue_unpaid_count}>
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-700">
+                        Total sisa: {formatRupiah(stats.overdue_unpaid_total)}
+                    </div>
+                    {overdueUnpaidClients.length === 0 ? (
+                        <p className="py-4 text-center text-sm text-stone-500">Tidak ada client belum lunas.</p>
+                    ) : overdueUnpaidClients.map((client) => <UnpaidClientRow key={client.id} client={client} />)}
+                </SectionCard>
             </div>
         </AuthenticatedLayout>
     );

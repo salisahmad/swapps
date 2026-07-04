@@ -1,8 +1,11 @@
 <?php
 
-use App\Models\Client;
-use Illuminate\Database\Seeder;
+namespace Database\Seeders;
+
+use App\Models\Event;
 use Faker\Factory;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ClientSeeder extends Seeder
 {
@@ -26,10 +29,12 @@ class ClientSeeder extends Seeder
                 'total_amount' => $faker->randomFloat(2, 50000, 1500000), // Random amount between 50k and 1.5M
                 'order_type' => $i % 2 === 0 ? 2 : 1, // Alternate order types (1 or 2)
                 'is_fully_paid' => $i % 3 !== 0, // Make some unpaid
-                // UUID and created_by will be handled by the model/database defaults
+                'uuid' => (string) Str::uuid(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
         }
 
-        Client::insert($data);
+        Event::insert($data);
     }
 }

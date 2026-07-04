@@ -2,12 +2,41 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useState } from 'react';
+
+interface AuthenticatedPageProps {
+    [key: string]: unknown;
+    auth: {
+        user: {
+            name: string;
+            role: number;
+        };
+    };
+    notifications: {
+        count: number;
+        items: {
+            id: number | string;
+            key: string;
+            type: string;
+            label: string;
+            message: string;
+            created_at: string | null;
+            read: boolean;
+            event: {
+                id: number;
+                uuid: string;
+                name: string;
+                date: string | null;
+            };
+            user: { id: number; name: string } | null;
+        }[];
+    };
+}
 
 const navItems = [
     { href: 'dashboard', label: 'Dashboard', icon: '📊', route: 'dashboard' },
-    { href: 'events.index', label: 'Events', icon: '📅', route: 'events.*' },
+    { href: 'events.index', label: 'Clients', icon: '👥', route: 'events.*' },
     { href: 'items.index', label: 'Katalog', icon: '👗', route: 'items.*' },
     { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
     { href: 'payments.index', label: 'Bayar', icon: '💰', route: 'payments.*' },
@@ -15,17 +44,40 @@ const navItems = [
 
 const adminNavItems = [
     { href: 'reports.index', label: 'Laporan', icon: '📈', route: 'reports.*' },
+    { href: 'dynamic-form-templates.edit', label: 'Setup', icon: '⚙️', route: 'dynamic-form-templates.*' },
 ];
 
 export default function Authenticated({
     header,
     children,
 }: PropsWithChildren<{ header?: ReactNode }>) {
-    const user = usePage().props.auth.user;
+    const user = usePage<AuthenticatedPageProps>().props.auth.user;
+    const notifications = usePage<AuthenticatedPageProps>().props.notifications;
     const isAdmin = user.role === 1 || user.role === 2; // Owner or Admin
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
     const allNavItems = isAdmin ? [...navItems, ...adminNavItems] : navItems;
+    const notificationBadgeClass = (type: string) => {
+        if (type === 'delete_requested') return 'bg-red-50 text-red-600';
+        if (type === 'total_changed') return 'bg-amber-50 text-amber-700';
+        if (type === 'payment_rejected') return 'bg-red-50 text-red-600';
+        return 'bg-stone-100 text-stone-600';
+    };
+    const markNotificationRead = (key: string, href: string) => {
+        router.post(route('notifications.read'), { key }, {
+            preserveScroll: true,
+            onFinish: () => router.visit(href),
+        });
+    };
+    const markAllNotificationsRead = () => {
+        router.post(route('notifications.read-all'), {
+            keys: notifications.items.map((item) => item.key),
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['notifications'],
+        });
+    };
 
     return (
         <div className="min-h-screen bg-[#faf9f7] pb-20 sm:pb-0">
@@ -59,13 +111,77 @@ export default function Authenticated({
 
                         {/* Desktop User Dropdown */}
                         <div className="hidden items-center gap-3 sm:flex">
-                            <Link
-                                href={route('telegram.settings')}
-                                className="rounded-lg p-2 text-stone-400 transition hover:bg-stone-50 hover:text-stone-600"
-                                title="Telegram Settings"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            </Link>
+                            <Dropdown>
+                                <Dropdown.Trigger>
+                                    <button
+                                        className="relative rounded-lg p-2 text-stone-400 transition hover:bg-stone-50 hover:text-stone-600"
+                                        title="Notifikasi"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+                                        {notifications.count > 0 && (
+                                            <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                                {notifications.count}
+                                            </span>
+                                        )}
+                                    </button>
+                                </Dropdown.Trigger>
+                                <Dropdown.Content width="80" contentClasses="bg-white py-2">
+                                    <div className="border-b border-stone-100 px-4 pb-2">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-stone-800">Notifikasi</p>
+                                                <p className="text-xs text-stone-500">{notifications.count} belum dibaca</p>
+                                            </div>
+                                            {notifications.count > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={markAllNotificationsRead}
+                                                    className="rounded px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                                                >
+                                                    Tandai dibaca
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {notifications.items.length === 0 ? (
+                                        <div className="px-4 py-5 text-center text-sm text-stone-500">
+                                            Belum ada notifikasi.
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-96 overflow-y-auto py-1">
+                                            {notifications.items.map((item) => (
+                                                <Link
+                                                    key={item.id}
+                                                    href={route('events.show', item.event.uuid)}
+                                                    onClick={(e) => {
+                                                        if (!item.read) {
+                                                            e.preventDefault();
+                                                            markNotificationRead(item.key, route('events.show', item.event.uuid));
+                                                        }
+                                                    }}
+                                                    className={`block border-b border-stone-50 px-4 py-3 transition hover:bg-stone-50 ${item.read ? 'bg-white' : 'bg-rose-50/60'}`}
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex min-w-0 gap-2">
+                                                            {!item.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-rose-500" />}
+                                                            <div className="min-w-0">
+                                                            <p className={`truncate text-sm font-semibold ${item.read ? 'text-stone-700' : 'text-stone-900'}`}>{item.event.name}</p>
+                                                            <p className="text-xs text-stone-500">{item.message}</p>
+                                                            <p className="mt-1 text-xs text-stone-400">
+                                                                {item.user ? `Oleh: ${item.user.name} · ` : ''}{item.created_at || '-'}
+                                                            </p>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`shrink-0 rounded px-2 py-1 text-[10px] font-semibold ${notificationBadgeClass(item.type)}`}>
+                                                            {item.label}
+                                                        </span>
+                                                    </div>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    )}
+                                </Dropdown.Content>
+                            </Dropdown>
                             <Dropdown>
                                 <Dropdown.Trigger>
                                     <button className="flex items-center gap-2 rounded-full bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-200">
@@ -81,8 +197,10 @@ export default function Authenticated({
                                     {isAdmin && (
                                         <>
                                             <Dropdown.Link href={route('staff.index')}>👥 Staff</Dropdown.Link>
-                                            <Dropdown.Link href={route('clients.index')}>📝 Clients</Dropdown.Link>
+                                            <Dropdown.Link href={route('events.index')}>📝 Clients</Dropdown.Link>
+                                            <Dropdown.Link href={route('dynamic-form-templates.edit')}>📋 Berita Acara</Dropdown.Link>
                                             <Dropdown.Link href={route('telegram.settings')}>⚙️ Telegram</Dropdown.Link>
+                                            <Dropdown.Link href={route('whatsapp.settings')}>📱 WhatsApp</Dropdown.Link>
                                         </>
                                     )}
                                     <div className="border-t border-stone-100 my-1" />
@@ -115,7 +233,7 @@ export default function Authenticated({
                                 📊 Dashboard
                             </ResponsiveNavLink>
                             <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
-                                📅 Events
+                                👥 Clients
                             </ResponsiveNavLink>
                             <ResponsiveNavLink href={route('items.index')} active={route().current('items.*')}>
                                 👗 Katalog
@@ -134,11 +252,25 @@ export default function Authenticated({
                                     <ResponsiveNavLink href={route('staff.index')} active={route().current('staff.*')}>
                                         👥 Staff
                                     </ResponsiveNavLink>
-                                    <ResponsiveNavLink href={route('clients.index')} active={route().current('clients.*')}>
+                                    <ResponsiveNavLink href={
+                                        notifications.items[0]
+                                            ? route('events.show', notifications.items[0].event.uuid)
+                                            : route('events.index')
+                                    }>
+                                        🔔 Notifikasi
+                                        {notifications.count > 0 && ` (${notifications.count})`}
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
                                         📝 Clients
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('dynamic-form-templates.edit')} active={route().current('dynamic-form-templates.*')}>
+                                        📋 Berita Acara
                                     </ResponsiveNavLink>
                                     <ResponsiveNavLink href={route('telegram.settings')}>
                                         ⚙️ Telegram Settings
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('whatsapp.settings')}>
+                                        📱 WhatsApp Tester
                                     </ResponsiveNavLink>
                                 </>
                             )}

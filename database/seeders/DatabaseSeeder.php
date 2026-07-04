@@ -20,8 +20,8 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@shofiwedding.com',
         ]);
 
-$this->call([
-    ClientSeeder::class,
-]);
+        $this->call([
+            ClientSeeder::class,
+        ]);
     }
 }

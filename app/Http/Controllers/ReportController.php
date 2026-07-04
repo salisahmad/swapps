@@ -48,7 +48,7 @@ class ReportController extends Controller
             ->sum('amount');
 
         // Payment list for the month
-        $payments = Payment::with('event:id,name')
+        $payments = Payment::with('event:id,uuid,name')
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at', 'desc')
             ->paginate(30);

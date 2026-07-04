@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Event {
     id: number;
@@ -10,11 +10,12 @@ interface Event {
 
 interface ScheduleItem {
     id: number;
+    type?: number | string;
     type_name: string;
     schedule_from: string;
     schedule_to: string | null;
     description: string | null;
-    event: { id: number; name: string };
+    event: { id: number; uuid: string; name: string };
 }
 
 interface PageProps {
@@ -31,6 +32,11 @@ interface PageProps {
     events: Event[];
 }
 
+interface TakenTime {
+    from: string;
+    to: string | null;
+}
+
 export default function Index({ schedules, filters, events }: PageProps) {
     const { data, setData, get, post, put, delete: destroy, processing, reset } = useForm({
         type: filters.type || '',
@@ -42,7 +48,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
         schedule_type: '1',
         schedule_from: '',
         time_from: '14:00',
-        time_to: '16:00',
+        time_to: '15:00',
         schedule_to: '',
         description: '',
         schedule_id: '',
@@ -50,6 +56,16 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
     const [showModal, setShowModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
+    const [clientSearch, setClientSearch] = useState('');
+    const [showClientDropdown, setShowClientDropdown] = useState(false);
+    const [takenTimes, setTakenTimes] = useState<TakenTime[]>([]);
+    const [checkingSchedule, setCheckingSchedule] = useState(false);
+    const [scheduleConflict, setScheduleConflict] = useState('');
+
+    const selectedEvent = events.find((event) => String(event.id) === data.event_id);
+    const filteredEvents = clientSearch.length > 0
+        ? events.filter((event) => event.name.toLowerCase().includes(clientSearch.toLowerCase()))
+        : events.slice(0, 10);
 
     const submitFilter = (e: React.FormEvent) => {
         e.preventDefault();
@@ -58,12 +74,26 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
     const openCreate = () => {
         reset();
+        setData({
+            ...data,
+            event_id: '',
+            schedule_type: '1',
+            schedule_from: '',
+            time_from: '14:00',
+            time_to: '15:00',
+            schedule_to: '',
+            description: '',
+            schedule_id: '',
+        });
+        setClientSearch('');
+        setShowClientDropdown(false);
         setEditMode(false);
         setShowModal(true);
     };
 
     const openEdit = (schedule: ScheduleItem) => {
         const fromDate = new Date(schedule.schedule_from);
+        const selectedScheduleEvent = events.find((event) => event.id === schedule.event.id);
         setData({
             ...data,
             event_id: String(schedule.event.id),
@@ -75,12 +105,25 @@ export default function Index({ schedules, filters, events }: PageProps) {
             description: schedule.description || '',
             schedule_id: String(schedule.id),
         });
+        setClientSearch(selectedScheduleEvent?.name || schedule.event.name);
+        setShowClientDropdown(false);
         setEditMode(true);
         setShowModal(true);
     };
 
     const submitForm = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!data.event_id) {
+            alert('Pilih client dari hasil pencarian dulu.');
+            return;
+        }
+
+        if (scheduleConflict) {
+            alert(scheduleConflict);
+            return;
+        }
+
         if (editMode && data.schedule_id) {
             put(route('schedules.update', data.schedule_id));
         } else {
@@ -95,10 +138,129 @@ export default function Index({ schedules, filters, events }: PageProps) {
         }
     };
 
-    const formatDateTime = (date: string) => {
-        const d = new Date(date);
-        return new Date(d).toISOString().split('T')[0];
+    const getScheduleTypeName = (schedule: ScheduleItem) => {
+        if (schedule.type_name === 'Fitting' || schedule.type_name === 'Konsultasi') {
+            return schedule.type_name;
+        }
+
+        return String(schedule.type) === '1' ? 'Fitting' : 'Konsultasi';
     };
+    const getScheduleStyle = (schedule: ScheduleItem) => {
+        const typeName = getScheduleTypeName(schedule);
+
+        return typeName === 'Fitting'
+            ? { icon: '👗', iconClass: 'bg-rose-100 text-rose-600', badgeClass: 'bg-rose-50 text-rose-700' }
+            : { icon: '💬', iconClass: 'bg-sky-100 text-sky-600', badgeClass: 'bg-sky-50 text-sky-700' };
+    };
+
+    const parseDateTime = (value: string) => {
+        const [datePart, timePart = ''] = value.replace('T', ' ').split(' ');
+        const [year, month, day] = datePart.split('-');
+        const [hour = '', minute = ''] = timePart.split(':');
+
+        return { year, month, day, time: hour && minute ? `${hour}:${minute}` : '' };
+    };
+    const formatScheduleDateTime = (value: string) => {
+        const { year, month, day, time } = parseDateTime(value);
+
+        return `${year}-${month}-${day}${time ? ` ${time}` : ''}`;
+    };
+    const formatDisplayDate = (value: string) => {
+        if (!value) return '-';
+
+        const [year, month, day] = value.split('-');
+        const monthNames = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+        ];
+
+        return `${year} ${monthNames[Number(month) - 1] || month} ${day}`;
+    };
+    const addOneHour = (time: string) => {
+        if (!time) return '';
+
+        const [hour, minute] = time.split(':').map(Number);
+        const nextHour = (hour + 1) % 24;
+
+        return `${String(nextHour).padStart(2, '0')}:${String(minute || 0).padStart(2, '0')}`;
+    };
+    const handleStartTimeChange = (time: string) => {
+        setData({
+            ...data,
+            time_from: time,
+            time_to: addOneHour(time),
+        });
+    };
+    const selectEvent = (event: Event) => {
+        setData('event_id', String(event.id));
+        setClientSearch(event.name);
+        setShowClientDropdown(false);
+    };
+    const timeToMinutes = (time: string | null) => {
+        if (!time) return null;
+
+        const [hour, minute] = time.split(':').map(Number);
+        return (hour * 60) + (minute || 0);
+    };
+    const isTimeConflict = (times: TakenTime[], startTime: string, endTime: string) => {
+        const start = timeToMinutes(startTime);
+        const end = timeToMinutes(endTime);
+
+        if (start === null || end === null) return false;
+
+        return times.some((time) => {
+            const existingStart = timeToMinutes(time.from);
+            const existingEnd = timeToMinutes(time.to) ?? ((existingStart ?? 0) + 60);
+
+            if (existingStart === null) return false;
+
+            return start < existingEnd && end > existingStart;
+        });
+    };
+
+    useEffect(() => {
+        if (!showModal || !data.schedule_from || !data.schedule_type) {
+            setTakenTimes([]);
+            setScheduleConflict('');
+            return;
+        }
+
+        const controller = new AbortController();
+        const params = new URLSearchParams({
+            date: data.schedule_from,
+            type: data.schedule_type,
+        });
+
+        if (editMode && data.schedule_id) {
+            params.set('exclude_id', data.schedule_id);
+        }
+
+        setCheckingSchedule(true);
+
+        fetch(`${route('schedules.taken-times')}?${params.toString()}`, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+        })
+            .then((response) => response.json())
+            .then((times: TakenTime[]) => {
+                setTakenTimes(times);
+                setScheduleConflict(
+                    isTimeConflict(times, data.time_from, data.time_to)
+                        ? 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.'
+                        : '',
+                );
+            })
+            .catch((error) => {
+                if (error.name !== 'AbortError') {
+                    setScheduleConflict('');
+                }
+            })
+            .finally(() => {
+                setCheckingSchedule(false);
+            });
+
+        return () => controller.abort();
+    }, [showModal, data.schedule_from, data.schedule_type, data.time_from, data.time_to, data.schedule_id, editMode]);
 
     return (
         <AuthenticatedLayout
@@ -156,23 +318,30 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-100">
-                                    {schedules.data.map((s) => (
+                                    {schedules.data.map((s) => {
+                                        const typeName = getScheduleTypeName(s);
+                                        const style = getScheduleStyle(s);
+
+                                        return (
                                         <tr key={s.id}>
                                             <td className="px-3 py-3">
-                                                <Link href={route('events.show', s.event.id)} className="text-sm font-medium text-rose-400 hover:underline text-rose-400">
+                                                <Link href={route('events.show', s.event.uuid)} className="text-sm font-medium text-rose-400 hover:underline text-rose-400">
                                                     {s.event.name}
                                                 </Link>
                                             </td>
                                             <td className="px-3 py-3">
-                                                <span className={`rounded px-2 py-1 text-xs font-semibold ${
-                                                    s.type_name === 'Fitting' ? 'bg-purple-100 text-purple-800 bg-purple-900 text-purple-300' : 'bg-blue-100 text-blue-800 bg-blue-900 text-blue-300'
-                                                }`}>
-                                                    {s.type_name}
+                                                <span className="flex items-center gap-2 text-sm font-medium text-stone-800">
+                                                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base ${style.iconClass}`}>
+                                                        {style.icon}
+                                                    </span>
+                                                    <span className={`rounded-md px-2 py-1 text-xs font-semibold ${style.badgeClass}`}>
+                                                        {typeName}
+                                                    </span>
                                                 </span>
                                             </td>
                                             <td className="px-3 py-3 text-sm text-stone-900 text-stone-100">
-                                                {formatDateTime(s.schedule_from)}
-                                                {s.schedule_to && ` - ${formatDateTime(s.schedule_to)}`}
+                                                {formatScheduleDateTime(s.schedule_from)}
+                                                {s.schedule_to && ` - ${parseDateTime(s.schedule_to).time || formatScheduleDateTime(s.schedule_to)}`}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-stone-900 text-stone-100">{s.description || '-'}</td>
                                             <td className="px-3 py-3 text-right text-sm">
@@ -180,7 +349,8 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                                 <button onClick={() => handleDelete(s.id)} className="text-red-600 hover:text-red-900 text-red-400">Hapus</button>
                                             </td>
                                         </tr>
-                                    ))}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
 
@@ -204,21 +374,44 @@ export default function Index({ schedules, filters, events }: PageProps) {
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
                         <form onSubmit={submitForm} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Event / Client</label>
-                                <select
-                                    value={data.event_id}
-                                    onChange={(e) => setData('event_id', e.target.value)}
+                            <div className="relative">
+                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Client</label>
+                                <input
+                                    type="text"
+                                    value={clientSearch}
+                                    onChange={(e) => {
+                                        setClientSearch(e.target.value);
+                                        setShowClientDropdown(true);
+                                        setData('event_id', '');
+                                    }}
+                                    onFocus={() => setShowClientDropdown(true)}
                                     className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
+                                    placeholder="Cari nama client..."
                                     required
-                                >
-                                    <option value="">Pilih Event...</option>
-                                    {events.map((event) => (
-                                        <option key={event.id} value={event.id}>
-                                            {event.name} ({event.date})
-                                        </option>
-                                    ))}
-                                </select>
+                                />
+                                {showClientDropdown && (
+                                    <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
+                                        {filteredEvents.length === 0 ? (
+                                            <p className="px-4 py-3 text-sm text-stone-400">Tidak ditemukan</p>
+                                        ) : (
+                                            filteredEvents.map((event) => (
+                                                <button
+                                                    key={event.id}
+                                                    type="button"
+                                                    onClick={() => selectEvent(event)}
+                                                    className="w-full px-4 py-2 text-left text-sm hover:bg-stone-50"
+                                                >
+                                                    <p className="font-medium text-stone-800">{event.name}</p>
+                                                    <p className="text-xs text-stone-400">{formatDisplayDate(event.date)}</p>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                                {selectedEvent && (
+                                    <p className="mt-1 text-xs text-stone-500">Tanggal acara: {formatDisplayDate(selectedEvent.date)}</p>
+                                )}
+                                <input type="hidden" value={data.event_id} name="event_id" />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
@@ -236,20 +429,33 @@ export default function Index({ schedules, filters, events }: PageProps) {
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Mulai</label>
-                                    <input type="time" value={data.time_from} onChange={(e) => setData('time_from', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
+                                    <input type="time" value={data.time_from} onChange={(e) => handleStartTimeChange(e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Selesai</label>
                                     <input type="time" value={data.time_to} onChange={(e) => setData('time_to', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" />
                                 </div>
                             </div>
+                            {checkingSchedule ? (
+                                <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-500">Mengecek jadwal...</p>
+                            ) : scheduleConflict ? (
+                                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{scheduleConflict}</p>
+                            ) : data.schedule_from && data.time_from && (
+                                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">Slot jadwal tersedia.</p>
+                            )}
+                            {takenTimes.length > 0 && (
+                                <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                                    <p className="font-semibold">Jadwal terisi di tanggal ini:</p>
+                                    <p>{takenTimes.map((time) => `${time.from} - ${time.to || '-'}`).join(', ')}</p>
+                                </div>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Keterangan</label>
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" rows={2} />
                             </div>
                             <div className="flex justify-end gap-2 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)} className="rounded bg-stone-100 px-4 py-2 text-sm text-stone-700 bg-stone-100 text-stone-500">Batal</button>
-                                <button type="submit" disabled={processing} className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500 disabled:opacity-50">{editMode ? 'Update' : 'Simpan'}</button>
+                                <button type="submit" disabled={processing || checkingSchedule || Boolean(scheduleConflict)} className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500 disabled:opacity-50">{editMode ? 'Update' : 'Simpan'}</button>
                             </div>
                         </form>
                     </div>

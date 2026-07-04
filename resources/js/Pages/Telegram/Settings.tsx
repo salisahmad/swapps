@@ -105,7 +105,7 @@ export default function Settings({ settings, flash }: PageProps) {
                                     onChange={(e) => setData('notify_new_event', e.target.checked)}
                                     className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                 />
-                                <span className="text-sm text-stone-700 text-stone-500">Booking Baru</span>
+                                <span className="text-sm text-stone-700 text-stone-500">Client Baru</span>
                             </label>
                             <label className="flex items-center gap-2">
                                 <input

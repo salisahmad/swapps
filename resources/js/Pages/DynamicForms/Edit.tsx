@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 interface EventItem {
     id: number;
+    uuid: string;
     name: string;
     date: string;
     dynamic_forms: DynamicFormItem[];
@@ -65,7 +66,7 @@ export default function Edit({ event }: PageProps) {
 
     const saveForm = () => {
         setSaving(true);
-        fetch(route('dynamic-forms.update', event.id), {
+        fetch(route('dynamic-forms.update', event.uuid), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
             body: JSON.stringify({ fields }),
@@ -93,7 +94,7 @@ export default function Edit({ event }: PageProps) {
                             + Tambah Field
                         </button>
                         <Link
-                            href={route('events.show', event.id)}
+                            href={route('events.show', event.uuid)}
                             className="rounded bg-stone-100 px-4 py-2 text-sm text-stone-700 bg-stone-100 text-stone-500"
                         >
                             Kembali

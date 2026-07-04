@@ -20,9 +20,13 @@ class Schedule extends Model
         'type' => 'integer',
     ];
 
+    protected $appends = [
+        'type_name',
+    ];
+
     public function event(): BelongsTo
     {
-        return $this->belongsTo(ClientEvent::class)->withTrashed();
+        return $this->belongsTo(Event::class)->withTrashed();
     }
 
     public function creator(): BelongsTo

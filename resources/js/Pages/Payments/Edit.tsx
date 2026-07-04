@@ -57,25 +57,7 @@ export default function Edit({ payment, events, authUser }: PageProps) {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        const formData = new FormData();
-        formData.append('_method', 'PUT');
-        formData.append('event_id', data.event_id);
-        formData.append('is_expense', data.is_expense);
-        formData.append('payment_type', data.payment_type);
-        formData.append('payment_at', data.payment_at);
-        formData.append('amount', data.amount);
-        formData.append('operational_cut', data.operational_cut || '0');
-        formData.append('description', data.description);
-        formData.append('status', data.status);
-        if (data.receipt_image && receiptChanged) {
-            formData.append('receipt_image', data.receipt_image);
-        }
-
-        post(route('payments.update', payment.id), {
-            data: formData,
-            forceFormData: true,
-        });
+        post(route('payments.update', payment.id), { forceFormData: true });
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,6 +70,8 @@ export default function Edit({ payment, events, authUser }: PageProps) {
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const onlyDigits = (value: string) => value.replace(/\D/g, '');
+    const formatNumberInput = (value: string) => onlyDigits(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
     const netAmount = parseFloat(data.amount || '0') - (parseFloat(data.operational_cut || '0') || 0);
 
@@ -104,7 +88,7 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                     <div className="card-elevated p-5 sm:p-6">
                         <form onSubmit={submit} className="space-y-4" encType="multipart/form-data">
                             <div>
-                                <label className="block text-sm font-medium text-stone-600">Event / Client</label>
+                                <label className="block text-sm font-medium text-stone-600">Client</label>
                                 <select
                                     value={data.event_id}
                                     onChange={(e) => setData('event_id', e.target.value)}
@@ -163,12 +147,12 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                                 <div>
                                     <label className="block text-sm font-medium text-stone-600">Jumlah (Rp)</label>
                                     <input
-                                        type="number"
-                                        value={data.amount}
-                                        onChange={(e) => setData('amount', e.target.value)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={formatNumberInput(data.amount)}
+                                        onChange={(e) => setData('amount', onlyDigits(e.target.value))}
                                         className="input-field"
                                         required
-                                        min="0"
                                     />
                                     {errors.amount && <p className="mt-1 text-sm text-red-500">{errors.amount}</p>}
                                 </div>
@@ -179,11 +163,11 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                                     Potongan Operasional (Rp)
                                 </label>
                                 <input
-                                    type="number"
-                                    value={data.operational_cut}
-                                    onChange={(e) => setData('operational_cut', e.target.value)}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formatNumberInput(data.operational_cut)}
+                                    onChange={(e) => setData('operational_cut', onlyDigits(e.target.value))}
                                     className="input-field"
-                                    min="0"
                                     placeholder="0"
                                 />
                                 {parseFloat(data.operational_cut || '0') > 0 && (

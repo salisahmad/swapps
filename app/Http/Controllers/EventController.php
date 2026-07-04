@@ -2,21 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
+use App\Models\Event;
+use App\Models\EventAdditionalCost;
 use App\Models\Item;
 use App\Models\Payment;
-use App\Models\Schedule;
+use App\Models\ClientActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 
 class EventController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Client::query();
+        $query = Event::with('additionalCosts');
 
         // Search
         if ($request->filled('q')) {
@@ -42,19 +42,44 @@ class EventController extends Controller
             $query->where('order_type', $request->order_type);
         }
 
-        $clients = $query->latest()->paginate(15)->withQueryString();
+        $events = $query->latest()->paginate(15)->withQueryString();
 
-        return Inertia::render('Clients/Index', [
-            'clients' => $clients,
+        return Inertia::render('Events/Index', [
+            'events' => $events,
             'filters' => $request->only(['q', 'date_from', 'date_to', 'paid', 'order_type']),
         ]);
     }
 
     public function create(): Response
     {
-        return Inertia::render('Clients/Create', [
-            'items' => Item::where('is_sold', false)->get(),
+        return Inertia::render('Events/Create', [
+            'items' => Item::with(['type', 'variants'])
+                ->where('is_sold', false)
+                ->where('is_rentable', true)
+                ->orderBy('code')
+                ->take(20)
+                ->get(),
         ]);
+    }
+
+    public function byDate(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'exclude' => 'nullable|string',
+        ]);
+
+        $query = Event::whereDate('date', $request->date)
+            ->orderBy('time')
+            ->orderBy('name');
+
+        if ($request->filled('exclude')) {
+            $query->where('uuid', '!=', $request->exclude);
+        }
+
+        return response()->json(
+            $query->get(['id', 'uuid', 'name', 'date', 'time'])
+        );
     }
 
     public function store(Request $request)
@@ -62,83 +87,331 @@ class EventController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'mobile_phone' => 'required|string|max:20',
-            'date' => 'required|date|after_or_equal:tomorrow', // Restrict date to tomorrow or later
+            'date' => 'required|date|after_or_equal:tomorrow',
             'time' => 'nullable',
             'address' => 'nullable|string',
             'location' => 'nullable|string',
             'package_description' => 'nullable|string',
             'total_amount' => 'required|numeric|min:0',
-            'order_type' => 'required|integer|in:1,2',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'order_type' => 'required|integer|in:1,2,3',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
-            'down_payment' => 'required|numeric|min:0', // New required field for DP
+            'down_payment' => 'required|numeric|min:0',
+            'down_payment_type' => 'required|integer|in:0,1,2,3,4',
+            'additional_costs' => 'nullable|array',
+            'additional_costs.*.type' => 'required_with:additional_costs|string|in:' . implode(',', EventAdditionalCost::TYPES),
+            'additional_costs.*.total' => 'nullable|numeric|min:0',
+            'additional_costs.*.notes' => 'nullable|string',
         ]);
 
-        $client = Client::create([
-            ...$validated,
+        $eventData = collect($validated)->except(['item_ids', 'down_payment', 'down_payment_type', 'additional_costs'])->all();
+        $eventData['discount_amount'] = $eventData['discount_amount'] ?? 0;
+
+        $event = Event::create([
+            ...$eventData,
             'uuid' => (string) Str::uuid(),
             'created_by' => auth()->id(),
         ]);
 
         if (!empty($validated['item_ids'])) {
-            $client->items()->attach($validated['item_ids']);
+            $event->items()->attach($validated['item_ids']);
         }
 
-        return redirect()->route('clients.index')->with('success', 'Client berhasil dibuat.');
+        $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
+
+        if ($validated['down_payment'] > 0) {
+            $payment = Payment::create([
+                'event_id' => $event->id,
+                'is_expense' => Payment::EARNING,
+                'payment_at' => now(),
+                'payment_type' => $validated['down_payment_type'],
+                'amount' => $validated['down_payment'],
+                'operational_cut' => 0,
+                'description' => 'DP awal client',
+                'status' => auth()->user()->isStaff() ? Payment::STATUS_PENDING : Payment::STATUS_CONFIRMED,
+                'created_by' => auth()->id(),
+            ]);
+
+            $event->update([
+                'is_fully_paid' => $validated['down_payment'] >= $event->fresh()->grand_total,
+            ]);
+
+            $this->logClientActivity(
+                $event,
+                ClientActivityLog::TYPE_PAYMENT_CHANGED,
+                'DP awal client dicatat.',
+                null,
+                [
+                    'payment_id' => $payment->id,
+                    'amount' => $payment->amount,
+                    'status' => $payment->status_name,
+                ],
+            );
+        }
+
+        $this->logClientActivity(
+            $event,
+            ClientActivityLog::TYPE_CREATED,
+            'Client dibuat.',
+            null,
+            [
+                'name' => $event->name,
+                'date' => $event->date?->format('Y-m-d'),
+                'total_amount' => $event->total_amount,
+                'discount_amount' => $event->discount_amount,
+                'grand_total' => $event->fresh()->grand_total,
+            ],
+        );
+
+        return redirect()->route('events.show', $event)->with('success', 'Client berhasil dibuat.');
     }
 
-    public function show(Client $client): Response
+    public function show(Event $event): Response
     {
-        return Inertia::render('Clients/Show', [
-            'client' => $client->load([
-                'items.type',
-                'schedules',
-                'payments' => function ($q) {
-                    $q->orderBy('created_at', 'desc');
-                },
-            ]),
+        $relations = [
+            'items.type',
+            'additionalCosts',
+            'items.variants',
+            'schedules',
+            'photos',
+            'payments' => function ($q) {
+                $q->orderBy('created_at', 'desc');
+            },
+        ];
+
+        if (auth()->user()->isAdmin()) {
+            $relations['activityLogs'] = function ($q) {
+                $q->with('user:id,name')->latest();
+            };
+        }
+
+        return Inertia::render('Events/Show', [
+            'event' => $event->load($relations),
+            'authUser' => [
+                'id' => auth()->id(),
+                'role' => auth()->user()->role,
+                'is_admin' => auth()->user()->isAdmin(),
+            ],
         ]);
     }
 
-    public function edit(Client $client): Response
+    public function edit(Event $event): Response
     {
-        return Inertia::render('Clients/Edit', [
-            'client' => $client->load('items'),
-            'items' => Item::where('is_sold', false)->orWhereHas('clients', function ($q) use ($client) {
-                $q->where('client_id', $client->id);
-            })->get(),
+        $selectedItemIds = $event->items()->pluck('items.id');
+
+        return Inertia::render('Events/Edit', [
+            'event' => $event->load(['items.variants', 'additionalCosts']),
+            'items' => Item::with(['type', 'variants'])
+                ->where(function ($q) use ($selectedItemIds) {
+                    $q->whereIn('id', $selectedItemIds)
+                        ->orWhere(function ($available) {
+                            $available->where('is_sold', false)
+                                ->where('is_rentable', true);
+                        });
+                })
+                ->orderBy('code')
+                ->take(30)
+                ->get(),
         ]);
     }
 
-    public function update(Request $request, Client $client)
+    public function update(Request $request, Event $event)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'mobile_phone' => 'required|string|max:20',
-            'date' => 'required|date|after_or_equal:tomorrow', // Restrict date to tomorrow or later
+            'date' => 'required|date',
             'time' => 'nullable',
             'address' => 'nullable|string',
             'location' => 'nullable|string',
             'package_description' => 'nullable|string',
             'total_amount' => 'required|numeric|min:0',
-            'order_type' => 'required|integer|in:1,2',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'order_type' => 'required|integer|in:1,2,3',
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
-            'down_payment' => 'required|numeric|min:0', // New required field for DP
+            'additional_costs' => 'nullable|array',
+            'additional_costs.*.type' => 'required_with:additional_costs|string|in:' . implode(',', EventAdditionalCost::TYPES),
+            'additional_costs.*.total' => 'nullable|numeric|min:0',
+            'additional_costs.*.notes' => 'nullable|string',
         ]);
 
-        $client->update($validated);
+        $oldTotal = $event->total_amount;
+        $oldDiscount = $event->discount_amount;
+        $oldAdditionalCostTotal = $event->additional_cost_total;
+        $oldGrandTotal = $event->grand_total;
+        $oldDate = $event->date?->format('Y-m-d');
+
+        $eventData = collect($validated)->except(['item_ids', 'additional_costs'])->all();
+        $eventData['discount_amount'] = $eventData['discount_amount'] ?? 0;
+
+        $event->update($eventData);
+        $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
+        $event->refresh();
 
         if (isset($validated['item_ids'])) {
-            $client->items()->sync($validated['item_ids']);
+            $event->items()->sync($validated['item_ids']);
         }
 
-        return redirect()->route('clients.index')->with('success', 'Client berhasil diupdate.');
+        $newGrandTotal = $event->grand_total;
+        if (
+            (float) $oldTotal !== (float) $event->total_amount
+            || (float) $oldDiscount !== (float) $event->discount_amount
+            || (float) $oldAdditionalCostTotal !== (float) $event->additional_cost_total
+        ) {
+            $this->logClientActivity(
+                $event,
+                ClientActivityLog::TYPE_TOTAL_CHANGED,
+                'Total harga client diubah.',
+                [
+                    'total_amount' => (float) $oldTotal,
+                    'additional_cost_total' => (float) $oldAdditionalCostTotal,
+                    'discount_amount' => (float) $oldDiscount,
+                    'grand_total' => (float) $oldGrandTotal,
+                ],
+                [
+                    'total_amount' => (float) $event->total_amount,
+                    'additional_cost_total' => (float) $event->additional_cost_total,
+                    'discount_amount' => (float) $event->discount_amount,
+                    'grand_total' => (float) $newGrandTotal,
+                ],
+            );
+        }
+
+        $this->updateEventPaidStatus($event);
+
+        $newDate = $event->date?->format('Y-m-d');
+        if ($oldDate !== $newDate) {
+            $this->logClientActivity(
+                $event,
+                ClientActivityLog::TYPE_DATE_CHANGED,
+                'Tanggal acara diubah.',
+                ['date' => $oldDate],
+                ['date' => $newDate],
+            );
+        }
+
+        return redirect()->route('events.show', $event)->with('success', 'Client berhasil diupdate.');
     }
 
-    public function destroy(Client $client)
+    public function destroy(Event $event)
     {
-        $client->delete();
-        return redirect()->route('clients.index')->with('success', 'Client berhasil dihapus.');
+        if (auth()->user()->isStaff()) {
+            if ($this->hasPendingDeleteRequest($event)) {
+                return redirect()->route('events.show', $event)->with('success', 'Permintaan hapus client masih menunggu admin.');
+            }
+
+            $this->logClientActivity(
+                $event,
+                ClientActivityLog::TYPE_DELETE_REQUESTED,
+                'Staff meminta konfirmasi admin untuk menghapus client.',
+            );
+
+            return redirect()->route('events.show', $event)->with('success', 'Permintaan hapus client dikirim ke admin.');
+        }
+
+        if (!auth()->user()->isAdmin()) {
+            abort(403);
+        }
+
+        $this->logClientActivity(
+            $event,
+            ClientActivityLog::TYPE_DELETED,
+            'Client dihapus.',
+            [
+                'name' => $event->name,
+                'date' => $event->date?->format('Y-m-d'),
+                'total_amount' => $event->grand_total,
+            ],
+        );
+
+        $event->delete();
+        return redirect()->route('events.index')->with('success', 'Client berhasil dihapus.');
+    }
+
+    public function approveDelete(Event $event)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403);
+        }
+
+        if (!$this->hasPendingDeleteRequest($event)) {
+            return redirect()->route('events.show', $event)->with('success', 'Tidak ada request hapus yang perlu dikonfirmasi.');
+        }
+
+        $this->logClientActivity(
+            $event,
+            ClientActivityLog::TYPE_DELETE_APPROVED,
+            'Admin mengkonfirmasi request hapus client.',
+        );
+
+        $this->logClientActivity(
+            $event,
+            ClientActivityLog::TYPE_DELETED,
+            'Client dihapus setelah request staff disetujui.',
+            [
+                'name' => $event->name,
+                'date' => $event->date?->format('Y-m-d'),
+                'total_amount' => $event->grand_total,
+            ],
+        );
+
+        $event->delete();
+
+        return redirect()->route('events.index')->with('success', 'Request hapus disetujui. Client berhasil dihapus.');
+    }
+
+    private function logClientActivity(Event $event, string $type, string $message, ?array $before = null, ?array $after = null): void
+    {
+        ClientActivityLog::create([
+            'event_id' => $event->id,
+            'user_id' => auth()->id(),
+            'type' => $type,
+            'message' => $message,
+            'before' => $before,
+            'after' => $after,
+        ]);
+    }
+
+    private function hasPendingDeleteRequest(Event $event): bool
+    {
+        $lastDeleteLog = $event->activityLogs()
+            ->whereIn('type', [
+                ClientActivityLog::TYPE_DELETE_REQUESTED,
+                ClientActivityLog::TYPE_DELETE_APPROVED,
+            ])
+            ->latest()
+            ->first();
+
+        return $lastDeleteLog?->type === ClientActivityLog::TYPE_DELETE_REQUESTED;
+    }
+
+    private function syncAdditionalCosts(Event $event, array $additionalCosts): void
+    {
+        $cleanCosts = collect($additionalCosts)
+            ->map(fn ($cost) => [
+                'type' => $cost['type'] ?? '',
+                'total' => max(0, (float) ($cost['total'] ?? 0)),
+                'notes' => $cost['notes'] ?? null,
+            ])
+            ->filter(fn ($cost) => $cost['type'] !== '' && $cost['total'] > 0)
+            ->values();
+
+        $event->additionalCosts()->delete();
+
+        $cleanCosts->each(function ($cost) use ($event) {
+            $event->additionalCosts()->create($cost);
+        });
+    }
+
+    private function updateEventPaidStatus(Event $event): void
+    {
+        $paid = $event->payments()
+            ->where('is_expense', Payment::EARNING)
+            ->where('status', Payment::STATUS_CONFIRMED)
+            ->sum('amount');
+
+        $event->update(['is_fully_paid' => $paid >= $event->fresh()->grand_total]);
     }
 }

@@ -13,6 +13,7 @@ interface DynamicFormItem {
 
 interface EventData {
     id: number;
+    uuid: string;
     name: string;
     date: string;
     time: string | null;
@@ -45,7 +46,7 @@ export default function Show({ event, dynamicForms }: PageProps) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // In real implementation, send to backend
-        fetch(route('dynamic-forms.submit', event.id), {
+        fetch(route('dynamic-forms.submit', event.uuid), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
             body: JSON.stringify({ values }),
@@ -63,6 +64,14 @@ export default function Show({ event, dynamicForms }: PageProps) {
             <Head title={`Berita Acara - ${event.name}`} />
 
             <div className="mx-auto max-w-2xl">
+                <button
+                    type="button"
+                    onClick={() => window.history.back()}
+                    className="mb-4 rounded-lg bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm transition hover:bg-stone-50"
+                >
+                    Kembali
+                </button>
+
                 {/* Header */}
                 <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold text-stone-900 text-white">Shofi Wedding</h1>

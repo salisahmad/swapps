@@ -24,6 +24,13 @@ class Payment extends Model
         'status' => 'integer',
     ];
 
+    protected $appends = [
+        'type_name',
+        'status_name',
+        'payment_type_name',
+        'net_amount',
+    ];
+
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);

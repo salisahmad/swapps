@@ -1,14 +1,16 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ClientController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventPhotoController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\DynamicFormController;
 use App\Http\Controllers\TelegramSettingController;
+use App\Http\Controllers\WhatsappSettingController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Foundation\Application;
@@ -32,12 +34,23 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    Route::resource('clients', ClientController::class);
+    Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 
-    Route::resource('events', EventController::class);
+    Route::redirect('/events', '/clients')->name('clients.index');
 
+    Route::get('/clients/by-date', [EventController::class, 'byDate'])->name('events.by-date');
+    Route::post('/clients/{event}/photos', [EventPhotoController::class, 'store'])->name('events.photos.store');
+    Route::delete('/clients/{event}/photos/{photo}', [EventPhotoController::class, 'destroy'])->name('events.photos.destroy');
+    Route::resource('clients', EventController::class)
+        ->names('events')
+        ->parameters(['clients' => 'event']);
+    Route::post('/clients/{event}/approve-delete', [EventController::class, 'approveDelete'])->name('events.approve-delete');
+
+    Route::get('/items/search', [ItemController::class, 'search'])->name('items.search');
     Route::resource('items', ItemController::class);
 
+    Route::get('/schedules/taken-times', [ScheduleController::class, 'takenTimes'])->name('schedules.taken-times');
     Route::resource('schedules', ScheduleController::class);
 
     Route::resource('payments', PaymentController::class);
@@ -49,6 +62,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/telegram-settings', [TelegramSettingController::class, 'update'])->name('telegram.update');
     Route::post('/telegram-test', [TelegramSettingController::class, 'test'])->name('telegram.test');
 
+    // WhatsApp Settings
+    Route::get('/whatsapp-settings', [WhatsappSettingController::class, 'index'])->name('whatsapp.settings');
+    Route::patch('/whatsapp-settings', [WhatsappSettingController::class, 'update'])->name('whatsapp.update');
+    Route::post('/whatsapp-test', [WhatsappSettingController::class, 'test'])->name('whatsapp.test');
+
     // Reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
@@ -56,8 +74,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('staff', StaffController::class);
 
     // Dynamic Forms (Admin)
-    Route::get('/events/{event}/dynamic-forms', [DynamicFormController::class, 'edit'])->name('dynamic-forms.edit');
-    Route::post('/events/{event}/dynamic-forms', [DynamicFormController::class, 'update'])->name('dynamic-forms.update');
+    Route::get('/settings/berita-acara', [DynamicFormController::class, 'templateEdit'])->name('dynamic-form-templates.edit');
+    Route::post('/settings/berita-acara', [DynamicFormController::class, 'templateUpdate'])->name('dynamic-form-templates.update');
+    Route::get('/clients/{event}/dynamic-forms', [DynamicFormController::class, 'edit'])->name('dynamic-forms.edit');
+    Route::post('/clients/{event}/dynamic-forms', [DynamicFormController::class, 'update'])->name('dynamic-forms.update');
 });
 
 // Dynamic Forms (Public - Client facing, no auth required)

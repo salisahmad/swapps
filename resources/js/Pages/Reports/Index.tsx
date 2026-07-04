@@ -17,7 +17,7 @@ interface PaymentItem {
     description: string | null;
     status: number;
     status_name: string;
-    event: { id: number; name: string };
+    event: { id: number; uuid: string; name: string };
 }
 
 interface ChartData {
@@ -102,11 +102,11 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
                             <p className="text-2xl font-bold text-yellow-700 text-yellow-300">{formatRupiah(summary.pending)}</p>
                         </div>
                         <div className="rounded-lg bg-white p-4 shadow-sm bg-white">
-                            <p className="text-xs text-stone-500">Booking Baru</p>
+                            <p className="text-xs text-stone-500">Client Baru</p>
                             <p className="text-2xl font-bold text-stone-900 text-white">{summary.new_events}</p>
                         </div>
                         <div className="rounded-lg bg-white p-4 shadow-sm bg-white">
-                            <p className="text-xs text-stone-500">Event Mendatang</p>
+                            <p className="text-xs text-stone-500">Client Mendatang</p>
                             <p className="text-2xl font-bold text-stone-900 text-white">{summary.upcoming_events}</p>
                         </div>
                     </div>
@@ -182,7 +182,7 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
                                 {payments.data.map((p) => (
                                     <tr key={p.id}>
                                         <td className="px-3 py-2 text-sm">
-                                            <Link href={route('events.show', p.event.id)} className="text-rose-400 hover:underline text-rose-400">{p.event.name}</Link>
+                                            <Link href={route('events.show', p.event.uuid)} className="text-rose-400 hover:underline text-rose-400">{p.event.name}</Link>
                                         </td>
                                         <td className="px-3 py-2 text-sm text-stone-900 text-stone-100">{p.payment_at || '-'}</td>
                                         <td className="px-3 py-2 text-sm">

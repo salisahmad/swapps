@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Event;
 use App\Models\Payment;
+use App\Models\ClientActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -14,10 +15,20 @@ class PaymentController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Payment::with('event:id,name');
+        $query = Payment::with('event:id,uuid,name,date');
+        $statusFilter = $request->input('status', [
+            (string) Payment::STATUS_PENDING,
+            (string) Payment::STATUS_REJECTED,
+        ]);
+        $statusFilter = is_array($statusFilter) ? $statusFilter : [$statusFilter];
+        $statusFilter = array_values(array_intersect($statusFilter, [
+            (string) Payment::STATUS_PENDING,
+            (string) Payment::STATUS_CONFIRMED,
+            (string) Payment::STATUS_REJECTED,
+        ]));
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if (!empty($statusFilter)) {
+            $query->whereIn('status', $statusFilter);
         }
 
         if ($request->filled('is_expense')) {
@@ -35,7 +46,12 @@ class PaymentController extends Controller
             $query->whereDate('payment_at', '<=', $request->date_to);
         }
 
-        $payments = $query->latest()->paginate(15)->withQueryString();
+        $payments = $query
+            ->orderByRaw('case when status = ? then 0 else 1 end', [Payment::STATUS_PENDING])
+            ->orderByDesc('payment_at')
+            ->orderByDesc('created_at')
+            ->paginate(15)
+            ->withQueryString();
 
         $totalEarnings = Payment::where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
@@ -48,7 +64,10 @@ class PaymentController extends Controller
 
         return Inertia::render('Payments/Index', [
             'payments' => $payments,
-            'filters' => $request->only(['status', 'is_expense', 'payment_type', 'date_from', 'date_to']),
+            'filters' => [
+                ...$request->only(['is_expense', 'payment_type', 'date_from', 'date_to']),
+                'status' => $statusFilter,
+            ],
             'stats' => [
                 'total_earnings' => (float) $totalEarnings,
                 'total_expenses' => (float) $totalExpenses,
@@ -65,13 +84,9 @@ class PaymentController extends Controller
 
     public function create(Request $request): Response
     {
-        // Exclude events that are fully paid AND past date (completed)
-        $events = Event::where(function ($q) {
-            $q->where('is_fully_paid', false)
-              ->orWhere('date', '>=', now()->toDateString());
-        })
-        ->orderBy('date', 'desc')
-        ->get(['id', 'name', 'date', 'total_amount']);
+        $events = Event::where('is_fully_paid', false)
+            ->orderBy('name')
+            ->get(['id', 'name', 'date', 'total_amount']);
 
         return Inertia::render('Payments/Create', [
             'events' => $events,
@@ -109,17 +124,21 @@ class PaymentController extends Controller
             $receiptPath = $this->compressAndStoreImage($request->file('receipt_image'));
         }
 
-        Payment::create([
+        $payment = Payment::create([
             ...$validated,
             'receipt_image' => $receiptPath,
             'operational_cut' => $validated['operational_cut'] ?? 0,
             'created_by' => auth()->id(),
         ]);
 
+        $this->logPaymentChange($payment, 'Pembayaran ditambahkan.');
+
         // Update event paid status
         $this->updateEventPaidStatus($validated['event_id']);
 
-        $redirect = $request->event_id ? route('events.show', $request->event_id) : route('payments.index');
+        $redirect = $request->event_id
+            ? route('events.show', Event::findOrFail($request->event_id))
+            : route('payments.index');
         return redirect($redirect)->with('success', 'Pembayaran berhasil dicatat.');
     }
 
@@ -167,6 +186,8 @@ class PaymentController extends Controller
             $receiptPath = $this->compressAndStoreImage($request->file('receipt_image'));
         }
 
+        $before = $payment->only(['event_id', 'is_expense', 'payment_at', 'payment_type', 'amount', 'operational_cut', 'description', 'status']);
+
         $payment->update([
             ...$validated,
             'receipt_image' => $receiptPath,
@@ -174,6 +195,12 @@ class PaymentController extends Controller
         ]);
 
         $this->updateEventPaidStatus($validated['event_id']);
+        $this->logPaymentChange(
+            $payment->fresh(),
+            'Data pembayaran diubah.',
+            $before,
+            $payment->fresh()->only(['event_id', 'is_expense', 'payment_at', 'payment_type', 'amount', 'operational_cut', 'description', 'status']),
+        );
 
         return redirect()->route('payments.index')->with('success', 'Pembayaran berhasil diupdate.');
     }
@@ -181,6 +208,7 @@ class PaymentController extends Controller
     public function destroy(Payment $payment)
     {
         $eventId = $payment->event_id;
+        $before = $payment->only(['event_id', 'is_expense', 'payment_at', 'payment_type', 'amount', 'operational_cut', 'description', 'status']);
         
         if ($payment->receipt_image) {
             Storage::disk('public')->delete($payment->receipt_image);
@@ -188,6 +216,10 @@ class PaymentController extends Controller
         
         $payment->delete();
         $this->updateEventPaidStatus($eventId);
+        $event = Event::find($eventId);
+        if ($event) {
+            $this->logClientActivity($event, 'Data pembayaran dihapus.', $before);
+        }
 
         return redirect()->route('payments.index')->with('success', 'Pembayaran berhasil dihapus.');
     }
@@ -197,8 +229,10 @@ class PaymentController extends Controller
         if (!auth()->user()->isAdmin()) {
             abort(403, 'Hanya admin yang dapat mengkonfirmasi pembayaran.');
         }
+        $before = $payment->only(['status']);
         $payment->update(['status' => Payment::STATUS_CONFIRMED]);
         $this->updateEventPaidStatus($payment->event_id);
+        $this->logPaymentChange($payment, 'Pembayaran dikonfirmasi.', $before, ['status' => Payment::STATUS_CONFIRMED]);
         return redirect()->back()->with('success', 'Pembayaran dikonfirmasi.');
     }
 
@@ -207,14 +241,16 @@ class PaymentController extends Controller
         if (!auth()->user()->isAdmin()) {
             abort(403, 'Hanya admin yang dapat menolak pembayaran.');
         }
+        $before = $payment->only(['status']);
         $payment->update(['status' => Payment::STATUS_REJECTED]);
         $this->updateEventPaidStatus($payment->event_id);
+        $this->logPaymentChange($payment, 'Pembayaran ditolak.', $before, ['status' => Payment::STATUS_REJECTED]);
         return redirect()->back()->with('success', 'Pembayaran ditolak.');
     }
 
     private function compressAndStoreImage($file): string
     {
-        $image = Image::read($file);
+        $image = Image::decodePath($file->getRealPath());
         
         // Resize to max 800px width, keep aspect ratio
         $image->scaleDown(width: 800);
@@ -223,7 +259,7 @@ class PaymentController extends Controller
         $filename = 'receipts/' . uniqid() . '.jpg';
         
         Storage::disk('public')->makeDirectory('receipts');
-        Storage::disk('public')->put($filename, $image->encodeByExtension('jpg', quality: 80));
+        Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 80));
         
         return $filename;
     }
@@ -235,6 +271,33 @@ class PaymentController extends Controller
             ->where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
             ->sum('amount');
-        $event->update(['is_fully_paid' => $paid >= $event->total_amount]);
+        $event->update(['is_fully_paid' => $paid >= $event->grand_total]);
+    }
+
+    private function logPaymentChange(Payment $payment, string $message, ?array $before = null, ?array $after = null): void
+    {
+        $payment->loadMissing('event');
+
+        if ($payment->event) {
+            $this->logClientActivity($payment->event, $message, $before, $after ?? [
+                'payment_id' => $payment->id,
+                'amount' => $payment->amount,
+                'payment_at' => $payment->payment_at?->format('Y-m-d'),
+                'payment_type' => $payment->payment_type_name,
+                'status' => $payment->status_name,
+            ]);
+        }
+    }
+
+    private function logClientActivity(Event $event, string $message, ?array $before = null, ?array $after = null): void
+    {
+        ClientActivityLog::create([
+            'event_id' => $event->id,
+            'user_id' => auth()->id(),
+            'type' => ClientActivityLog::TYPE_PAYMENT_CHANGED,
+            'message' => $message,
+            'before' => $before,
+            'after' => $after,
+        ]);
     }
 }

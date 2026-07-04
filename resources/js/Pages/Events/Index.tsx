@@ -3,12 +3,14 @@ import { Head, Link, useForm } from '@inertiajs/react';
 
 interface EventItem {
     id: number;
+    uuid: string;
     name: string;
     date: string;
     time: string | null;
     mobile_phone: string;
     location: string | null;
     total_amount: number;
+    grand_total: number;
     is_fully_paid: boolean;
     order_type_name: string;
     created_at: string;
@@ -43,19 +45,23 @@ export default function Index({ events, filters }: PageProps) {
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const orderTypeClass = (name: string) =>
+        name === 'MUA'
+            ? 'bg-rose-100 text-rose-700 border border-rose-200'
+            : 'bg-violet-100 text-violet-700 border border-violet-200';
 
     return (
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="page-title">Events</h2>
+                    <h2 className="page-title">Clients</h2>
                     <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">
-                        + Booking
+                        + Client
                     </Link>
                 </div>
             }
         >
-            <Head title="Events" />
+            <Head title="Clients" />
 
             <div className="space-y-4">
                 {/* Filter Bar - Compact */}
@@ -83,6 +89,15 @@ export default function Index({ events, filters }: PageProps) {
                             <option value="1">Lunas</option>
                             <option value="0">Belum</option>
                         </select>
+                        <select
+                            value={data.order_type}
+                            onChange={(e) => setData('order_type', e.target.value)}
+                            className="input-field w-auto"
+                        >
+                            <option value="">Semua Jenis</option>
+                            <option value="1">MUA</option>
+                            <option value="2">Sewa Gaun</option>
+                        </select>
                         <button type="submit" className="btn-primary py-2 px-4">Filter</button>
                         <Link href={route('events.index')} className="btn-secondary py-2 px-4">Reset</Link>
                     </form>
@@ -93,7 +108,7 @@ export default function Index({ events, filters }: PageProps) {
                     {events.data.map((event) => (
                         <Link
                             key={event.id}
-                            href={route('events.show', event.id)}
+                            href={route('events.show', event.uuid)}
                             className="card block p-4 transition active:scale-[0.98]"
                         >
                             <div className="flex items-start justify-between">
@@ -112,17 +127,17 @@ export default function Index({ events, filters }: PageProps) {
                                 </span>
                             </div>
                             <div className="mt-3 flex items-center justify-between">
-                                <span className={`badge ${event.order_type_name === 'MUA' ? 'bg-rose-100 text-rose-700' : 'bg-violet-100 text-violet-700'}`}>
+                                <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
                                     {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
                                 </span>
-                                <p className="text-lg font-bold text-rose-500">{formatRupiah(event.total_amount)}</p>
+                                <p className="text-lg font-bold text-rose-500">{formatRupiah(event.grand_total ?? event.total_amount)}</p>
                             </div>
                         </Link>
                     ))}
                     {events.data.length === 0 && (
                         <div className="card py-12 text-center">
                             <p className="text-4xl mb-2">📭</p>
-                            <p className="text-stone-400">Tidak ada event</p>
+                            <p className="text-stone-400">Tidak ada client</p>
                         </div>
                     )}
                 </div>
@@ -139,37 +154,37 @@ export default function Index({ events, filters }: PageProps) {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Jenis</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Total</th>
                                     <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-100">
                                 {events.data.map((event) => (
-                                    <tr key={event.id} className="transition hover:bg-stone-50">
+                                    <tr
+                                        key={event.id}
+                                        onClick={() => { window.location.href = route('events.show', event.uuid); }}
+                                        className="cursor-pointer transition hover:bg-stone-50"
+                                    >
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-stone-800">{event.name}</p>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-stone-600">{event.date} {event.time ? `· ${event.time}` : ''}</td>
                                         <td className="px-4 py-3 text-sm text-stone-600">{event.mobile_phone}</td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={`badge ${event.order_type_name === 'MUA' ? 'badge-rose' : 'badge-violet'}`}>
+                                            <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
                                                 {event.order_type_name}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.total_amount)}</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount)}</td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
                                                 {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right text-sm">
-                                            <Link href={route('events.show', event.id)} className="text-rose-500 hover:text-rose-600 font-medium">Detail</Link>
-                                        </td>
                                     </tr>
                                 ))}
                                 {events.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="px-4 py-12 text-center text-stone-400">
-                                            📭 Tidak ada event
+                                        <td colSpan={6} className="px-4 py-12 text-center text-stone-400">
+                                            📭 Tidak ada client
                                         </td>
                                     </tr>
                                 )}

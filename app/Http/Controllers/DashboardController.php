@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClientEvent;
+use App\Models\Event;
 use App\Models\Payment;
 use App\Models\Schedule;
 use Carbon\Carbon;
@@ -13,126 +13,122 @@ class DashboardController extends Controller
 {
     public function index(): Response
     {
-        $today = Carbon::today();
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
-        $startOfYear = Carbon::now()->startOfYear();
-        $endOfYear = Carbon::now()->endOfYear();
-        $startOfLastYear = Carbon::now()->subYear()->startOfYear();
-        $endOfLastYear = Carbon::now()->subYear()->endOfYear();
-        $startOfNextYear = Carbon::now()->addYear()->startOfYear();
-        $endOfNextYear = Carbon::now()->addYear()->endOfYear();
+        $businessNow = Carbon::now('Asia/Jakarta');
+        $today = $businessNow->copy()->startOfDay();
+        $startOfMonth = $businessNow->copy()->startOfMonth();
+        $endOfMonth = $businessNow->copy()->endOfMonth();
+        $startOfYear = $businessNow->copy()->startOfYear();
+        $endOfYear = $businessNow->copy()->endOfYear();
+        $startOfLastYear = $businessNow->copy()->subYear()->startOfYear();
+        $endOfLastYear = $businessNow->copy()->subYear()->endOfYear();
+        $todayDate = $today->toDateString();
+        $yesterday = $today->copy()->subDay();
+        $unpaidClientCutoffDate = $today->copy()->addDays(2)->toDateString();
+        $appTimezone = config('app.timezone');
+        $toAppTimezoneRange = fn (Carbon $start, Carbon $end) => [
+            $start->copy()->setTimezone($appTimezone),
+            $end->copy()->setTimezone($appTimezone),
+        ];
+
+        $lastYearInputRange = $toAppTimezoneRange($startOfLastYear, $endOfLastYear);
+        $thisYearInputRange = $toAppTimezoneRange($startOfYear, $endOfYear);
+        $thisMonthInputRange = $toAppTimezoneRange($startOfMonth, $endOfMonth);
+        $todayInputRange = $toAppTimezoneRange($today, $today->copy()->endOfDay());
+        $yesterdayInputRange = $toAppTimezoneRange($yesterday->copy()->startOfDay(), $yesterday->copy()->endOfDay());
 
         // ===== 1. Omset Tahun Lalu =====
         $lastYearEarnings = Payment::where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', [$startOfLastYear, $endOfLastYear])
+            ->whereBetween('created_at', $lastYearInputRange)
             ->sum('amount');
 
         // ===== 2. Total Client Tahun Lalu =====
-        $lastYearTotalEvents = ClientEvent::whereBetween('created_at', [$startOfLastYear, $endOfLastYear])->count();
+        $lastYearTotalEvents = Event::whereBetween('created_at', $lastYearInputRange)->count();
 
         // ===== 3. Omset Tahun Ini =====
         $thisYearEarnings = Payment::where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', [$startOfYear, $endOfYear])
+            ->whereBetween('created_at', $thisYearInputRange)
             ->sum('amount');
 
         // ===== 4. Total Client Tahun Ini =====
-        $thisYearTotalEvents = ClientEvent::whereBetween('created_at', [$startOfYear, $endOfYear])->count();
+        $thisYearTotalEvents = Event::whereBetween('created_at', $thisYearInputRange)->count();
 
         // ===== 5. Omset Bulan Ini =====
         $thisMonthEarnings = Payment::where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereBetween('created_at', $thisMonthInputRange)
             ->sum('amount');
 
         // ===== 6. Total Client Bulan Ini =====
-        $thisMonthTotalEvents = ClientEvent::whereBetween('created_at', [$startOfMonth, $endOfMonth])->count();
+        $thisMonthTotalEvents = Event::whereBetween('created_at', $thisMonthInputRange)->count();
+        $thisMonthMuaEvents = Event::whereBetween('created_at', $thisMonthInputRange)
+            ->where('order_type', Event::ORDER_TYPE_MUA)
+            ->count();
+        $thisMonthGownEvents = Event::whereBetween('created_at', $thisMonthInputRange)
+            ->where('order_type', Event::ORDER_TYPE_GOWN)
+            ->count();
+        $thisYearMuaEvents = Event::whereBetween('created_at', $thisYearInputRange)
+            ->where('order_type', Event::ORDER_TYPE_MUA)
+            ->count();
+        $thisYearGownEvents = Event::whereBetween('created_at', $thisYearInputRange)
+            ->where('order_type', Event::ORDER_TYPE_GOWN)
+            ->count();
 
-        // ===== 7. Total Client Tahun Depan =====
-        $nextYearTotalEvents = ClientEvent::whereBetween('date', [$startOfNextYear, $endOfNextYear])->count();
-
-        // ===== 8. Hutang (DP events yang belum terlaksana) =====
-        // Events with date >= today (future or today) that are not fully paid
-        $hutangEvents = ClientEvent::where('date', '>=', $today)
+        // ===== 7. Client belum lunas sampai dua hari ke depan =====
+        $overdueUnpaidEvents = Event::whereDate('date', '<=', $unpaidClientCutoffDate)
             ->where('is_fully_paid', false)
+            ->with(['additionalCosts', 'payments' => function ($q) {
+                $q->where('is_expense', Payment::EARNING)
+                    ->where('status', Payment::STATUS_CONFIRMED);
+            }])
+            ->orderBy('date', 'desc')
             ->get();
-        $hutangAmount = 0;
-        foreach ($hutangEvents as $event) {
-            $paid = $event->payments()
-                ->where('is_expense', Payment::EARNING)
-                ->where('status', Payment::STATUS_CONFIRMED)
-                ->sum('amount');
-            $hutangAmount += ($event->total_amount - $paid);
-        }
-        $hutangCount = $hutangEvents->count();
 
-        // ===== 9. Closing Event Hari Ini =====
-        $closingToday = ClientEvent::whereDate('created_at', $today)->count();
+        $overdueUnpaidTotal = $overdueUnpaidEvents->sum(function ($event) {
+            return max(0, $event->grand_total - $event->payments->sum('amount'));
+        });
 
-        // ===== 10. Closing Event Kemarin =====
-        $closingYesterday = ClientEvent::whereDate('created_at', $today->copy()->subDay())->count();
+        $overdueUnpaidCount = $overdueUnpaidEvents->count();
 
-        // Existing stats (keep for reference)
-        $totalEvents = ClientEvent::count();
-        $unpaidEvents = ClientEvent::where('is_fully_paid', false)->count();
-        $totalUnpaidAmount = ClientEvent::where('is_fully_paid', false)->sum('total_amount');
+        $totalEvents = Event::count();
 
         $expenses = Payment::where('is_expense', Payment::EXPENSE)
             ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', [$startOfMonth, $endOfMonth])
+            ->whereBetween('created_at', $thisMonthInputRange)
             ->sum('amount');
 
         $profit = $thisMonthEarnings - $expenses;
 
-        // Events hari ini
-        $todayEvents = ClientEvent::whereDate('date', $today)
-            ->with(['payments' => function ($q) {
-                $q->where('is_expense', Payment::EARNING)->where('status', Payment::STATUS_CONFIRMED);
-            }])
-            ->get();
-
-        // Schedules hari ini
-        $todaySchedules = Schedule::whereDate('schedule_from', $today)
-            ->with('event')
+        $todaySchedules = Schedule::whereDate('schedule_from', $todayDate)
+            ->with('event:id,uuid,name,date,time')
             ->orderBy('schedule_from')
             ->get();
 
-        // Upcoming events (7 hari)
-        $upcomingEvents = ClientEvent::whereBetween('date', [$today, $today->copy()->addDays(7)])
-            ->orderBy('date')
+        $nextSchedules = Schedule::whereDate('schedule_from', '>', $todayDate)
+            ->with('event:id,uuid,name,date,time')
+            ->orderBy('schedule_from')
             ->take(5)
             ->get();
 
-        // Unpaid events list
-        $unpaidEventsList = ClientEvent::where('is_fully_paid', false)
-            ->with('payments')
+        $nextClients = Event::whereDate('date', '>=', $todayDate)
+            ->with('additionalCosts')
             ->orderBy('date')
             ->take(5)
-            ->get();
+            ->get(['id', 'uuid', 'name', 'date', 'time', 'location', 'total_amount', 'discount_amount', 'is_fully_paid', 'order_type']);
 
         // Closing lists
-        $closingTodayList = ClientEvent::whereDate('created_at', $today)
+        $closingTodayList = Event::whereBetween('created_at', $todayInputRange)
+            ->with('additionalCosts')
             ->orderBy('created_at', 'desc')
             ->take(5)
-            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
+            ->get(['id', 'uuid', 'name', 'date', 'total_amount', 'discount_amount', 'is_fully_paid', 'order_type']);
 
-        $closingYesterdayList = ClientEvent::whereDate('created_at', $today->copy()->subDay())
+        $closingYesterdayList = Event::whereBetween('created_at', $yesterdayInputRange)
+            ->with('additionalCosts')
             ->orderBy('created_at', 'desc')
             ->take(5)
-            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
-
-        // Client lists for dashboard
-        $todayClients = ClientEvent::whereDate('created_at', $today)
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
-
-        $nextYearClients = ClientEvent::whereBetween('date', [$startOfNextYear, $endOfNextYear])
-            ->orderBy('date')
-            ->take(5)
-            ->get(['id', 'name', 'date', 'total_amount', 'is_fully_paid']);
+            ->get(['id', 'uuid', 'name', 'date', 'total_amount', 'discount_amount', 'is_fully_paid', 'order_type']);
 
         return Inertia::render('Dashboard', [
             'stats' => [
@@ -140,27 +136,33 @@ class DashboardController extends Controller
                 'earnings' => (float) $thisMonthEarnings,
                 'expenses' => (float) $expenses,
                 'profit' => (float) $profit,
-                'unpaid_events' => $unpaidEvents,
-                'total_unpaid_amount' => (float) $totalUnpaidAmount,
+                'overdue_unpaid_count' => $overdueUnpaidCount,
+                'overdue_unpaid_total' => (float) $overdueUnpaidTotal,
                 'this_year_earnings' => (float) $thisYearEarnings,
                 'this_year_total_events' => $thisYearTotalEvents,
                 'this_month_earnings' => (float) $thisMonthEarnings,
                 'this_month_total_events' => $thisMonthTotalEvents,
-                'next_year_total_events' => $nextYearTotalEvents,
-                'hutang_amount' => (float) $hutangAmount,
-                'hutang_count' => $hutangCount,
                 // Combined last year card
                 'last_year_summary' => [
                     'earnings' => (float) $lastYearEarnings,
                     'clients' => $lastYearTotalEvents,
                 ],
+                'this_month_summary' => [
+                    'earnings' => (float) $thisMonthEarnings,
+                    'clients' => $thisMonthTotalEvents,
+                    'mua_clients' => $thisMonthMuaEvents,
+                    'gown_clients' => $thisMonthGownEvents,
+                ],
+                'this_year_client_summary' => [
+                    'total' => $thisYearTotalEvents,
+                    'mua_clients' => $thisYearMuaEvents,
+                    'gown_clients' => $thisYearGownEvents,
+                ],
             ],
-            'todayEvents' => $todayEvents,
-            'todaySchedules' => $todaySchedules,
-            'upcomingEvents' => $upcomingEvents,
-            'unpaidEventsList' => $unpaidEventsList,
-            'todayClients' => $todayClients,
-            'nextYearClients' => $nextYearClients,
+            'todayFittingSchedules' => $todaySchedules,
+            'nextFittingSchedules' => $nextSchedules,
+            'nextClients' => $nextClients,
+            'overdueUnpaidClients' => $overdueUnpaidEvents,
             'closingTodayList' => $closingTodayList,
             'closingYesterdayList' => $closingYesterdayList,
             'authUser' => [

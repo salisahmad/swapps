@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\TelegramSetting;
 use Illuminate\Support\Facades\Http;
-use App\Models\ClientEvent; // Corrected model usage
+use App\Models\Event;
 
 class TelegramNotification
 {
@@ -46,7 +46,7 @@ class TelegramNotification
         }
     }
 
-    public function notifyNewEvent(ClientEvent $event): bool
+    public function notifyNewEvent(Event $event): bool
     {
         $settings = TelegramSetting::getInstance();
         if (!$settings?->notify_new_event) return false;
@@ -58,7 +58,7 @@ class TelegramNotification
             "<b>Paket:</b> " . ($event->package_description ?: '-') . "\n" .
             "<b>Total:</b> Rp " . number_format($event->total_amount, 0, ',', '.') . "\n" .
             "<b>Status:</b> " . ($event->is_fully_paid ? 'Lunas' : 'Belum Lunas') . "\n\n" .
-            "🔗 <a href=\"" . route('events.show', $event->id) . "\">Lihat Detail</a>";
+            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
 
         return $this->sendMessage($message);
     }
@@ -79,7 +79,7 @@ class TelegramNotification
             "<b>Metode:</b> {$payment->payment_type_name}\n" .
             "<b>Keterangan:</b> " . ($payment->description ?: '-') . "\n" .
             "<b>Status:</b> {$payment->status_name}\n\n" .
-            "🔗 <a href=\"" . route('events.show', $event->id) . "\">Lihat Detail</a>";
+            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
 
         return $this->sendMessage($message);
     }
@@ -96,7 +96,7 @@ class TelegramNotification
             "<b>Client:</b> {$event->name}\n" .
             "<b>Tanggal:</b> {$date}\n" .
             "<b>Keterangan:</b> " . ($schedule->description ?: '-') . "\n\n" .
-            "🔗 <a href=\"" . route('events.show', $event->id) . "\">Lihat Detail</a>";
+            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
 
         return $this->sendMessage($message);
     }

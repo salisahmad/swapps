@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ClientEvent;
+use App\Models\Event;
 use App\Models\Schedule;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -13,8 +13,8 @@ class ScheduleController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Schedule::with('event:id,name')
-            ->orderBy('schedule_from', 'desc');
+        $query = Schedule::with('event:id,uuid,name')
+            ->orderBy('schedule_from');
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);
@@ -35,9 +35,8 @@ class ScheduleController extends Controller
 
         $schedules = $query->paginate(15)->withQueryString();
 
-        // Get upcoming events for dropdown
-        $events = ClientEvent::whereDate('date', '>=', Carbon::today())
-            ->orderBy('date')
+        $events = Event::whereDate('date', '>', Carbon::today())
+            ->orderBy('name')
             ->get(['id', 'name', 'date']);
 
         return Inertia::render('Schedules/Index', [
@@ -51,11 +50,13 @@ class ScheduleController extends Controller
     {
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'type' => 'required|integer|in:1,2',
+            'schedule_type' => 'required|integer|in:1,2',
             'schedule_from' => 'required|date',
             'schedule_to' => 'nullable|date|after_or_equal:schedule_from',
             'description' => 'nullable|string',
         ]);
+        $validated['type'] = $validated['schedule_type'];
+        unset($validated['schedule_type']);
 
         $validated['created_by'] = auth()->id();
 
@@ -64,7 +65,13 @@ class ScheduleController extends Controller
             $validated['schedule_from'] = $request->schedule_from . ' ' . $request->time_from;
         }
         if ($request->has('time_to') && $request->time_to) {
-            $validated['schedule_to'] = $request->schedule_to . ' ' . $request->time_to;
+            $validated['schedule_to'] = ($request->schedule_to ?: $request->schedule_from) . ' ' . $request->time_to;
+        }
+
+        if ($this->hasConflict($validated['type'], $validated['schedule_from'], $validated['schedule_to'] ?? null)) {
+            return redirect()->back()->withErrors([
+                'schedule_from' => 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.',
+            ]);
         }
 
         Schedule::create($validated);
@@ -76,17 +83,25 @@ class ScheduleController extends Controller
     {
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
-            'type' => 'required|integer|in:1,2',
+            'schedule_type' => 'required|integer|in:1,2',
             'schedule_from' => 'required|date',
             'schedule_to' => 'nullable|date|after_or_equal:schedule_from',
             'description' => 'nullable|string',
         ]);
+        $validated['type'] = $validated['schedule_type'];
+        unset($validated['schedule_type']);
 
         if ($request->has('time_from')) {
             $validated['schedule_from'] = $request->schedule_from . ' ' . $request->time_from;
         }
         if ($request->has('time_to') && $request->time_to) {
-            $validated['schedule_to'] = $request->schedule_to . ' ' . $request->time_to;
+            $validated['schedule_to'] = ($request->schedule_to ?: $request->schedule_from) . ' ' . $request->time_to;
+        }
+
+        if ($this->hasConflict($validated['type'], $validated['schedule_from'], $validated['schedule_to'] ?? null, $schedule->id)) {
+            return redirect()->back()->withErrors([
+                'schedule_from' => 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.',
+            ]);
         }
 
         $schedule->update($validated);
@@ -123,5 +138,27 @@ class ScheduleController extends Controller
         });
 
         return response()->json($taken);
+    }
+
+    private function hasConflict(int $type, string $from, ?string $to = null, ?int $excludeId = null): bool
+    {
+        $start = Carbon::parse($from);
+        $end = $to ? Carbon::parse($to) : $start->copy()->addHour();
+
+        $query = Schedule::where('type', $type)
+            ->whereDate('schedule_from', $start->toDateString());
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        return $query->get(['schedule_from', 'schedule_to'])->contains(function (Schedule $schedule) use ($start, $end) {
+            $existingStart = Carbon::parse($schedule->schedule_from);
+            $existingEnd = $schedule->schedule_to
+                ? Carbon::parse($schedule->schedule_to)
+                : $existingStart->copy()->addHour();
+
+            return $start->lt($existingEnd) && $end->gt($existingStart);
+        });
     }
 }

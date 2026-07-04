@@ -32,7 +32,7 @@ export default function Index({ staff, filters }: PageProps) {
         email: '',
         mobile_phone: '',
         password: '',
-        role: '3',
+        form_role: '3',
         staff_id: '',
     });
 
@@ -57,7 +57,7 @@ export default function Index({ staff, filters }: PageProps) {
             email: s.email,
             mobile_phone: s.mobile_phone || '',
             password: '',
-            role: String(s.role),
+            form_role: String(s.role),
             staff_id: String(s.id),
         });
         setEditMode(true);
@@ -70,7 +70,7 @@ export default function Index({ staff, filters }: PageProps) {
             name: data.name,
             email: data.email,
             mobile_phone: data.mobile_phone,
-            role: data.role,
+            role: data.form_role,
             ...(editMode ? {} : { password: data.password }),
         };
         if (editMode && data.staff_id) {
@@ -192,7 +192,7 @@ export default function Index({ staff, filters }: PageProps) {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Role</label>
-                                <select value={data.role} onChange={(e) => setData('role', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800">
+                                <select value={data.form_role} onChange={(e) => setData('form_role', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800">
                                     <option value="2">Admin</option>
                                     <option value="3">Staff</option>
                                 </select>
