@@ -88,6 +88,7 @@ export default function Edit({ event, items }: PageProps) {
     const [itemResults, setItemResults] = useState<Item[]>(items);
     const [selectedItems, setSelectedItems] = useState<Item[]>(event.items as Item[]);
     const [searchingItems, setSearchingItems] = useState(false);
+    const [previewItem, setPreviewItem] = useState<Item | null>(null);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,6 +109,21 @@ export default function Edit({ event, items }: PageProps) {
         );
     };
 
+    const handleOrderTypeChange = (value: string) => {
+        setData({
+            ...data,
+            order_type: value,
+            item_ids: value === data.order_type ? data.item_ids : [],
+        });
+
+        if (value !== data.order_type) {
+            setSelectedItems([]);
+        }
+
+        setItemResults([]);
+        setItemSearch('');
+    };
+
     const inputClass = 'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-200 bg-white text-stone-800';
     const labelClass = 'block text-sm font-medium text-stone-700 text-stone-500';
     const onlyDigits = (value: string) => value.replace(/\D/g, '');
@@ -117,6 +133,8 @@ export default function Edit({ event, items }: PageProps) {
     const additionalCostTypes = ['Transport', 'Foto/Video', 'Melati', 'MC', 'Hairdo', 'Hena', 'Dekor', 'Tambahan'];
     const additionalCostTotal = data.additional_costs.reduce((sum, cost) => sum + Number(cost.total || 0), 0);
     const grandTotal = Math.max(0, Number(data.total_amount || 0) + additionalCostTotal - Number(data.discount_amount || 0));
+    const isCatalogOrder = data.order_type === '1' || data.order_type === '2';
+    const isGownOrder = data.order_type === '2';
 
     const addAdditionalCost = () => {
         setData('additional_costs', [...data.additional_costs, { type: 'Transport', total: '', notes: '' }]);
@@ -133,9 +151,17 @@ export default function Edit({ event, items }: PageProps) {
     };
 
     useEffect(() => {
+        if (!isCatalogOrder) {
+            setItemResults([]);
+            setSearchingItems(false);
+            return;
+        }
+
         const controller = new AbortController();
         const timeout = window.setTimeout(() => {
             const params = new URLSearchParams();
+            params.set('order_type', data.order_type);
+
             if (itemSearch.trim()) {
                 params.set('q', itemSearch.trim());
             }
@@ -167,7 +193,7 @@ export default function Edit({ event, items }: PageProps) {
             window.clearTimeout(timeout);
             controller.abort();
         };
-    }, [itemSearch, selectedItems]);
+    }, [itemSearch, selectedItems, data.order_type, isCatalogOrder]);
 
     useEffect(() => {
         if (!data.date) {
@@ -263,7 +289,7 @@ export default function Edit({ event, items }: PageProps) {
                                     <label className={labelClass}>Jenis Order</label>
                                     <select
                                         value={data.order_type}
-                                        onChange={(e) => setData('order_type', e.target.value)}
+                                        onChange={(e) => handleOrderTypeChange(e.target.value)}
                                         className={inputClass}
                                     >
                                         <option value="1">MUA</option>
@@ -406,8 +432,16 @@ export default function Edit({ event, items }: PageProps) {
                                 </div>
                             </div>
 
+                            {isCatalogOrder && (
                             <div>
-                                <label className={labelClass}>Pilih Item / Gaun</label>
+                                <label className={labelClass}>
+                                    {isGownOrder ? 'Pilih Item / Gaun dari Katalog Disewakan' : 'Pilih Item dari Katalog'}
+                                </label>
+                                <p className="mt-1 text-xs text-stone-500">
+                                    {isGownOrder
+                                        ? 'Hanya item katalog dengan status disewakan dan tersedia yang bisa dipilih.'
+                                        : 'Client MUA bisa memilih item katalog yang tersedia.'}
+                                </p>
                                 <input
                                     type="text"
                                     value={itemSearch}
@@ -430,7 +464,8 @@ export default function Edit({ event, items }: PageProps) {
                                     </div>
                                 )}
                                 {searchingItems && <p className="mt-2 text-xs text-stone-500">Mencari item...</p>}
-                                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                <div className="mt-2 max-h-[17rem] overflow-y-auto pr-1 sm:max-h-[25rem]">
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                                     {itemResults.map((item) => (
                                         <label
                                             key={item.id}
@@ -447,10 +482,21 @@ export default function Edit({ event, items }: PageProps) {
                                                 className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                             />
                                             {item.image_url && (
-                                                <img src={item.image_url} alt={item.name} className="h-12 w-12 rounded-lg object-cover" />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setPreviewItem(item);
+                                                    }}
+                                                    className="shrink-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-400"
+                                                    title="Lihat foto"
+                                                >
+                                                    <img src={item.image_url} alt={item.name} className="h-12 w-12 rounded-lg object-cover" />
+                                                </button>
                                             )}
                                             <div className="min-w-0">
-                                                <p className="text-sm font-medium text-stone-900 text-white">{item.name}</p>
+                                                <p className="text-sm font-medium text-stone-900">{item.name}</p>
                                                 <p className="text-xs text-stone-500">{item.code} {item.type_name ? `• ${item.type_name}` : ''}</p>
                                                 {item.stock_summary && (
                                                     <p className="text-xs text-stone-400">Stok: {item.stock_summary}</p>
@@ -467,7 +513,43 @@ export default function Edit({ event, items }: PageProps) {
                                         </p>
                                     )}
                                 </div>
+                                </div>
+                                {errors.item_ids && <p className="mt-2 text-sm text-red-600">{errors.item_ids}</p>}
                             </div>
+                            )}
+
+                            {previewItem?.image_url && (
+                                <div
+                                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+                                    onClick={() => setPreviewItem(null)}
+                                >
+                                    <div
+                                        className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-xl"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-stone-900">{previewItem.name}</p>
+                                                <p className="text-xs text-stone-500">{previewItem.code}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreviewItem(null)}
+                                                className="rounded px-3 py-1 text-sm font-semibold text-stone-600 hover:bg-stone-100"
+                                            >
+                                                Tutup
+                                            </button>
+                                        </div>
+                                        <div className="bg-stone-50 p-3">
+                                            <img
+                                                src={previewItem.image_url}
+                                                alt={previewItem.name}
+                                                className="mx-auto max-h-[75vh] w-auto rounded object-contain"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="flex items-center gap-4 pt-4">
                                 <button

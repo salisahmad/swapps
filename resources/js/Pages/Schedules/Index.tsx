@@ -4,8 +4,13 @@ import { useEffect, useState } from 'react';
 
 interface Event {
     id: number;
+    uuid: string;
     name: string;
+    mobile_phone: string | null;
     date: string;
+    time: string | null;
+    order_type?: number | string;
+    order_type_name?: string;
 }
 
 interface ScheduleItem {
@@ -15,7 +20,12 @@ interface ScheduleItem {
     schedule_from: string;
     schedule_to: string | null;
     description: string | null;
-    event: { id: number; uuid: string; name: string };
+    prospect_name: string | null;
+    prospect_mobile_phone: string | null;
+    client_name: string;
+    client_phone: string | null;
+    client_status_name: string;
+    event: Event | null;
 }
 
 interface PageProps {
@@ -44,7 +54,10 @@ export default function Index({ schedules, filters, events }: PageProps) {
         date_to: filters.date_to || '',
         q: filters.q || '',
         // form fields
+        client_source: 'booked',
         event_id: '',
+        prospect_name: '',
+        prospect_mobile_phone: '',
         schedule_type: '1',
         schedule_from: '',
         time_from: '14:00',
@@ -64,7 +77,10 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
     const selectedEvent = events.find((event) => String(event.id) === data.event_id);
     const filteredEvents = clientSearch.length > 0
-        ? events.filter((event) => event.name.toLowerCase().includes(clientSearch.toLowerCase()))
+        ? events.filter((event) => (
+            event.name.toLowerCase().includes(clientSearch.toLowerCase())
+            || (event.mobile_phone || '').includes(clientSearch)
+        ))
         : events.slice(0, 10);
 
     const submitFilter = (e: React.FormEvent) => {
@@ -76,7 +92,10 @@ export default function Index({ schedules, filters, events }: PageProps) {
         reset();
         setData({
             ...data,
+            client_source: 'booked',
             event_id: '',
+            prospect_name: '',
+            prospect_mobile_phone: '',
             schedule_type: '1',
             schedule_from: '',
             time_from: '14:00',
@@ -93,10 +112,15 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
     const openEdit = (schedule: ScheduleItem) => {
         const fromDate = new Date(schedule.schedule_from);
-        const selectedScheduleEvent = events.find((event) => event.id === schedule.event.id);
+        const selectedScheduleEvent = schedule.event
+            ? events.find((event) => event.id === schedule.event?.id)
+            : null;
         setData({
             ...data,
-            event_id: String(schedule.event.id),
+            client_source: schedule.event ? 'booked' : 'prospect',
+            event_id: schedule.event ? String(schedule.event.id) : '',
+            prospect_name: schedule.prospect_name || '',
+            prospect_mobile_phone: schedule.prospect_mobile_phone || '',
             schedule_type: schedule.type_name === 'Fitting' ? '1' : '2',
             schedule_from: fromDate.toISOString().split('T')[0],
             time_from: fromDate.toTimeString().slice(0, 5),
@@ -105,7 +129,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
             description: schedule.description || '',
             schedule_id: String(schedule.id),
         });
-        setClientSearch(selectedScheduleEvent?.name || schedule.event.name);
+        setClientSearch(selectedScheduleEvent?.name || schedule.event?.name || '');
         setShowClientDropdown(false);
         setEditMode(true);
         setShowModal(true);
@@ -114,8 +138,13 @@ export default function Index({ schedules, filters, events }: PageProps) {
     const submitForm = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!data.event_id) {
+        if (data.client_source === 'booked' && !data.event_id) {
             alert('Pilih client dari hasil pencarian dulu.');
+            return;
+        }
+
+        if (data.client_source === 'prospect' && (!data.prospect_name || !data.prospect_mobile_phone)) {
+            alert('Isi nama dan nomor telepon calon client.');
             return;
         }
 
@@ -196,6 +225,18 @@ export default function Index({ schedules, filters, events }: PageProps) {
         setClientSearch(event.name);
         setShowClientDropdown(false);
     };
+    const getClientStatusStyle = (schedule: ScheduleItem) => {
+        if (!schedule.event) {
+            return 'bg-orange-100 text-orange-800 border border-orange-200';
+        }
+
+        return schedule.client_status_name === 'MUA'
+            ? 'bg-rose-50 text-rose-700 border border-rose-100'
+            : 'bg-violet-50 text-violet-700 border border-violet-100';
+    };
+    const getScheduleRowClass = (schedule: ScheduleItem) => (
+        schedule.event ? '' : 'bg-orange-50/70'
+    );
     const timeToMinutes = (time: string | null) => {
         if (!time) return null;
 
@@ -323,11 +364,16 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                         const style = getScheduleStyle(s);
 
                                         return (
-                                        <tr key={s.id}>
+                                        <tr key={s.id} className={getScheduleRowClass(s)}>
                                             <td className="px-3 py-3">
-                                                <Link href={route('events.show', s.event.uuid)} className="text-sm font-medium text-rose-400 hover:underline text-rose-400">
-                                                    {s.event.name}
-                                                </Link>
+                                                {s.event ? (
+                                                    <Link href={route('events.show', s.event.uuid)} className="text-sm font-medium text-rose-400 hover:underline text-rose-400">
+                                                        {s.client_name}
+                                                    </Link>
+                                                ) : (
+                                                    <p className="text-sm font-bold text-orange-800">{s.client_name}</p>
+                                                )}
+                                                <p className="text-xs text-stone-500">{s.client_phone || '-'}</p>
                                             </td>
                                             <td className="px-3 py-3">
                                                 <span className="flex items-center gap-2 text-sm font-medium text-stone-800">
@@ -343,7 +389,12 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                                 {formatScheduleDateTime(s.schedule_from)}
                                                 {s.schedule_to && ` - ${parseDateTime(s.schedule_to).time || formatScheduleDateTime(s.schedule_to)}`}
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-stone-900 text-stone-100">{s.description || '-'}</td>
+                                            <td className="px-3 py-3 text-sm text-stone-900 text-stone-100">
+                                                <span className={`mb-1 inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${getClientStatusStyle(s)}`}>
+                                                    {s.client_status_name}
+                                                </span>
+                                                <p>{s.description || '-'}</p>
+                                            </td>
                                             <td className="px-3 py-3 text-right text-sm">
                                                 <button onClick={() => openEdit(s)} className="mr-2 text-rose-400 hover:text-rose-500 text-rose-400">Edit</button>
                                                 <button onClick={() => handleDelete(s.id)} className="text-red-600 hover:text-red-900 text-red-400">Hapus</button>
@@ -374,44 +425,102 @@ export default function Index({ schedules, filters, events }: PageProps) {
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
                         <form onSubmit={submitForm} className="space-y-4">
-                            <div className="relative">
-                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Client</label>
-                                <input
-                                    type="text"
-                                    value={clientSearch}
-                                    onChange={(e) => {
-                                        setClientSearch(e.target.value);
-                                        setShowClientDropdown(true);
-                                        setData('event_id', '');
-                                    }}
-                                    onFocus={() => setShowClientDropdown(true)}
-                                    className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
-                                    placeholder="Cari nama client..."
-                                    required
-                                />
-                                {showClientDropdown && (
-                                    <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
-                                        {filteredEvents.length === 0 ? (
-                                            <p className="px-4 py-3 text-sm text-stone-400">Tidak ditemukan</p>
-                                        ) : (
-                                            filteredEvents.map((event) => (
-                                                <button
-                                                    key={event.id}
-                                                    type="button"
-                                                    onClick={() => selectEvent(event)}
-                                                    className="w-full px-4 py-2 text-left text-sm hover:bg-stone-50"
-                                                >
-                                                    <p className="font-medium text-stone-800">{event.name}</p>
-                                                    <p className="text-xs text-stone-400">{formatDisplayDate(event.date)}</p>
-                                                </button>
-                                            ))
-                                        )}
+                            <div>
+                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Status Client</label>
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setData({
+                                            ...data,
+                                            client_source: 'booked',
+                                            prospect_name: '',
+                                            prospect_mobile_phone: '',
+                                        })}
+                                        className={`rounded-lg border px-3 py-2 text-sm font-semibold ${data.client_source === 'booked' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-stone-200 bg-white text-stone-600'}`}
+                                    >
+                                        Client booking
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setData({
+                                            ...data,
+                                            client_source: 'prospect',
+                                            event_id: '',
+                                        })}
+                                        className={`rounded-lg border px-3 py-2 text-sm font-semibold ${data.client_source === 'prospect' ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-stone-200 bg-white text-stone-600'}`}
+                                    >
+                                        Calon client
+                                    </button>
+                                </div>
+                            </div>
+
+                            {data.client_source === 'booked' ? (
+                                <div className="relative">
+                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Client</label>
+                                    <input
+                                        type="text"
+                                        value={clientSearch}
+                                        onChange={(e) => {
+                                            setClientSearch(e.target.value);
+                                            setShowClientDropdown(true);
+                                            setData('event_id', '');
+                                        }}
+                                        onFocus={() => setShowClientDropdown(true)}
+                                        className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
+                                        placeholder="Cari nama / nomor client..."
+                                        required
+                                    />
+                                    {showClientDropdown && (
+                                        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
+                                            {filteredEvents.length === 0 ? (
+                                                <p className="px-4 py-3 text-sm text-stone-400">Tidak ditemukan</p>
+                                            ) : (
+                                                filteredEvents.map((event) => (
+                                                    <button
+                                                        key={event.id}
+                                                        type="button"
+                                                        onClick={() => selectEvent(event)}
+                                                        className="w-full px-4 py-2 text-left text-sm hover:bg-stone-50"
+                                                    >
+                                                        <p className="font-medium text-stone-800">{event.name}</p>
+                                                        <p className="text-xs text-stone-400">{event.mobile_phone || '-'} / {formatDisplayDate(event.date)}</p>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+                                    {selectedEvent && (
+                                        <p className="mt-1 text-xs text-stone-500">Tanggal acara: {formatDisplayDate(selectedEvent.date)}</p>
+                                    )}
+                                    <input type="hidden" value={data.event_id} name="event_id" />
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 text-stone-500">Nama Calon Client</label>
+                                        <input
+                                            type="text"
+                                            value={data.prospect_name}
+                                            onChange={(e) => setData('prospect_name', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
+                                            required
+                                        />
                                     </div>
-                                )}
-                                {selectedEvent && (
-                                    <p className="mt-1 text-xs text-stone-500">Tanggal acara: {formatDisplayDate(selectedEvent.date)}</p>
-                                )}
-                                <input type="hidden" value={data.event_id} name="event_id" />
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 text-stone-500">Nomor Telepon</label>
+                                        <input
+                                            type="text"
+                                            value={data.prospect_mobile_phone}
+                                            onChange={(e) => setData('prospect_mobile_phone', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="rounded-lg bg-stone-50 px-3 py-2 text-xs text-stone-600">
+                                Keterangan status: MUA dan Sewa Gaun diambil dari data client booking. Calon client dipakai untuk jadwal yang belum booking.
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>

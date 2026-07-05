@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\DynamicForm;
 use App\Models\DynamicFormTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,6 +56,48 @@ class DynamicFormController extends Controller
         }
 
         return redirect()->back()->with('success', 'Template berita acara berhasil disimpan.');
+    }
+
+    public function syncLatestTemplate(Event $event)
+    {
+        $this->backfillTemplateFromExistingClientForm();
+
+        $templates = DynamicFormTemplate::orderBy('sort_order')->get();
+
+        if ($templates->isEmpty()) {
+            return redirect()->back()->with('error', 'Template berita acara belum tersedia.');
+        }
+
+        $existingFields = $event->dynamicForms()->get();
+        $valuesByName = $existingFields
+            ->filter(fn (DynamicForm $field) => filled($field->field_value))
+            ->keyBy('field_name')
+            ->map(fn (DynamicForm $field) => $field->field_value);
+        $valuesByLabel = $existingFields
+            ->filter(fn (DynamicForm $field) => filled($field->field_value))
+            ->keyBy(fn (DynamicForm $field) => mb_strtolower(trim($field->field_label)))
+            ->map(fn (DynamicForm $field) => $field->field_value);
+
+        DB::transaction(function () use ($event, $templates, $valuesByName, $valuesByLabel) {
+            $event->dynamicForms()->delete();
+
+            foreach ($templates as $template) {
+                $labelKey = mb_strtolower(trim($template->field_label));
+
+                DynamicForm::create([
+                    'event_id' => $event->id,
+                    'field_name' => $template->field_name,
+                    'field_label' => $template->field_label,
+                    'field_type' => $template->field_type,
+                    'field_options' => $template->field_options,
+                    'field_value' => $valuesByName->get($template->field_name, $valuesByLabel->get($labelKey)),
+                    'is_required' => $template->is_required,
+                    'sort_order' => $template->sort_order,
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Berita acara client berhasil disesuaikan dengan template terbaru.');
     }
 
     private function ensureEventSnapshot(Event $event): void
@@ -131,12 +174,27 @@ class DynamicFormController extends Controller
         $event = Event::where('uuid', $uuid)->firstOrFail();
         $this->ensureEventSnapshot($event);
 
-        if ($request->has('values')) {
-            foreach ($request->values as $fieldId => $value) {
-                DynamicForm::where('event_id', $event->id)
-                    ->where('id', $fieldId)
-                    ->update(['field_value' => $value]);
+        $validated = $request->validate([
+            'values' => 'nullable|array',
+        ]);
+
+        $values = $validated['values'] ?? [];
+        $fields = $event->dynamicForms()->get();
+
+        DB::transaction(function () use ($fields, $values) {
+            foreach ($fields as $field) {
+                $value = $values[$field->id] ?? $values[(string) $field->id] ?? $values[$field->field_name] ?? null;
+
+                $field->update([
+                    'field_value' => is_array($value) ? json_encode($value) : $value,
+                ]);
             }
+        });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Berita acara berhasil disimpan.',
+            ]);
         }
 
         return redirect()->back()->with('success', 'Berita acara berhasil disimpan.');

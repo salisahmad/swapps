@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface EventItem {
@@ -66,16 +66,17 @@ export default function Edit({ event }: PageProps) {
 
     const saveForm = () => {
         setSaving(true);
-        fetch(route('dynamic-forms.update', event.uuid), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
-            body: JSON.stringify({ fields }),
-        }).then(() => {
-            setSaving(false);
-            alert('Form berhasil disimpan!');
-        }).catch(() => {
-            setSaving(false);
-            alert('Gagal menyimpan form');
+        router.post(route('dynamic-forms.update', event.uuid), { fields } as Record<string, any>, {
+            preserveScroll: true,
+            onSuccess: () => {
+                alert('Form berhasil disimpan!');
+            },
+            onError: () => {
+                alert('Gagal menyimpan form');
+            },
+            onFinish: () => {
+                setSaving(false);
+            },
         });
     };
 

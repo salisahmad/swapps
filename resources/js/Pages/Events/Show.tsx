@@ -57,6 +57,16 @@ interface ClientActivityLog {
     user: { id: number; name: string } | null;
 }
 
+interface DynamicFormItem {
+    id: number;
+    field_name: string;
+    field_label: string;
+    field_type: string;
+    field_value: string | null;
+    field_options: string | null;
+    is_required: boolean;
+}
+
 interface Event {
     id: number;
     uuid: string;
@@ -78,6 +88,7 @@ interface Event {
     payments: PaymentItem[];
     photos: EventPhoto[];
     additional_costs: EventAdditionalCost[];
+    dynamic_forms: DynamicFormItem[];
     activity_logs?: ClientActivityLog[];
 }
 
@@ -103,6 +114,38 @@ export default function Show({ event, authUser }: PageProps) {
         .filter((p) => p.is_expense === 1 && p.status === 1)
         .reduce((sum, p) => sum + p.amount, 0);
     const remaining = event.grand_total - totalPaid;
+    const visibleDynamicForms = (event.dynamic_forms || []).filter((field) => field.field_value !== null && field.field_value !== '');
+    const dynamicFormSummary = (
+        <div className="rounded-xl border border-stone-100 bg-white p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                    <p className="text-sm font-semibold text-stone-800">Ringkasan Berita Acara</p>
+                    <p className="text-xs text-stone-500">Data berita acara yang sudah diisi.</p>
+                </div>
+                <Link href={route('dynamic-forms.show', event.uuid)} className="rounded bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-200">
+                    Edit
+                </Link>
+            </div>
+            {visibleDynamicForms.length === 0 ? (
+                <p className="rounded-lg bg-stone-50 px-3 py-4 text-center text-sm text-stone-400">
+                    Belum ada data berita acara yang diisi.
+                </p>
+            ) : (
+                <div className="divide-y divide-stone-100">
+                    {visibleDynamicForms.map((field) => {
+                        const value = field.field_value || '-';
+
+                        return (
+                            <div key={field.id} className="grid gap-1 py-2.5 sm:grid-cols-[180px_1fr] sm:gap-4">
+                                <p className="text-xs font-medium uppercase text-stone-400">{field.field_label}</p>
+                                <p className="whitespace-pre-wrap text-sm leading-6 text-stone-800">{value}</p>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
     const orderTheme = event.order_type_name === 'MUA'
         ? {
             badge: 'bg-rose-100 text-rose-700 border border-rose-200',
@@ -118,6 +161,7 @@ export default function Show({ event, authUser }: PageProps) {
         };
 
     const { delete: destroy, post, processing: deleteProcessing } = useForm();
+    const { post: syncDynamicForm, processing: syncProcessing } = useForm();
     const {
         data: photoData,
         setData: setPhotoData,
@@ -143,6 +187,15 @@ export default function Show({ event, authUser }: PageProps) {
     const handleApproveDelete = () => {
         if (confirm('Setujui request hapus dan hapus client ini?')) {
             post(route('events.approve-delete', event.uuid));
+        }
+    };
+
+    const handleSyncDynamicForm = () => {
+        if (confirm('Ambil template berita acara terbaru untuk client ini? Field yang sudah terisi akan dipertahankan kalau masih cocok.')) {
+            syncDynamicForm(route('dynamic-forms.sync-latest', event.uuid), {
+                preserveScroll: true,
+                preserveState: false,
+            });
         }
     };
 
@@ -210,6 +263,14 @@ export default function Show({ event, authUser }: PageProps) {
                 <div className="flex items-center justify-between">
                     <h2 className="page-title">{event.name}</h2>
                     <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleSyncDynamicForm}
+                            disabled={syncProcessing}
+                            className="btn-secondary text-sm py-2 px-3 disabled:opacity-50"
+                        >
+                            {syncProcessing ? 'Mengambil...' : '↻ Ambil Form Terbaru'}
+                        </button>
                         <Link href={route('dynamic-forms.show', event.uuid)} className="btn-primary text-sm py-2 px-3">
                             📝 Berita Acara
                         </Link>
@@ -313,6 +374,7 @@ export default function Show({ event, authUser }: PageProps) {
                                     <p className="text-sm text-stone-700">{event.package_description}</p>
                                 </div>
                             )}
+                            {dynamicFormSummary}
                             <div className="rounded-xl border border-stone-100 bg-stone-50 p-4">
                                 <p className="mb-3 text-sm font-semibold text-stone-800">Ringkasan Harga</p>
                                 <div className="space-y-2 text-sm">

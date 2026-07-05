@@ -6,6 +6,11 @@
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
+        <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png">
+        <link rel="icon" type="image/png" sizes="192x192" href="/brand/shofi-mark-192.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png">
+        <meta name="theme-color" content="#faf9f7">
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />

@@ -21,7 +21,10 @@ interface Schedule {
     schedule_from: string;
     schedule_to: string | null;
     description: string | null;
-    event: { id: number; uuid: string; name: string; date: string; time: string | null };
+    client_name: string;
+    client_status_name: string;
+    client_phone: string | null;
+    event: { id: number; uuid: string; name: string; date: string; time: string | null } | null;
 }
 
 interface ClientList {
@@ -158,25 +161,35 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
     const ScheduleRow = ({ schedule }: { schedule: Schedule }) => {
         const typeName = getScheduleTypeName(schedule);
         const style = getScheduleStyle(schedule);
+        const isProspect = !schedule.event;
 
-        return (
-        <Link href={route('events.show', schedule.event.uuid)} className="flex items-center gap-3 rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+        const content = (
+        <div className={`flex items-center gap-3 rounded-xl p-3 transition active:scale-[0.98] hover:bg-stone-100 ${isProspect ? 'border border-orange-200 bg-orange-50' : 'bg-stone-50'}`}>
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${style.iconClass}`}>{style.icon}</span>
             <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-stone-800">
-                        {schedule.event.name} / {formatDate(schedule.event.date)}
+                    <p className={`truncate text-sm font-semibold ${isProspect ? 'text-orange-800' : 'text-stone-800'}`}>
+                        {schedule.client_name} / {schedule.event ? formatDate(schedule.event.date) : 'Calon client'}
                     </p>
                     <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ${style.badgeClass}`}>
                         {typeName}
                     </span>
+                    {isProspect && (
+                        <span className="shrink-0 rounded-md bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+                            Calon Client
+                        </span>
+                    )}
                 </div>
                 <p className="text-xs text-stone-500">
-                    {formatDate(schedule.schedule_from)} / {schedule.event.time || '-'}
+                    {formatDate(schedule.schedule_from)} / {schedule.event?.time || schedule.client_phone || '-'}
                 </p>
             </div>
-        </Link>
+        </div>
         );
+
+        return schedule.event
+            ? <Link href={route('events.show', schedule.event.uuid)}>{content}</Link>
+            : content;
     };
 
     const NextClientRow = ({ client }: { client: Event }) => (

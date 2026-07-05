@@ -101,12 +101,12 @@ class DashboardController extends Controller
         $profit = $thisMonthEarnings - $expenses;
 
         $todaySchedules = Schedule::whereDate('schedule_from', $todayDate)
-            ->with('event:id,uuid,name,date,time')
+            ->with('event:id,uuid,name,mobile_phone,date,time,order_type')
             ->orderBy('schedule_from')
             ->get();
 
         $nextSchedules = Schedule::whereDate('schedule_from', '>', $todayDate)
-            ->with('event:id,uuid,name,date,time')
+            ->with('event:id,uuid,name,mobile_phone,date,time,order_type')
             ->orderBy('schedule_from')
             ->take(5)
             ->get();

@@ -89,14 +89,18 @@ class TelegramNotification
         $settings = TelegramSetting::getInstance();
         if (!$settings?->notify_schedule) return false;
 
-        $event = $schedule->event;
         $date = \Carbon\Carbon::parse($schedule->schedule_from)->format('d M Y H:i');
+        $detailLink = $schedule->event
+            ? "\n\n🔗 <a href=\"" . route('events.show', $schedule->event) . "\">Lihat Detail</a>"
+            : '';
 
         $message = "<b>📅 Jadwal {$schedule->type_name}!</b>\n\n" .
-            "<b>Client:</b> {$event->name}\n" .
+            "<b>Client:</b> {$schedule->client_name}\n" .
+            "<b>Status:</b> {$schedule->client_status_name}\n" .
+            "<b>Telepon:</b> " . ($schedule->client_phone ?: '-') . "\n" .
             "<b>Tanggal:</b> {$date}\n" .
-            "<b>Keterangan:</b> " . ($schedule->description ?: '-') . "\n\n" .
-            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
+            "<b>Keterangan:</b> " . ($schedule->description ?: '-') .
+            $detailLink;
 
         return $this->sendMessage($message);
     }

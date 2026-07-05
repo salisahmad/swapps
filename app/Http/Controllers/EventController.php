@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\Payment;
 use App\Models\ClientActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -55,7 +56,6 @@ class EventController extends Controller
         return Inertia::render('Events/Create', [
             'items' => Item::with(['type', 'variants'])
                 ->where('is_sold', false)
-                ->where('is_rentable', true)
                 ->orderBy('code')
                 ->take(20)
                 ->get(),
@@ -105,6 +105,7 @@ class EventController extends Controller
             'additional_costs.*.notes' => 'nullable|string',
         ]);
 
+        $itemIds = $this->itemIdsForOrder($validated);
         $eventData = collect($validated)->except(['item_ids', 'down_payment', 'down_payment_type', 'additional_costs'])->all();
         $eventData['discount_amount'] = $eventData['discount_amount'] ?? 0;
 
@@ -114,8 +115,8 @@ class EventController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        if (!empty($validated['item_ids'])) {
-            $event->items()->attach($validated['item_ids']);
+        if (!empty($itemIds)) {
+            $event->items()->attach($itemIds);
         }
 
         $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
@@ -172,6 +173,7 @@ class EventController extends Controller
         $relations = [
             'items.type',
             'additionalCosts',
+            'dynamicForms',
             'items.variants',
             'schedules',
             'photos',
@@ -198,17 +200,35 @@ class EventController extends Controller
 
     public function edit(Event $event): Response
     {
-        $selectedItemIds = $event->items()->pluck('items.id');
+        $selectedItemQuery = $event->items()->where('is_sold', false);
+        if ($event->order_type === Event::ORDER_TYPE_GOWN) {
+            $selectedItemQuery->where('is_rentable', true);
+        }
+
+        $selectedItemIds = $selectedItemQuery->pluck('items.id');
 
         return Inertia::render('Events/Edit', [
-            'event' => $event->load(['items.variants', 'additionalCosts']),
+            'event' => $event->load([
+                'additionalCosts',
+                'items' => function ($q) use ($event) {
+                    $q->where('is_sold', false)
+                        ->with('variants');
+
+                    if ($event->order_type === Event::ORDER_TYPE_GOWN) {
+                        $q->where('is_rentable', true);
+                    }
+                },
+            ]),
             'items' => Item::with(['type', 'variants'])
-                ->where(function ($q) use ($selectedItemIds) {
+                ->where(function ($q) use ($selectedItemIds, $event) {
                     $q->whereIn('id', $selectedItemIds)
                         ->orWhere(function ($available) {
-                            $available->where('is_sold', false)
-                                ->where('is_rentable', true);
+                            $available->where('is_sold', false);
                         });
+
+                    if ($event->order_type === Event::ORDER_TYPE_GOWN) {
+                        $q->where('is_rentable', true);
+                    }
                 })
                 ->orderBy('code')
                 ->take(30)
@@ -243,6 +263,7 @@ class EventController extends Controller
         $oldGrandTotal = $event->grand_total;
         $oldDate = $event->date?->format('Y-m-d');
 
+        $itemIds = $this->itemIdsForOrder($validated);
         $eventData = collect($validated)->except(['item_ids', 'additional_costs'])->all();
         $eventData['discount_amount'] = $eventData['discount_amount'] ?? 0;
 
@@ -250,9 +271,7 @@ class EventController extends Controller
         $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
         $event->refresh();
 
-        if (isset($validated['item_ids'])) {
-            $event->items()->sync($validated['item_ids']);
-        }
+        $event->items()->sync($itemIds);
 
         $newGrandTotal = $event->grand_total;
         if (
@@ -403,6 +422,45 @@ class EventController extends Controller
         $cleanCosts->each(function ($cost) use ($event) {
             $event->additionalCosts()->create($cost);
         });
+    }
+
+    private function itemIdsForOrder(array $validated): array
+    {
+        $orderType = (int) $validated['order_type'];
+
+        if (!in_array($orderType, [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN], true)) {
+            return [];
+        }
+
+        $itemIds = collect($validated['item_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($itemIds->isEmpty()) {
+            return [];
+        }
+
+        $validItemQuery = Item::whereIn('id', $itemIds)
+            ->where('is_sold', false);
+
+        if ($orderType === Event::ORDER_TYPE_GOWN) {
+            $validItemQuery->where('is_rentable', true);
+        }
+
+        $validItemIds = $validItemQuery->pluck('id')->all();
+
+        if (count($validItemIds) !== $itemIds->count()) {
+            $message = $orderType === Event::ORDER_TYPE_GOWN
+                ? 'Client Sewa Gaun hanya bisa memilih item katalog yang statusnya disewakan dan tersedia.'
+                : 'Client MUA hanya bisa memilih item katalog yang tersedia.';
+
+            throw ValidationException::withMessages([
+                'item_ids' => $message,
+            ]);
+        }
+
+        return $validItemIds;
     }
 
     private function updateEventPaidStatus(Event $event): void

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface DynamicFormTemplateItem {
@@ -62,19 +62,17 @@ export default function Template({ fields: initialFields }: PageProps) {
 
     const saveForm = () => {
         setSaving(true);
-        fetch(route('dynamic-form-templates.update'), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        router.post(route('dynamic-form-templates.update'), { fields } as Record<string, any>, {
+            preserveScroll: true,
+            onSuccess: () => {
+                alert('Template berita acara berhasil disimpan.');
             },
-            body: JSON.stringify({ fields }),
-        }).then(() => {
-            setSaving(false);
-            alert('Template berita acara berhasil disimpan.');
-        }).catch(() => {
-            setSaving(false);
-            alert('Gagal menyimpan template.');
+            onError: () => {
+                alert('Gagal menyimpan template.');
+            },
+            onFinish: () => {
+                setSaving(false);
+            },
         });
     };
 

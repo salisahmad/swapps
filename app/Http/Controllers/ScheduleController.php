@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Schedule;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,7 +14,7 @@ class ScheduleController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Schedule::with('event:id,uuid,name')
+        $query = Schedule::with('event:id,uuid,name,mobile_phone,date,time,order_type')
             ->orderBy('schedule_from');
 
         if ($request->filled('type')) {
@@ -28,8 +29,13 @@ class ScheduleController extends Controller
         }
 
         if ($request->filled('q')) {
-            $query->whereHas('event', function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->q . '%');
+            $query->where(function ($query) use ($request) {
+                $query->whereHas('event', function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->q . '%')
+                        ->orWhere('mobile_phone', 'like', '%' . $request->q . '%');
+                })
+                    ->orWhere('prospect_name', 'like', '%' . $request->q . '%')
+                    ->orWhere('prospect_mobile_phone', 'like', '%' . $request->q . '%');
             });
         }
 
@@ -37,7 +43,7 @@ class ScheduleController extends Controller
 
         $events = Event::whereDate('date', '>', Carbon::today())
             ->orderBy('name')
-            ->get(['id', 'name', 'date']);
+            ->get(['id', 'uuid', 'name', 'mobile_phone', 'date', 'time', 'order_type']);
 
         return Inertia::render('Schedules/Index', [
             'schedules' => $schedules,
@@ -49,14 +55,21 @@ class ScheduleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
+            'client_source' => 'required|string|in:booked,prospect',
+            'event_id' => 'nullable|exists:events,id',
+            'prospect_name' => 'nullable|string|max:255',
+            'prospect_mobile_phone' => 'nullable|string|max:30',
             'schedule_type' => 'required|integer|in:1,2',
             'schedule_from' => 'required|date',
             'schedule_to' => 'nullable|date|after_or_equal:schedule_from',
             'description' => 'nullable|string',
         ]);
+
+        $this->validateClientData($request);
+        $this->normalizeClientData($validated);
+
         $validated['type'] = $validated['schedule_type'];
-        unset($validated['schedule_type']);
+        unset($validated['schedule_type'], $validated['client_source']);
 
         $validated['created_by'] = auth()->id();
 
@@ -82,14 +95,21 @@ class ScheduleController extends Controller
     public function update(Request $request, Schedule $schedule)
     {
         $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
+            'client_source' => 'required|string|in:booked,prospect',
+            'event_id' => 'nullable|exists:events,id',
+            'prospect_name' => 'nullable|string|max:255',
+            'prospect_mobile_phone' => 'nullable|string|max:30',
             'schedule_type' => 'required|integer|in:1,2',
             'schedule_from' => 'required|date',
             'schedule_to' => 'nullable|date|after_or_equal:schedule_from',
             'description' => 'nullable|string',
         ]);
+
+        $this->validateClientData($request);
+        $this->normalizeClientData($validated);
+
         $validated['type'] = $validated['schedule_type'];
-        unset($validated['schedule_type']);
+        unset($validated['schedule_type'], $validated['client_source']);
 
         if ($request->has('time_from')) {
             $validated['schedule_from'] = $request->schedule_from . ' ' . $request->time_from;
@@ -160,5 +180,31 @@ class ScheduleController extends Controller
 
             return $start->lt($existingEnd) && $end->gt($existingStart);
         });
+    }
+
+    private function validateClientData(Request $request): void
+    {
+        if ($request->client_source === 'booked' && !$request->filled('event_id')) {
+            throw ValidationException::withMessages([
+                'event_id' => 'Pilih client dari hasil pencarian dulu.',
+            ]);
+        }
+
+        if ($request->client_source === 'prospect' && (!$request->filled('prospect_name') || !$request->filled('prospect_mobile_phone'))) {
+            throw ValidationException::withMessages([
+                'prospect_name' => 'Nama dan nomor telepon calon client wajib diisi.',
+            ]);
+        }
+    }
+
+    private function normalizeClientData(array &$validated): void
+    {
+        if ($validated['client_source'] === 'booked') {
+            $validated['prospect_name'] = null;
+            $validated['prospect_mobile_phone'] = null;
+            return;
+        }
+
+        $validated['event_id'] = null;
     }
 }

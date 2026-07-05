@@ -1,4 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import ApplicationLogo from '@/Components/ApplicationLogo';
 import { useState } from 'react';
 
 interface DynamicFormItem {
@@ -38,6 +39,8 @@ export default function Show({ event, dynamicForms }: PageProps) {
         return initial;
     });
     const [submitted, setSubmitted] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const handleChange = (fieldId: number, value: string) => {
         setValues({ ...values, [fieldId]: value });
@@ -45,15 +48,20 @@ export default function Show({ event, dynamicForms }: PageProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // In real implementation, send to backend
-        fetch(route('dynamic-forms.submit', event.uuid), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '' },
-            body: JSON.stringify({ values }),
-        }).then(() => {
-            setSubmitted(true);
-        }).catch(() => {
-            alert('Gagal menyimpan. Coba lagi.');
+        setSaving(true);
+        setErrorMessage('');
+
+        router.post(route('dynamic-forms.submit', event.uuid), { values }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSubmitted(true);
+            },
+            onError: () => {
+                setErrorMessage('Gagal menyimpan. Coba lagi.');
+            },
+            onFinish: () => {
+                setSaving(false);
+            },
         });
     };
 
@@ -74,7 +82,10 @@ export default function Show({ event, dynamicForms }: PageProps) {
 
                 {/* Header */}
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-stone-900 text-white">Shofi Wedding</h1>
+                    <ApplicationLogo
+                        variant="vertical"
+                        className="mx-auto h-24 w-auto object-contain"
+                    />
                     <p className="mt-2 text-lg text-stone-600 text-stone-500">Berita Acara</p>
                     <div className="mt-4 rounded-lg bg-white p-4 shadow-sm bg-white">
                         <p className="text-xl font-semibold text-stone-900 text-white">{event.name}</p>
@@ -97,6 +108,11 @@ export default function Show({ event, dynamicForms }: PageProps) {
                 ) : (
                     <form onSubmit={handleSubmit} className="rounded-lg bg-white p-6 shadow-sm bg-white">
                         <h2 className="mb-6 text-lg font-semibold text-stone-900 text-white">Isi Berita Acara</h2>
+                        {errorMessage && (
+                            <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
+                                {errorMessage}
+                            </p>
+                        )}
 
                         <div className="space-y-4">
                             {dynamicForms.length === 0 && (
@@ -143,9 +159,10 @@ export default function Show({ event, dynamicForms }: PageProps) {
                         <div className="mt-6">
                             <button
                                 type="submit"
-                                className="w-full rounded bg-rose-400 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500"
+                                disabled={saving}
+                                className="w-full rounded bg-rose-400 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
                             >
-                                Simpan Berita Acara
+                                {saving ? 'Menyimpan...' : 'Simpan Berita Acara'}
                             </button>
                         </div>
                     </form>

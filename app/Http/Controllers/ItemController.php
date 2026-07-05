@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\ItemType;
+use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -55,12 +56,16 @@ class ItemController extends Controller
     {
         $request->validate([
             'q' => 'nullable|string|max:100',
+            'order_type' => 'nullable|integer|in:1,2',
         ]);
 
         $query = Item::with(['type', 'variants'])
             ->where('is_sold', false)
-            ->where('is_rentable', true)
             ->orderBy('code');
+
+        if ((int) $request->input('order_type') === Event::ORDER_TYPE_GOWN) {
+            $query->where('is_rentable', true);
+        }
 
         if ($request->filled('q')) {
             $query->where(function ($q) use ($request) {
@@ -99,7 +104,7 @@ class ItemController extends Controller
         $validated['package_rental_price'] = $validated['package_rental_price'] ?? 0;
         $validated['is_rentable'] = $request->has('is_rentable')
             ? $request->boolean('is_rentable')
-            : $item->is_rentable;
+            : true;
         $validated['created_by'] = auth()->id();
 
         if ($request->hasFile('image')) {
@@ -138,7 +143,9 @@ class ItemController extends Controller
         $validated['is_premium'] = $validated['premium_level'] === Item::LEVEL_PREMIUM;
         $validated['rental_price'] = $validated['rental_price'] ?? 0;
         $validated['package_rental_price'] = $validated['package_rental_price'] ?? 0;
-        $validated['is_rentable'] = $request->boolean('is_rentable', true);
+        $validated['is_rentable'] = $request->has('is_rentable')
+            ? $request->boolean('is_rentable')
+            : $item->is_rentable;
 
         if ($request->boolean('remove_image') && $item->image_path) {
             Storage::disk('public')->delete($item->image_path);

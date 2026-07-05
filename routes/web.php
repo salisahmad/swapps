@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
     // Dynamic Forms (Admin)
     Route::get('/settings/berita-acara', [DynamicFormController::class, 'templateEdit'])->name('dynamic-form-templates.edit');
     Route::post('/settings/berita-acara', [DynamicFormController::class, 'templateUpdate'])->name('dynamic-form-templates.update');
+    Route::post('/clients/{event}/dynamic-forms/sync-latest', [DynamicFormController::class, 'syncLatestTemplate'])->name('dynamic-forms.sync-latest');
     Route::get('/clients/{event}/dynamic-forms', [DynamicFormController::class, 'edit'])->name('dynamic-forms.edit');
     Route::post('/clients/{event}/dynamic-forms', [DynamicFormController::class, 'update'])->name('dynamic-forms.update');
 });

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
 interface ItemType {
@@ -49,7 +49,7 @@ interface PageProps {
 }
 
 export default function Index({ items, itemTypes, premiumLevels, filters }: PageProps) {
-    const { data, setData, get, post, put, delete: destroy, processing, reset, transform, errors } = useForm({
+    const { data, setData, get, put, delete: destroy, processing, reset, transform, errors, clearErrors, setError } = useForm({
         q: filters.q || '',
         item_type_id: filters.item_type_id || '',
         is_sold: filters.is_sold || '',
@@ -77,11 +77,14 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
 
     const submitFilter = (e: React.FormEvent) => {
         e.preventDefault();
+        transform((formData) => formData);
         get(route('items.index'));
     };
 
     const openCreate = () => {
         reset();
+        clearErrors();
+        transform((formData) => formData);
         setData({
             ...data,
             code: '',
@@ -104,6 +107,8 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
     };
 
     const openEdit = (item: Item) => {
+        clearErrors();
+        transform((formData) => formData);
         setData({
             ...data,
             code: item.code,
@@ -132,27 +137,37 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
     const submitForm = (e: React.FormEvent) => {
         e.preventDefault();
 
-        transform((formData) => ({
-            ...formData,
-            item_type_id: formData.item_type_id_form || '',
-            premium_level: formData.form_premium_level,
-            rental_price: formData.rental_price || '0',
-            package_rental_price: formData.package_rental_price || '0',
-            is_rentable: formData.is_rentable_form,
-            variants: formData.variants.filter((variant) => variant.size.trim() !== ''),
-            _method: editMode ? 'put' : '',
-        }));
+        clearErrors();
+
+        const payload: Record<string, any> = {
+            code: data.code,
+            name: data.name,
+            description: data.description,
+            item_type_id: data.item_type_id_form || '',
+            premium_level: data.form_premium_level,
+            rental_price: data.rental_price || '0',
+            package_rental_price: data.package_rental_price || '0',
+            is_rentable: data.is_rentable_form ? '1' : '0',
+            image: data.image,
+            remove_image: data.remove_image ? '1' : '0',
+            variants: data.variants.filter((variant) => variant.size.trim() !== ''),
+        };
 
         if (editMode && data.item_id) {
-            post(route('items.update', data.item_id), {
+            router.post(route('items.update', data.item_id), {
+                ...payload,
+                _method: 'put',
+            }, {
                 forceFormData: true,
                 preserveScroll: true,
+                onError: (formErrors) => setError(formErrors),
                 onSuccess: () => setShowModal(false),
             });
         } else {
-            post(route('items.store'), {
+            router.post(route('items.store'), payload, {
                 forceFormData: true,
                 preserveScroll: true,
+                onError: (formErrors) => setError(formErrors),
                 onSuccess: () => setShowModal(false),
             });
         }
@@ -178,6 +193,8 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
         } as any);
     };
 
+    const onlyDigits = (value: string) => value.replace(/\D/g, '');
+    const formatNumberInput = (value: string) => onlyDigits(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     const formatRupiah = (n: number) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 
     const handleImageChange = (file: File | null) => {
@@ -361,7 +378,7 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 text-stone-500">Kode</label>
                                     <input type="text" value={data.code} onChange={(e) => setData('code', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
-                                    {processing && <p className="mt-1 text-xs text-stone-500">Checking...</p>}
+                                    {errors.code && <p className="mt-1 text-sm text-red-500">{errors.code}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 text-stone-500">Kategori</label>
@@ -369,15 +386,18 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
                                         <option value="">Pilih...</option>
                                         {itemTypes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                                     </select>
+                                    {errors.item_type_id && <p className="mt-1 text-sm text-red-500">{errors.item_type_id}</p>}
                                 </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Nama Item</label>
                                 <input type="text" value={data.name} onChange={(e) => setData('name', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
+                                {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Deskripsi</label>
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" rows={2} />
+                                {errors.description && <p className="mt-1 text-sm text-red-500">{errors.description}</p>}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Level Item</label>
@@ -392,10 +412,10 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 text-stone-500">Harga Sewa</label>
                                     <input
-                                        type="number"
-                                        min="0"
-                                        value={data.rental_price}
-                                        onChange={(e) => setData('rental_price', e.target.value)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={formatNumberInput(data.rental_price)}
+                                        onChange={(e) => setData('rental_price', onlyDigits(e.target.value))}
                                         className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
                                         placeholder="0"
                                     />
@@ -404,10 +424,10 @@ export default function Index({ items, itemTypes, premiumLevels, filters }: Page
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 text-stone-500">Harga Sewa Paket</label>
                                     <input
-                                        type="number"
-                                        min="0"
-                                        value={data.package_rental_price}
-                                        onChange={(e) => setData('package_rental_price', e.target.value)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={formatNumberInput(data.package_rental_price)}
+                                        onChange={(e) => setData('package_rental_price', onlyDigits(e.target.value))}
                                         className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
                                         placeholder="0"
                                     />

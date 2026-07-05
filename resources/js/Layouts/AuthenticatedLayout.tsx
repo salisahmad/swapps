@@ -44,7 +44,6 @@ const navItems = [
 
 const adminNavItems = [
     { href: 'reports.index', label: 'Laporan', icon: '📈', route: 'reports.*' },
-    { href: 'dynamic-form-templates.edit', label: 'Setup', icon: '⚙️', route: 'dynamic-form-templates.*' },
 ];
 
 export default function Authenticated({
@@ -87,11 +86,11 @@ export default function Authenticated({
                     <div className="flex h-14 items-center justify-between sm:h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2">
-                            <Link href="/" className="flex items-center gap-2">
-                                <span className="text-2xl">💍</span>
-                                <span className="hidden text-lg font-bold tracking-tight text-stone-800 sm:inline">
-                                    Shofi Wedding
-                                </span>
+                            <Link href="/" className="flex items-center">
+                                <ApplicationLogo
+                                    variant="horizontal"
+                                    className="h-8 w-auto max-w-[150px] object-contain sm:h-9 sm:max-w-[190px]"
+                                />
                             </Link>
                         </div>
 
@@ -194,11 +193,11 @@ export default function Authenticated({
                                 </Dropdown.Trigger>
                                 <Dropdown.Content>
                                     <Dropdown.Link href={route('profile.edit')}>👤 Profile</Dropdown.Link>
+                                    <Dropdown.Link href={route('dynamic-form-templates.edit')}>📋 Setup Berita Acara</Dropdown.Link>
                                     {isAdmin && (
                                         <>
                                             <Dropdown.Link href={route('staff.index')}>👥 Staff</Dropdown.Link>
                                             <Dropdown.Link href={route('events.index')}>📝 Clients</Dropdown.Link>
-                                            <Dropdown.Link href={route('dynamic-form-templates.edit')}>📋 Berita Acara</Dropdown.Link>
                                             <Dropdown.Link href={route('telegram.settings')}>⚙️ Telegram</Dropdown.Link>
                                             <Dropdown.Link href={route('whatsapp.settings')}>📱 WhatsApp</Dropdown.Link>
                                         </>
@@ -263,9 +262,6 @@ export default function Authenticated({
                                     <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
                                         📝 Clients
                                     </ResponsiveNavLink>
-                                    <ResponsiveNavLink href={route('dynamic-form-templates.edit')} active={route().current('dynamic-form-templates.*')}>
-                                        📋 Berita Acara
-                                    </ResponsiveNavLink>
                                     <ResponsiveNavLink href={route('telegram.settings')}>
                                         ⚙️ Telegram Settings
                                     </ResponsiveNavLink>
@@ -277,6 +273,9 @@ export default function Authenticated({
                             <div className="border-t border-stone-100 pt-2">
                                 <ResponsiveNavLink href={route('profile.edit')}>
                                     👤 Profile
+                                </ResponsiveNavLink>
+                                <ResponsiveNavLink href={route('dynamic-form-templates.edit')} active={route().current('dynamic-form-templates.*')}>
+                                    📋 Setup Berita Acara
                                 </ResponsiveNavLink>
                                 <ResponsiveNavLink href={route('logout')} method="post" as="button">
                                     🚪 Log Out

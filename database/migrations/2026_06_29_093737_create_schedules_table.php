@@ -10,10 +10,12 @@ return new class extends Migration
     {
         Schema::create('schedules', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('event_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('event_id')->nullable()->constrained()->nullOnDelete();
             $table->tinyInteger('type')->default(1); // 1=Fitting, 2=Consultation
             $table->dateTime('schedule_from');
             $table->dateTime('schedule_to')->nullable();
+            $table->string('prospect_name')->nullable();
+            $table->string('prospect_mobile_phone', 30)->nullable();
             $table->text('description')->nullable();
             $table->string('google_event_id')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();

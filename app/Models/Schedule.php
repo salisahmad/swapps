@@ -11,7 +11,15 @@ class Schedule extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'event_id', 'type', 'schedule_from', 'schedule_to', 'description', 'google_event_id', 'created_by',
+        'event_id',
+        'type',
+        'schedule_from',
+        'schedule_to',
+        'prospect_name',
+        'prospect_mobile_phone',
+        'description',
+        'google_event_id',
+        'created_by',
     ];
 
     protected $casts = [
@@ -22,6 +30,9 @@ class Schedule extends Model
 
     protected $appends = [
         'type_name',
+        'client_name',
+        'client_phone',
+        'client_status_name',
     ];
 
     public function event(): BelongsTo
@@ -55,5 +66,20 @@ class Schedule extends Model
     public function getTimeAttribute(): string
     {
         return $this->schedule_from ? $this->schedule_from->format('H:i') : '';
+    }
+
+    public function getClientNameAttribute(): string
+    {
+        return $this->event?->name ?? $this->prospect_name ?? '-';
+    }
+
+    public function getClientPhoneAttribute(): ?string
+    {
+        return $this->event?->mobile_phone ?? $this->prospect_mobile_phone;
+    }
+
+    public function getClientStatusNameAttribute(): string
+    {
+        return $this->event?->order_type_name ?? 'Calon Client';
     }
 }
