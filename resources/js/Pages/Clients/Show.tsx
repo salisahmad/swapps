@@ -75,60 +75,60 @@ export default function Show({ client }: PageProps) {
             <div className="py-12">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
                     <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
-                        <div className="bg-white p-4 shadow-sm bg-white sm:rounded-lg">
+                        <div className="bg-white p-4 shadow-sm dark:bg-stone-900 sm:rounded-lg">
                             <p className="text-sm text-stone-500">Total Booking</p>
-                            <p className="text-2xl font-bold text-stone-900 text-white">{client.bookings.length}</p>
+                            <p className="text-2xl font-bold text-stone-900 dark:text-white">{client.bookings.length}</p>
                         </div>
-                        <div className="bg-white p-4 shadow-sm bg-white sm:rounded-lg">
+                        <div className="bg-white p-4 shadow-sm dark:bg-stone-900 sm:rounded-lg">
                             <p className="text-sm text-stone-500">Total Harga</p>
-                            <p className="text-2xl font-bold text-stone-900 text-white">
+                            <p className="text-2xl font-bold text-stone-900 dark:text-white">
                                 Rp {totalPrice.toLocaleString('id-ID')}
                             </p>
                         </div>
-                        <div className="bg-white p-4 shadow-sm bg-white sm:rounded-lg">
+                        <div className="bg-white p-4 shadow-sm dark:bg-stone-900 sm:rounded-lg">
                             <p className="text-sm text-stone-500">Total Dibayar</p>
-                            <p className="text-2xl font-bold text-green-600 text-green-400">
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                                 Rp {paidTotal.toLocaleString('id-ID')}
                             </p>
                         </div>
                     </div>
 
-                    <div className="mb-6 bg-white p-6 shadow-sm bg-white sm:rounded-lg">
-                        <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">Data Pribadi</h3>
+                    <div className="mb-6 bg-white p-6 shadow-sm dark:bg-stone-900 sm:rounded-lg">
+                        <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">Data Pribadi</h3>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <p className="text-sm text-stone-500">Telepon</p>
-                                <p className="text-stone-900 text-stone-100">{client.phone}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{client.phone}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Email</p>
-                                <p className="text-stone-900 text-stone-100">{client.email ?? '-'}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{client.email ?? '-'}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Tanggal Event</p>
-                                <p className="text-stone-900 text-stone-100">{client.event_date ?? '-'}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{client.event_date ?? '-'}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Lokasi</p>
-                                <p className="text-stone-900 text-stone-100">{client.event_location ?? '-'}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{client.event_location ?? '-'}</p>
                             </div>
                         </div>
                         {client.address && (
                             <div className="mt-4">
                                 <p className="text-sm text-stone-500">Alamat</p>
-                                <p className="text-stone-900 text-stone-100">{client.address}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{client.address}</p>
                             </div>
                         )}
                         {client.notes && (
                             <div className="mt-4">
                                 <p className="text-sm text-stone-500">Catatan</p>
-                                <p className="text-stone-900 text-stone-100">{client.notes}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{client.notes}</p>
                             </div>
                         )}
                     </div>
 
-                    <div className="bg-white p-6 shadow-sm bg-white sm:rounded-lg">
-                        <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">Riwayat Booking</h3>
+                    <div className="bg-white p-6 shadow-sm dark:bg-stone-900 sm:rounded-lg">
+                        <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">Riwayat Booking</h3>
                         {client.bookings.length === 0 ? (
                             <p className="text-stone-500">Belum ada booking.</p>
                         ) : (
@@ -139,7 +139,7 @@ export default function Show({ client }: PageProps) {
                                         <div key={booking.id} className="rounded-lg border border-stone-200 p-4 border-stone-200">
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className="font-medium text-stone-900 text-white">
+                                                    <p className="font-medium text-stone-900 dark:text-white">
                                                         {booking.service.name}
                                                     </p>
                                                     <p className="text-sm text-stone-500">
@@ -159,15 +159,15 @@ export default function Show({ client }: PageProps) {
                                                 </span>
                                             </div>
                                             <div className="mt-2 flex items-center justify-between text-sm">
-                                                <p className="text-stone-600 text-stone-400">
+                                                <p className="text-stone-600 dark:text-stone-400">
                                                     MUA: {booking.staff?.name ?? 'Belum ditentukan'}
                                                 </p>
-                                                <p className="font-semibold text-stone-900 text-white">
+                                                <p className="font-semibold text-stone-900 dark:text-white">
                                                     Rp {parseFloat(booking.total_price).toLocaleString('id-ID')}
                                                 </p>
                                             </div>
                                             <div className="mt-1 text-sm">
-                                                <p className="text-stone-600 text-stone-400">
+                                                <p className="text-stone-600 dark:text-stone-400">
                                                     Dibayar: Rp {paid.toLocaleString('id-ID')} ({booking.payments.length} payment)
                                                 </p>
                                             </div>

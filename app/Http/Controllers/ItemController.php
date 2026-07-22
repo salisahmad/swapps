@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\ItemPhoto;
 use App\Models\ItemType;
 use App\Models\Event;
 use Illuminate\Http\Request;
@@ -15,7 +16,7 @@ class ItemController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Item::with(['type', 'variants'])->orderBy('code');
+        $query = Item::with(['type', 'variants', 'photos'])->orderBy('code');
 
         if ($request->filled('q')) {
             $query->where(function ($q) use ($request) {
@@ -59,7 +60,7 @@ class ItemController extends Controller
             'order_type' => 'nullable|integer|in:1,2',
         ]);
 
-        $query = Item::with(['type', 'variants'])
+        $query = Item::with(['type', 'variants', 'photos'])
             ->where('is_sold', false)
             ->orderBy('code');
 
@@ -90,6 +91,8 @@ class ItemController extends Controller
             'package_rental_price' => 'nullable|numeric|min:0',
             'is_rentable' => 'nullable|boolean',
             'image' => 'nullable|image|max:5120',
+            'photos' => 'nullable|array|max:20',
+            'photos.*' => 'image|max:5120',
             'variants' => 'nullable|array',
             'variants.*.size' => 'required_with:variants|string|max:50',
             'variants.*.stock' => 'nullable|integer|min:0',
@@ -97,7 +100,7 @@ class ItemController extends Controller
 
         $variantsProvided = $request->has('variants');
         $variants = $validated['variants'] ?? [];
-        unset($validated['variants'], $validated['image'], $validated['remove_image']);
+        unset($validated['variants'], $validated['image'], $validated['photos'], $validated['remove_image']);
 
         $validated['is_premium'] = $validated['premium_level'] === Item::LEVEL_PREMIUM;
         $validated['rental_price'] = $validated['rental_price'] ?? 0;
@@ -113,6 +116,7 @@ class ItemController extends Controller
 
         $item = Item::create($validated);
         $this->syncVariants($item, $variants);
+        $this->storePhotos($item, $request->file('photos', []));
 
         return redirect()->back()->with('success', 'Item berhasil ditambahkan.');
     }
@@ -130,6 +134,8 @@ class ItemController extends Controller
             'is_rentable' => 'nullable|boolean',
             'is_sold' => 'boolean',
             'image' => 'nullable|image|max:5120',
+            'photos' => 'nullable|array|max:20',
+            'photos.*' => 'image|max:5120',
             'remove_image' => 'nullable|boolean',
             'variants' => 'nullable|array',
             'variants.*.size' => 'required_with:variants|string|max:50',
@@ -138,7 +144,7 @@ class ItemController extends Controller
 
         $variantsProvided = $request->has('variants');
         $variants = $validated['variants'] ?? [];
-        unset($validated['variants'], $validated['image'], $validated['remove_image']);
+        unset($validated['variants'], $validated['image'], $validated['photos'], $validated['remove_image']);
 
         $validated['is_premium'] = $validated['premium_level'] === Item::LEVEL_PREMIUM;
         $validated['rental_price'] = $validated['rental_price'] ?? 0;
@@ -161,6 +167,7 @@ class ItemController extends Controller
         }
 
         $item->update($validated);
+        $this->storePhotos($item, $request->file('photos', []));
 
         if ($variantsProvided) {
             $this->syncVariants($item, $variants);
@@ -175,8 +182,23 @@ class ItemController extends Controller
             Storage::disk('public')->delete($item->image_path);
         }
 
+        $item->photos()->get()->each(function (ItemPhoto $photo) {
+            Storage::disk('public')->delete($photo->path);
+            $photo->delete();
+        });
+
         $item->delete();
         return redirect()->back()->with('success', 'Item berhasil dihapus.');
+    }
+
+    public function destroyPhoto(Item $item, ItemPhoto $photo)
+    {
+        abort_if($photo->item_id !== $item->id, 404);
+
+        Storage::disk('public')->delete($photo->path);
+        $photo->delete();
+
+        return redirect()->back()->with('success', 'Foto katalog berhasil dihapus.');
     }
 
     private function syncVariants(Item $item, array $variants): void
@@ -208,5 +230,16 @@ class ItemController extends Controller
         Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 82));
 
         return $filename;
+    }
+
+    private function storePhotos(Item $item, array $photos): void
+    {
+        foreach ($photos as $photo) {
+            $item->photos()->create([
+                'path' => $this->compressAndStoreImage($photo),
+                'original_name' => $photo->getClientOriginalName(),
+                'created_by' => auth()->id(),
+            ]);
+        }
     }
 }

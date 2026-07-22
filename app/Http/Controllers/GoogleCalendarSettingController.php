@@ -1,0 +1,131 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Event;
+use App\Models\GoogleCalendarSetting;
+use App\Models\Schedule;
+use App\Services\GoogleCalendarService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class GoogleCalendarSettingController extends Controller
+{
+    public function index(): Response
+    {
+        $this->authorizeOwner();
+
+        $settings = GoogleCalendarSetting::getInstance();
+
+        return Inertia::render('GoogleCalendar/Settings', [
+            'settings' => [
+                'enabled' => $settings->enabled,
+                'client_id' => $settings->client_id,
+                'calendar_id' => $settings->calendar_id ?: 'primary',
+                'color_id' => $settings->color_id ?: '4',
+                'connected_email' => $settings->connected_email,
+                'has_client_secret' => filled($settings->client_secret),
+                'is_connected' => filled($settings->refresh_token),
+                'redirect_uri' => rtrim((string) config('app.url'), '/') . route('google-calendar.callback', [], false),
+            ],
+        ]);
+    }
+
+    public function update(Request $request): RedirectResponse
+    {
+        $this->authorizeOwner();
+
+        $validated = $request->validate([
+            'enabled' => 'boolean',
+            'client_id' => 'nullable|string|max:255',
+            'client_secret' => 'nullable|string',
+            'calendar_id' => 'nullable|string|max:255',
+            'color_id' => 'nullable|string|max:10',
+        ]);
+
+        $settings = GoogleCalendarSetting::getInstance();
+        $payload = collect($validated)->except('client_secret')->all();
+        $payload['calendar_id'] = $payload['calendar_id'] ?: 'primary';
+        $payload['color_id'] = $payload['color_id'] ?: '4';
+
+        if ($request->filled('client_secret')) {
+            $payload['client_secret'] = $validated['client_secret'];
+        }
+
+        $settings->update($payload);
+
+        return redirect()->back()->with('success', 'Pengaturan Google Calendar disimpan.');
+    }
+
+    public function connect(GoogleCalendarService $calendar): RedirectResponse
+    {
+        $this->authorizeOwner();
+
+        $settings = GoogleCalendarSetting::getInstance();
+
+        if (!filled($settings->client_id) || !filled($settings->client_secret)) {
+            return redirect()->back()->with('error', 'Isi Client ID dan Client Secret dulu.');
+        }
+
+        return redirect()->away($calendar->authUrl($settings));
+    }
+
+    public function callback(Request $request, GoogleCalendarService $calendar): RedirectResponse
+    {
+        $this->authorizeOwner();
+
+        if ($request->input('state') !== session('google_calendar_oauth_state')) {
+            return redirect()->route('google-calendar.settings')->with('error', 'State OAuth tidak valid. Coba connect ulang.');
+        }
+
+        if (!$request->filled('code')) {
+            return redirect()->route('google-calendar.settings')->with('error', 'Google tidak mengirim authorization code.');
+        }
+
+        $result = $calendar->exchangeCode($request->string('code')->toString());
+
+        return redirect()
+            ->route('google-calendar.settings')
+            ->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function disconnect(): RedirectResponse
+    {
+        $this->authorizeOwner();
+
+        GoogleCalendarSetting::getInstance()->update([
+            'access_token' => null,
+            'refresh_token' => null,
+            'token_expires_at' => null,
+            'connected_email' => null,
+        ]);
+
+        return redirect()->back()->with('success', 'Google Calendar diputus.');
+    }
+
+    public function sync(GoogleCalendarService $calendar): RedirectResponse
+    {
+        $this->authorizeOwner();
+
+        Event::whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
+            ->whereNull('deleted_at')
+            ->orderBy('date')
+            ->get()
+            ->each(fn (Event $event) => $calendar->syncEvent($event));
+
+        Schedule::with('event')
+            ->whereNull('deleted_at')
+            ->orderBy('schedule_from')
+            ->get()
+            ->each(fn (Schedule $schedule) => $calendar->syncSchedule($schedule));
+
+        return redirect()->back()->with('success', 'Sync Google Calendar dijalankan untuk client dan jadwal.');
+    }
+
+    private function authorizeOwner(): void
+    {
+        abort_unless(request()->user()?->isOwner(), 403);
+    }
+}

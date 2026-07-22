@@ -9,7 +9,7 @@ export default function Welcome({ auth }: PageProps) {
         <>
             <Head title="Shofi Wedding" />
 
-            <main className="min-h-screen bg-rose-50 text-stone-900">
+            <main className="min-h-screen bg-rose-50 text-stone-900 dark:bg-stone-950 dark:text-stone-100">
                 <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-6 sm:px-8 lg:px-10">
                     <header className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -21,7 +21,7 @@ export default function Welcome({ auth }: PageProps) {
                                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-500">
                                     Shofi Wedding
                                 </p>
-                                <h1 className="mt-1 text-xl font-bold text-stone-950">
+                                <h1 className="mt-1 text-xl font-bold text-stone-950 dark:text-stone-100">
                                     Client Management
                                 </h1>
                             </div>
@@ -29,7 +29,7 @@ export default function Welcome({ auth }: PageProps) {
 
                         <Link
                             href={isLoggedIn ? route('dashboard') : route('login')}
-                            className="inline-flex items-center justify-center rounded-lg bg-stone-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 focus:ring-offset-rose-50"
+                            className="inline-flex items-center justify-center rounded-lg bg-stone-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 focus:ring-offset-rose-50 dark:bg-stone-100 dark:text-stone-950 dark:hover:bg-white dark:focus:ring-offset-stone-950"
                         >
                             {isLoggedIn ? 'Dashboard' : 'Login'}
                         </Link>
@@ -44,11 +44,11 @@ export default function Welcome({ auth }: PageProps) {
                             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-rose-500">
                                 Sistem internal
                             </p>
-                            <h2 className="mt-5 text-4xl font-bold leading-tight text-stone-950 sm:text-5xl">
+                            <h2 className="mt-5 text-4xl font-bold leading-tight text-stone-950 dark:text-stone-100 sm:text-5xl">
                                 Kelola client, jadwal, katalog, dan pembayaran
                                 dalam satu tempat.
                             </h2>
-                            <p className="mt-5 max-w-xl text-base leading-8 text-stone-600">
+                            <p className="mt-5 max-w-xl text-base leading-8 text-stone-600 dark:text-stone-400">
                                 Dashboard operasional untuk tim Shofi Wedding
                                 agar data client, fitting, transaksi, dan
                                 laporan tetap rapi setiap hari.
@@ -61,7 +61,7 @@ export default function Welcome({ auth }: PageProps) {
                                             ? route('dashboard')
                                             : route('login')
                                     }
-                                    className="inline-flex items-center justify-center rounded-lg bg-rose-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 focus:ring-offset-rose-50"
+                                    className="inline-flex items-center justify-center rounded-lg bg-rose-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 focus:ring-offset-rose-50 dark:focus:ring-offset-stone-950"
                                 >
                                     {isLoggedIn
                                         ? 'Masuk ke Dashboard'
@@ -70,13 +70,13 @@ export default function Welcome({ auth }: PageProps) {
                             </div>
                         </div>
 
-                        <div className="rounded-lg border border-rose-100 bg-white p-6 shadow-sm">
+                        <div className="rounded-lg border border-rose-100 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
                             <div className="space-y-4">
                                 <div className="rounded-lg bg-rose-50 p-4">
                                     <p className="text-sm font-semibold text-rose-700">
                                         Client & Jadwal
                                     </p>
-                                    <p className="mt-1 text-sm text-stone-600">
+                                    <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
                                         Pantau closing, fitting, konsultasi, dan
                                         acara yang akan datang.
                                     </p>
@@ -85,7 +85,7 @@ export default function Welcome({ auth }: PageProps) {
                                     <p className="text-sm font-semibold text-sky-700">
                                         Pembayaran
                                     </p>
-                                    <p className="mt-1 text-sm text-stone-600">
+                                    <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
                                         Cek DP, pelunasan, bukti transfer, dan
                                         status konfirmasi.
                                     </p>
@@ -94,7 +94,7 @@ export default function Welcome({ auth }: PageProps) {
                                     <p className="text-sm font-semibold text-violet-700">
                                         Katalog
                                     </p>
-                                    <p className="mt-1 text-sm text-stone-600">
+                                    <p className="mt-1 text-sm text-stone-600 dark:text-stone-300">
                                         Kelola item, stok ukuran, harga sewa,
                                         dan foto katalog.
                                     </p>

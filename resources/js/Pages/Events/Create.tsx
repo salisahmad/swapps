@@ -198,7 +198,7 @@ export default function Create({ items }: PageProps) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm bg-white sm:rounded-lg">
+                    <div className="bg-white p-6 shadow-sm dark:bg-stone-900 sm:rounded-lg">
                         <form onSubmit={submit} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
@@ -556,7 +556,7 @@ export default function Create({ items }: PageProps) {
                                 </button>
                                 <Link
                                     href={route('events.index')}
-                                    className="text-sm text-stone-600 hover:text-stone-900 text-stone-400"
+                                    className="text-sm text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
                                 >
                                     Batal
                                 </Link>

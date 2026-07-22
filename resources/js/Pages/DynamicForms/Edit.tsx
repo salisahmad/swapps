@@ -108,7 +108,7 @@ export default function Edit({ event }: PageProps) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="bg-white p-6 shadow-sm bg-white sm:rounded-lg">
+                    <div className="bg-white p-6 shadow-sm dark:bg-stone-900 sm:rounded-lg">
                         <p className="mb-4 text-sm text-stone-500">
                             Susun form berita acara untuk client. Client akan mengisi form ini.
                         </p>
@@ -122,10 +122,10 @@ export default function Edit({ event }: PageProps) {
                                     </div>
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2">
-                                            <label className="text-sm font-medium text-stone-900 text-white">
+                                            <label className="text-sm font-medium text-stone-900 dark:text-white">
                                                 {field.field_label} {field.is_required && <span className="text-red-500">*</span>}
                                             </label>
-                                            <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600 bg-stone-100 text-stone-400">{field.field_type}</span>
+                                            <span className="rounded bg-stone-100 px-2 py-0.5 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-400">{field.field_type}</span>
                                         </div>
                                         <p className="text-xs text-stone-500">{field.field_name}</p>
                                     </div>
@@ -140,8 +140,8 @@ export default function Edit({ event }: PageProps) {
 
                         {showAdd && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                                <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl bg-white">
-                                    <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">Tambah Field</h3>
+                                <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-stone-900">
+                                    <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">Tambah Field</h3>
                                     <div className="space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-stone-700 text-stone-500">Label Field</label>

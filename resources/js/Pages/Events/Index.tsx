@@ -9,9 +9,9 @@ interface EventItem {
     time: string | null;
     mobile_phone: string;
     location: string | null;
-    total_amount: number;
-    grand_total: number;
-    is_fully_paid: boolean;
+    total_amount: number | null;
+    grand_total: number | null;
+    is_fully_paid: boolean | null;
     order_type_name: string;
     created_at: string;
 }
@@ -28,9 +28,14 @@ interface PageProps {
         paid?: string;
         order_type?: string;
     };
+    authUser: {
+        id: number;
+        role: number;
+        is_limited_staff: boolean;
+    };
 }
 
-export default function Index({ events, filters }: PageProps) {
+export default function Index({ events, filters, authUser }: PageProps) {
     const { data, setData, get } = useForm({
         q: filters.q || '',
         date_from: filters.date_from || '',
@@ -55,9 +60,11 @@ export default function Index({ events, filters }: PageProps) {
             header={
                 <div className="flex items-center justify-between">
                     <h2 className="page-title">Clients</h2>
-                    <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">
-                        + Client
-                    </Link>
+                    {!authUser.is_limited_staff && (
+                        <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">
+                            + Client
+                        </Link>
+                    )}
                 </div>
             }
         >
@@ -80,15 +87,17 @@ export default function Index({ events, filters }: PageProps) {
                             onChange={(e) => setData('date_from', e.target.value)}
                             className="input-field w-auto"
                         />
-                        <select
-                            value={data.paid}
-                            onChange={(e) => setData('paid', e.target.value)}
-                            className="input-field w-auto"
-                        >
-                            <option value="">Semua</option>
-                            <option value="1">Lunas</option>
-                            <option value="0">Belum</option>
-                        </select>
+                        {!authUser.is_limited_staff && (
+                            <select
+                                value={data.paid}
+                                onChange={(e) => setData('paid', e.target.value)}
+                                className="input-field w-auto"
+                            >
+                                <option value="">Semua</option>
+                                <option value="1">Lunas</option>
+                                <option value="0">Belum</option>
+                            </select>
+                        )}
                         <select
                             value={data.order_type}
                             onChange={(e) => setData('order_type', e.target.value)}
@@ -122,15 +131,19 @@ export default function Index({ events, filters }: PageProps) {
                                         <p className="mt-1 text-sm text-stone-400">📍 {event.location}</p>
                                     )}
                                 </div>
-                                <span className={`badge shrink-0 ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
-                                    {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
-                                </span>
+                                {!authUser.is_limited_staff && (
+                                    <span className={`badge shrink-0 ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
+                                        {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                                    </span>
+                                )}
                             </div>
                             <div className="mt-3 flex items-center justify-between">
                                 <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
                                     {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
                                 </span>
-                                <p className="text-lg font-bold text-rose-500">{formatRupiah(event.grand_total ?? event.total_amount)}</p>
+                                {!authUser.is_limited_staff && (
+                                    <p className="text-lg font-bold text-rose-500">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</p>
+                                )}
                             </div>
                         </Link>
                     ))}
@@ -152,8 +165,12 @@ export default function Index({ events, filters }: PageProps) {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Tanggal</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Telepon</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Jenis</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Total</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
+                                    {!authUser.is_limited_staff && (
+                                        <>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Total</th>
+                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
+                                        </>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-100">
@@ -173,17 +190,21 @@ export default function Index({ events, filters }: PageProps) {
                                                 {event.order_type_name}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount)}</td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
-                                                {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
-                                            </span>
-                                        </td>
+                                        {!authUser.is_limited_staff && (
+                                            <>
+                                                <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
+                                                        {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                                                    </span>
+                                                </td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))}
                                 {events.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-12 text-center text-stone-400">
+                                        <td colSpan={authUser.is_limited_staff ? 4 : 6} className="px-4 py-12 text-center text-stone-400">
                                             📭 Tidak ada client
                                         </td>
                                     </tr>

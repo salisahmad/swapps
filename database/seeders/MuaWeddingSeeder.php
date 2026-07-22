@@ -29,7 +29,7 @@ class MuaWeddingSeeder extends Seeder
             'name' => 'Admin',
             'email' => 'admin@wedding.com',
             'password' => bcrypt('password'),
-            'role' => User::ROLE_ADMIN,
+            'role' => User::ROLE_MANAGER,
             'mobile_phone' => '08234567890',
         ]);
 

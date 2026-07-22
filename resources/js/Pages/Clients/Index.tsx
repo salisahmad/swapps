@@ -56,11 +56,11 @@ export default function Index({ clients }: PageProps) {
                                 <tbody className="divide-y divide-stone-100">
                                     {clients.data.map((client) => (
                                         <tr key={client.id}>
-                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.name}</td>
-                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.phone}</td>
-                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.event_date ?? '-'}</td>
-                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100 capitalize">{client.event_type}</td>
-                                            <td className="px-4 py-2 text-sm text-stone-900 text-stone-100">{client.event_location ?? '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.name}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.phone}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.event_date ?? '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100 capitalize">{client.event_type}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.event_location ?? '-'}</td>
                                             <td className="px-4 py-2 text-sm">
                                                 <Link
                                                     href={route('clients.edit', client.id)}
@@ -70,7 +70,7 @@ export default function Index({ clients }: PageProps) {
                                                 </Link>
                                                 <Link
                                                     href={route('clients.show', client.id)}
-                                                    className="text-stone-600 hover:text-stone-900 text-stone-400"
+                                                    className="text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
                                                 >
                                                     Detail
                                                 </Link>
@@ -89,14 +89,14 @@ export default function Index({ clients }: PageProps) {
                                             className={`rounded px-3 py-1 text-sm ${
                                                 link.active
                                                     ? 'bg-rose-400 text-white'
-                                                    : 'bg-stone-100 text-stone-600 bg-stone-100 text-stone-500'
+                                                    : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
                                             }`}
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     ) : (
                                         <span
                                             key={i}
-                                            className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-white"
+                                            className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 dark:bg-stone-900"
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     ),

@@ -44,10 +44,26 @@ class EventController extends Controller
         }
 
         $events = $query->latest()->paginate(15)->withQueryString();
+        if (auth()->user()->isLimitedStaff()) {
+            $events->through(function (Event $event) {
+                $data = $event->toArray();
+                $data['total_amount'] = null;
+                $data['grand_total'] = null;
+                $data['is_fully_paid'] = null;
+                unset($data['additional_costs'], $data['additional_cost_total']);
+
+                return $data;
+            });
+        }
 
         return Inertia::render('Events/Index', [
             'events' => $events,
             'filters' => $request->only(['q', 'date_from', 'date_to', 'paid', 'order_type']),
+            'authUser' => [
+                'id' => auth()->id(),
+                'role' => auth()->user()->role,
+                'is_limited_staff' => auth()->user()->isLimitedStaff(),
+            ],
         ]);
     }
 
@@ -172,15 +188,18 @@ class EventController extends Controller
     {
         $relations = [
             'items.type',
-            'additionalCosts',
             'dynamicForms',
             'items.variants',
             'schedules',
             'photos',
-            'payments' => function ($q) {
-                $q->orderBy('created_at', 'desc');
-            },
         ];
+
+        if (!auth()->user()->isLimitedStaff()) {
+            $relations[] = 'additionalCosts';
+            $relations['payments'] = function ($q) {
+                $q->orderBy('created_at', 'desc');
+            };
+        }
 
         if (auth()->user()->isAdmin()) {
             $relations['activityLogs'] = function ($q) {
@@ -188,12 +207,27 @@ class EventController extends Controller
             };
         }
 
+        $loadedEvent = $event->load($relations);
+        if (auth()->user()->isLimitedStaff()) {
+            $eventData = $loadedEvent->toArray();
+            $eventData['total_amount'] = null;
+            $eventData['discount_amount'] = null;
+            $eventData['additional_cost_total'] = null;
+            $eventData['grand_total'] = null;
+            $eventData['is_fully_paid'] = null;
+            $eventData['payments'] = [];
+            $eventData['additional_costs'] = [];
+        } else {
+            $eventData = $loadedEvent;
+        }
+
         return Inertia::render('Events/Show', [
-            'event' => $event->load($relations),
+            'event' => $eventData,
             'authUser' => [
                 'id' => auth()->id(),
                 'role' => auth()->user()->role,
                 'is_admin' => auth()->user()->isAdmin(),
+                'is_limited_staff' => auth()->user()->isLimitedStaff(),
             ],
         ]);
     }

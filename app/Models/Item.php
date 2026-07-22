@@ -59,6 +59,11 @@ class Item extends Model
         return $this->hasMany(ItemVariant::class)->orderBy('size');
     }
 
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ItemPhoto::class)->latest();
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -76,6 +81,10 @@ class Item extends Model
 
     public function getImageUrlAttribute(): ?string
     {
+        if ($this->relationLoaded('photos') && $this->photos->isNotEmpty()) {
+            return $this->photos->first()->url;
+        }
+
         return $this->image_path ? Storage::url($this->image_path) : null;
     }
 

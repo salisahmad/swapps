@@ -77,11 +77,11 @@ interface Event {
     address: string | null;
     location: string | null;
     package_description: string | null;
-    total_amount: number;
-    discount_amount: number;
-    additional_cost_total: number;
-    grand_total: number;
-    is_fully_paid: boolean;
+    total_amount: number | null;
+    discount_amount: number | null;
+    additional_cost_total: number | null;
+    grand_total: number | null;
+    is_fully_paid: boolean | null;
     order_type_name: string;
     items: Item[];
     schedules: Schedule[];
@@ -98,14 +98,18 @@ interface PageProps {
         id: number;
         role: number;
         is_admin: boolean;
+        is_limited_staff: boolean;
     };
 }
 
+type ClientTab = 'info' | 'payment' | 'schedule';
+
 export default function Show({ event, authUser }: PageProps) {
-    const [activeTab, setActiveTab] = useState<'info' | 'payment' | 'schedule'>('info');
+    const [activeTab, setActiveTab] = useState<ClientTab>('info');
     const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
     const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const canSeeFinancials = !authUser.is_limited_staff;
 
     const totalPaid = event.payments
         .filter((p) => p.is_expense === 0 && p.status === 1)
@@ -113,7 +117,7 @@ export default function Show({ event, authUser }: PageProps) {
     const totalExpense = event.payments
         .filter((p) => p.is_expense === 1 && p.status === 1)
         .reduce((sum, p) => sum + p.amount, 0);
-    const remaining = event.grand_total - totalPaid;
+    const remaining = (event.grand_total || 0) - totalPaid;
     const visibleDynamicForms = (event.dynamic_forms || []).filter((field) => field.field_value !== null && field.field_value !== '');
     const dynamicFormSummary = (
         <div className="rounded-xl border border-stone-100 bg-white p-4">
@@ -263,23 +267,27 @@ export default function Show({ event, authUser }: PageProps) {
                 <div className="flex items-center justify-between">
                     <h2 className="page-title">{event.name}</h2>
                     <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={handleSyncDynamicForm}
-                            disabled={syncProcessing}
-                            className="btn-secondary text-sm py-2 px-3 disabled:opacity-50"
-                        >
-                            {syncProcessing ? 'Mengambil...' : '↻ Ambil Form Terbaru'}
-                        </button>
-                        <Link href={route('dynamic-forms.show', event.uuid)} className="btn-primary text-sm py-2 px-3">
-                            📝 Berita Acara
-                        </Link>
-                        <Link href={route('events.edit', event.uuid)} className="btn-secondary text-sm py-2 px-3">
-                            Edit
-                        </Link>
-                        <button onClick={handleDelete} disabled={deleteProcessing} className="btn-danger text-sm py-2 px-3">
-                            Hapus
-                        </button>
+                        {!authUser.is_limited_staff && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={handleSyncDynamicForm}
+                                    disabled={syncProcessing}
+                                    className="btn-secondary text-sm py-2 px-3 disabled:opacity-50"
+                                >
+                                    {syncProcessing ? 'Mengambil...' : '↻ Ambil Form Terbaru'}
+                                </button>
+                                <Link href={route('dynamic-forms.show', event.uuid)} className="btn-primary text-sm py-2 px-3">
+                                    📝 Berita Acara
+                                </Link>
+                                <Link href={route('events.edit', event.uuid)} className="btn-secondary text-sm py-2 px-3">
+                                    Edit
+                                </Link>
+                                <button onClick={handleDelete} disabled={deleteProcessing} className="btn-danger text-sm py-2 px-3">
+                                    Hapus
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             }
@@ -288,11 +296,12 @@ export default function Show({ event, authUser }: PageProps) {
 
             <div className="space-y-4">
                 {/* Summary Cards */}
+                {canSeeFinancials && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div className={`stat-card border-l-4 ${orderTheme.accent}`}>
                         <p className="text-xs text-stone-400">Grand Total</p>
-                        <p className="text-lg font-bold text-stone-800">{formatRupiah(event.grand_total)}</p>
-                        <p className="text-xs text-stone-400">Base {formatRupiah(event.total_amount)}</p>
+                        <p className="text-lg font-bold text-stone-800">{formatRupiah(event.grand_total || 0)}</p>
+                        <p className="text-xs text-stone-400">Base {formatRupiah(event.total_amount || 0)}</p>
                     </div>
                     <div className="stat-card border-l-4 border-emerald-300">
                         <p className="text-xs text-stone-400">Dibayar</p>
@@ -307,12 +316,15 @@ export default function Show({ event, authUser }: PageProps) {
                         <p className="text-lg font-bold text-red-500">{formatRupiah(totalExpense)}</p>
                     </div>
                 </div>
+                )}
 
                 {/* Status Badge */}
                 <div className="flex items-center gap-2">
-                    <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
-                        {event.is_fully_paid ? '✅ LUNAS' : '⏳ BELUM LUNAS'}
-                    </span>
+                    {canSeeFinancials && (
+                        <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
+                            {event.is_fully_paid ? '✅ LUNAS' : '⏳ BELUM LUNAS'}
+                        </span>
+                    )}
                     <span className={`badge ${orderTheme.badge}`}>
                         {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
                     </span>
@@ -321,7 +333,7 @@ export default function Show({ event, authUser }: PageProps) {
 
                 {/* Mobile Tabs */}
                 <div className="flex gap-1 rounded-xl bg-white p-1 shadow-sm">
-                    {(['info', 'payment', 'schedule'] as const).map((tab) => (
+                    {(['info', ...(canSeeFinancials ? ['payment' as ClientTab] : []), 'schedule'] as ClientTab[]).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -375,16 +387,17 @@ export default function Show({ event, authUser }: PageProps) {
                                 </div>
                             )}
                             {dynamicFormSummary}
+                            {canSeeFinancials && (
                             <div className="rounded-xl border border-stone-100 bg-stone-50 p-4">
                                 <p className="mb-3 text-sm font-semibold text-stone-800">Ringkasan Harga</p>
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between gap-4">
                                         <span className="text-stone-500">Total Harga</span>
-                                        <span className="font-semibold text-stone-800">{formatRupiah(event.total_amount)}</span>
+                                        <span className="font-semibold text-stone-800">{formatRupiah(event.total_amount || 0)}</span>
                                     </div>
                                     <div className="flex justify-between gap-4">
                                         <span className="text-stone-500">Biaya Tambahan</span>
-                                        <span className="font-semibold text-stone-800">{formatRupiah(event.additional_cost_total)}</span>
+                                        <span className="font-semibold text-stone-800">{formatRupiah(event.additional_cost_total || 0)}</span>
                                     </div>
                                     {event.additional_costs.length > 0 && (
                                         <div className="space-y-1 rounded-lg bg-white p-3">
@@ -398,14 +411,15 @@ export default function Show({ event, authUser }: PageProps) {
                                     )}
                                     <div className="flex justify-between gap-4">
                                         <span className="text-stone-500">Diskon</span>
-                                        <span className="font-semibold text-red-500">-{formatRupiah(event.discount_amount)}</span>
+                                        <span className="font-semibold text-red-500">-{formatRupiah(event.discount_amount || 0)}</span>
                                     </div>
                                     <div className="border-t border-stone-200 pt-2 flex justify-between gap-4">
                                         <span className="font-semibold text-stone-800">Grand Total</span>
-                                        <span className="font-bold text-rose-500">{formatRupiah(event.grand_total)}</span>
+                                        <span className="font-bold text-rose-500">{formatRupiah(event.grand_total || 0)}</span>
                                     </div>
                                 </div>
                             </div>
+                            )}
                             {event.items.length > 0 && (
                                 <div>
                                     <p className="text-xs text-stone-400">👗 Item / Gaun</p>
@@ -427,45 +441,47 @@ export default function Show({ event, authUser }: PageProps) {
                                     </div>
                                 </div>
 
-                                <form onSubmit={submitPhotos} className="mb-4 rounded-xl border border-dashed border-stone-200 bg-stone-50 p-3">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <label className="flex cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-medium text-stone-600 shadow-sm transition hover:bg-stone-100">
-                                            Pilih Foto
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                onChange={handlePhotoChange}
-                                                className="hidden"
-                                            />
-                                        </label>
-                                        <button
-                                            type="submit"
-                                            disabled={photoProcessing || photoData.photos.length === 0}
-                                            className="btn-primary px-4 py-3 text-sm disabled:opacity-50"
-                                        >
-                                            Upload Foto
-                                        </button>
-                                    </div>
-                                    {photoData.photos.length > 0 && (
-                                        <p className="mt-2 text-xs text-stone-500">{photoData.photos.length} foto dipilih</p>
-                                    )}
-                                    {(photoErrors.photos || photoErrors['photos.0']) && (
-                                        <p className="mt-2 text-sm text-red-500">{photoErrors.photos || photoErrors['photos.0']}</p>
-                                    )}
-                                    {photoPreviews.length > 0 && (
-                                        <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
-                                            {photoPreviews.map((src, index) => (
-                                                <img
-                                                    key={`${src}-${index}`}
-                                                    src={src}
-                                                    alt={`Preview foto ${index + 1}`}
-                                                    className="aspect-square rounded-lg object-cover"
+                                {!authUser.is_limited_staff && (
+                                    <form onSubmit={submitPhotos} className="mb-4 rounded-xl border border-dashed border-stone-200 bg-stone-50 p-3">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <label className="flex cursor-pointer items-center justify-center rounded-lg bg-white px-4 py-3 text-sm font-medium text-stone-600 shadow-sm transition hover:bg-stone-100">
+                                                Pilih Foto
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    multiple
+                                                    onChange={handlePhotoChange}
+                                                    className="hidden"
                                                 />
-                                            ))}
+                                            </label>
+                                            <button
+                                                type="submit"
+                                                disabled={photoProcessing || photoData.photos.length === 0}
+                                                className="btn-primary px-4 py-3 text-sm disabled:opacity-50"
+                                            >
+                                                Upload Foto
+                                            </button>
                                         </div>
-                                    )}
-                                </form>
+                                        {photoData.photos.length > 0 && (
+                                            <p className="mt-2 text-xs text-stone-500">{photoData.photos.length} foto dipilih</p>
+                                        )}
+                                        {(photoErrors.photos || photoErrors['photos.0']) && (
+                                            <p className="mt-2 text-sm text-red-500">{photoErrors.photos || photoErrors['photos.0']}</p>
+                                        )}
+                                        {photoPreviews.length > 0 && (
+                                            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+                                                {photoPreviews.map((src, index) => (
+                                                    <img
+                                                        key={`${src}-${index}`}
+                                                        src={src}
+                                                        alt={`Preview foto ${index + 1}`}
+                                                        className="aspect-square rounded-lg object-cover"
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </form>
+                                )}
 
                                 {event.photos.length === 0 ? (
                                     <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-stone-400">
@@ -486,14 +502,16 @@ export default function Show({ event, authUser }: PageProps) {
                                                         className="aspect-square w-full object-cover transition group-hover:scale-105"
                                                     />
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeletePhoto(photo)}
-                                                    disabled={photoProcessing}
-                                                    className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-1 text-xs font-bold text-white shadow disabled:opacity-50"
-                                                >
-                                                    Hapus
-                                                </button>
+                                                {!authUser.is_limited_staff && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeletePhoto(photo)}
+                                                        disabled={photoProcessing}
+                                                        className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-1 text-xs font-bold text-white shadow disabled:opacity-50"
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>

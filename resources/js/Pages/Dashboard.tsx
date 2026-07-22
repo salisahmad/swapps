@@ -91,12 +91,12 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
         : '-';
 
     const StatCard = ({ title, value, sub, color, icon }: { title: string; value: string; sub?: string; color: string; icon: string }) => (
-        <div className={`rounded-xl bg-white border border-stone-100 p-3 flex items-center gap-3 ${color}`}>
+        <div className={`rounded-xl bg-white border border-stone-100 p-3 flex items-center gap-3 dark:border-stone-800 dark:bg-stone-900 ${color}`}>
             <span className="text-2xl">{icon}</span>
             <div className="min-w-0">
-                <p className="text-xs text-stone-500 truncate">{title}</p>
-                <p className="text-lg font-bold text-stone-800 truncate">{value}</p>
-                {sub && <p className="text-xs text-stone-500">{sub}</p>}
+                <p className="text-xs text-stone-500 truncate dark:text-stone-400">{title}</p>
+                <p className="text-lg font-bold text-stone-800 truncate dark:text-stone-100">{value}</p>
+                {sub && <p className="text-xs text-stone-500 dark:text-stone-400">{sub}</p>}
             </div>
         </div>
     );
@@ -122,15 +122,15 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
         const typeStyle = getClientTypeStyle(client);
 
         return (
-        <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-white border border-stone-100 p-3 transition active:scale-[0.98] hover:bg-stone-50">
+        <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-white border border-stone-100 p-3 transition active:scale-[0.98] hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:hover:bg-stone-800">
             <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
+                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{client.name}</p>
                     <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ${typeStyle.className}`}>
                         {typeStyle.icon} {typeName}
                     </span>
                 </div>
-                <p className="text-xs text-stone-500">{client.date}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">{client.date}</p>
             </div>
             <div className="text-right shrink-0">
                 <p className="text-sm font-bold text-rose-500">{formatRupiah(client.grand_total ?? client.total_amount)}</p>
@@ -164,23 +164,23 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
         const isProspect = !schedule.event;
 
         const content = (
-        <div className={`flex items-center gap-3 rounded-xl p-3 transition active:scale-[0.98] hover:bg-stone-100 ${isProspect ? 'border border-orange-200 bg-orange-50' : 'bg-stone-50'}`}>
+        <div className={`flex items-center gap-3 rounded-xl p-3 transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-stone-800 ${isProspect ? 'border border-orange-200 bg-orange-50 dark:border-orange-900/60 dark:bg-orange-950/20' : 'bg-stone-50 dark:bg-stone-900'}`}>
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${style.iconClass}`}>{style.icon}</span>
             <div className="min-w-0">
                 <div className="flex min-w-0 items-center gap-2">
-                    <p className={`truncate text-sm font-semibold ${isProspect ? 'text-orange-800' : 'text-stone-800'}`}>
+                    <p className={`truncate text-sm font-semibold ${isProspect ? 'text-orange-800 dark:text-orange-200' : 'text-stone-800 dark:text-stone-100'}`}>
                         {schedule.client_name} / {schedule.event ? formatDate(schedule.event.date) : 'Calon client'}
                     </p>
                     <span className={`shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold ${style.badgeClass}`}>
                         {typeName}
                     </span>
                     {isProspect && (
-                        <span className="shrink-0 rounded-md bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-800">
+                        <span className="shrink-0 rounded-md bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-800 dark:bg-orange-900/50 dark:text-orange-200">
                             Calon Client
                         </span>
                     )}
                 </div>
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-stone-500 dark:text-stone-400">
                     {formatDate(schedule.schedule_from)} / {schedule.event?.time || schedule.client_phone || '-'}
                 </p>
             </div>
@@ -193,10 +193,10 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
     };
 
     const NextClientRow = ({ client }: { client: Event }) => (
-        <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+        <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100 dark:bg-stone-900 dark:hover:bg-stone-800">
             <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
-                <p className="text-xs text-stone-500">
+                <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{client.name}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
                     {client.date} {client.time ? `· ${client.time}` : ''} · {client.location || 'Lokasi belum diisi'}
                 </p>
             </div>
@@ -211,13 +211,13 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
         const remaining = Math.max(0, (client.grand_total ?? client.total_amount) - paid);
 
         return (
-            <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100">
+            <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100 dark:bg-stone-900 dark:hover:bg-stone-800">
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-stone-800">{client.name}</p>
-                    <p className="text-xs text-stone-500">{client.date}</p>
+                    <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{client.name}</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">{client.date}</p>
                 </div>
                 <div className="text-right shrink-0">
-                    <p className="text-xs text-stone-500">Sisa</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">Sisa</p>
                     <p className="text-sm font-bold text-amber-600">{formatRupiah(remaining)}</p>
                 </div>
             </Link>
@@ -225,9 +225,9 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
     };
 
     const SectionCard = ({ title, icon, count, children }: { title: string; icon: string; count?: number; children: React.ReactNode }) => (
-        <div className="rounded-xl bg-white border border-stone-100 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
-            <div className="flex items-center justify-between border-b border-stone-50 px-4 py-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">{icon} {title}</h2>
+        <div className="rounded-xl bg-white border border-stone-100 shadow-[0_2px_8px_rgba(0,0,0,0.03)] dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
+            <div className="flex items-center justify-between border-b border-stone-50 px-4 py-3 dark:border-stone-800">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">{icon} {title}</h2>
                 {count !== undefined && <span className="rounded-md bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">{count}</span>}
             </div>
             <div className="p-3 space-y-2">{children}</div>
@@ -243,7 +243,7 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="page-title">Shofi Wedding</h1>
-                        <p className="text-sm text-stone-500">Dashboard</p>
+                        <p className="text-sm text-stone-500 dark:text-stone-400">Dashboard</p>
                     </div>
                     {authUser.is_admin && (
                         <Link href={route('events.create')} className="btn-primary text-sm py-2.5 px-4">+ Client</Link>
@@ -253,9 +253,9 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                 {authUser.is_admin && (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                         <StatCard title="Omset Th. Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
-                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-stone-300">
-                            <p className="text-xs text-stone-500">Client Th. Ini</p>
-                            <p className="text-lg font-bold text-stone-800">{stats.this_year_client_summary.total}</p>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-stone-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Client Th. Ini</p>
+                            <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{stats.this_year_client_summary.total}</p>
                             <div className="mt-1 flex flex-wrap gap-1">
                                 <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_year_client_summary.mua_clients}</span>
                                 <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_year_client_summary.gown_clients}</span>

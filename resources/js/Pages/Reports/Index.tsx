@@ -85,35 +85,35 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
 
                     {/* Summary Cards */}
                     <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div className="rounded-lg bg-green-50 p-4 bg-green-900/20">
+                        <div className="rounded-lg bg-green-50 p-4 dark:bg-green-900/20">
                             <p className="text-xs text-stone-500">Pemasukan</p>
                             <p className="text-2xl font-bold text-green-700 text-green-300">{formatRupiah(summary.earnings)}</p>
                         </div>
-                        <div className="rounded-lg bg-red-50 p-4 bg-red-900/20">
+                        <div className="rounded-lg bg-red-50 p-4 dark:bg-red-900/20">
                             <p className="text-xs text-stone-500">Pengeluaran</p>
                             <p className="text-2xl font-bold text-red-700 text-red-300">{formatRupiah(summary.expenses)}</p>
                         </div>
-                        <div className="rounded-lg bg-blue-50 p-4 bg-blue-900/20">
+                        <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-900/20">
                             <p className="text-xs text-stone-500">Profit</p>
                             <p className="text-2xl font-bold text-blue-700 text-blue-300">{formatRupiah(summary.profit)}</p>
                         </div>
-                        <div className="rounded-lg bg-yellow-50 p-4 bg-yellow-900/20">
+                        <div className="rounded-lg bg-yellow-50 p-4 dark:bg-yellow-900/20">
                             <p className="text-xs text-stone-500">Pending</p>
                             <p className="text-2xl font-bold text-yellow-700 text-yellow-300">{formatRupiah(summary.pending)}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-4 shadow-sm bg-white">
+                        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900">
                             <p className="text-xs text-stone-500">Client Baru</p>
-                            <p className="text-2xl font-bold text-stone-900 text-white">{summary.new_events}</p>
+                            <p className="text-2xl font-bold text-stone-900 dark:text-white">{summary.new_events}</p>
                         </div>
-                        <div className="rounded-lg bg-white p-4 shadow-sm bg-white">
+                        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900">
                             <p className="text-xs text-stone-500">Client Mendatang</p>
-                            <p className="text-2xl font-bold text-stone-900 text-white">{summary.upcoming_events}</p>
+                            <p className="text-2xl font-bold text-stone-900 dark:text-white">{summary.upcoming_events}</p>
                         </div>
                     </div>
 
                     {/* Chart: Last 12 Months */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm bg-white">
-                        <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">📊 Grafik 12 Bulan Terakhir</h3>
+                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm dark:bg-stone-900">
+                        <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">📊 Grafik 12 Bulan Terakhir</h3>
                         <div className="flex items-end gap-2 overflow-x-auto pb-2">
                             {chartData.map((d, i) => {
                                 const eHeight = (d.earnings / maxChart) * 200;
@@ -136,25 +136,25 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
                     </div>
 
                     {/* Daily Breakdown */}
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm bg-white">
-                        <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">📅 Harian Bulan Ini</h3>
+                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm dark:bg-stone-900">
+                        <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">📅 Harian Bulan Ini</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-stone-100">
                                 <thead>
                                     <tr>
                                         <th className="px-3 py-2 text-left text-xs font-medium text-stone-500">Tanggal</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-green-600 text-green-400">Pemasukan</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-red-600 text-red-400">Pengeluaran</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium text-blue-600 text-blue-400">Profit</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-green-600 dark:text-green-400">Pemasukan</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-red-600 dark:text-red-400">Pengeluaran</th>
+                                        <th className="px-3 py-2 text-right text-xs font-medium text-blue-600 dark:text-blue-400">Profit</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-100">
                                     {daily.map((d) => (
                                         <tr key={d.date}>
-                                            <td className="px-3 py-2 text-sm text-stone-900 text-stone-100">{d.date}</td>
-                                            <td className="px-3 py-2 text-right text-sm font-medium text-green-600 text-green-400">{formatRupiah(d.earnings)}</td>
-                                            <td className="px-3 py-2 text-right text-sm font-medium text-red-600 text-red-400">{formatRupiah(d.expenses)}</td>
-                                            <td className="px-3 py-2 text-right text-sm font-medium text-blue-600 text-blue-400">{formatRupiah(d.earnings - d.expenses)}</td>
+                                            <td className="px-3 py-2 text-sm text-stone-900 dark:text-stone-100">{d.date}</td>
+                                            <td className="px-3 py-2 text-right text-sm font-medium text-green-600 dark:text-green-400">{formatRupiah(d.earnings)}</td>
+                                            <td className="px-3 py-2 text-right text-sm font-medium text-red-600 dark:text-red-400">{formatRupiah(d.expenses)}</td>
+                                            <td className="px-3 py-2 text-right text-sm font-medium text-blue-600 dark:text-blue-400">{formatRupiah(d.earnings - d.expenses)}</td>
                                         </tr>
                                     ))}
                                     {daily.length === 0 && (
@@ -166,8 +166,8 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
                     </div>
 
                     {/* Payment List */}
-                    <div className="rounded-lg bg-white p-6 shadow-sm bg-white">
-                        <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">📋 Semua Transaksi</h3>
+                    <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-stone-900">
+                        <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">📋 Semua Transaksi</h3>
                         <table className="min-w-full divide-y divide-stone-100">
                             <thead>
                                 <tr>
@@ -184,13 +184,13 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
                                         <td className="px-3 py-2 text-sm">
                                             <Link href={route('events.show', p.event.uuid)} className="text-rose-400 hover:underline text-rose-400">{p.event.name}</Link>
                                         </td>
-                                        <td className="px-3 py-2 text-sm text-stone-900 text-stone-100">{p.payment_at || '-'}</td>
+                                        <td className="px-3 py-2 text-sm text-stone-900 dark:text-stone-100">{p.payment_at || '-'}</td>
                                         <td className="px-3 py-2 text-sm">
                                             <span className={`rounded px-2 py-1 text-xs font-semibold ${p.is_expense === 0 ? 'bg-green-100 text-green-800 bg-green-900 text-green-300' : 'bg-red-100 text-red-800 bg-red-900 text-red-300'}`}>
                                                 {p.type_name}
                                             </span>
                                         </td>
-                                        <td className={`px-3 py-2 text-right text-sm font-medium ${p.is_expense === 0 ? 'text-green-600 text-green-400' : 'text-red-600 text-red-400'}`}>
+                                        <td className={`px-3 py-2 text-right text-sm font-medium ${p.is_expense === 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                             {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}
                                         </td>
                                         <td className="px-3 py-2 text-center">
@@ -207,9 +207,9 @@ export default function Index({ filters, summary, daily, payments, chartData }: 
                         </table>
                         <div className="mt-4 flex justify-end gap-1">
                             {payments.links.map((link, i) => link.url ? (
-                                <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-stone-100 text-stone-600 bg-stone-100 text-stone-500'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
+                                <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
                             ) : (
-                                <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-white" dangerouslySetInnerHTML={{ __html: link.label }} />
+                                <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 dark:bg-stone-900" dangerouslySetInnerHTML={{ __html: link.label }} />
                             ))}
                         </div>
                     </div>

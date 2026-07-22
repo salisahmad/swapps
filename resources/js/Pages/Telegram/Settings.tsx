@@ -49,19 +49,19 @@ export default function Settings({ settings, flash }: PageProps) {
             <div className="py-6">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
                     {flash?.success && (
-                        <div className="mb-4 rounded bg-green-50 p-4 text-green-800 bg-green-900/20 text-green-300">
+                        <div className="mb-4 rounded bg-green-50 p-4 text-green-800 dark:bg-green-900/20 dark:text-green-300">
                             ✅ {flash.success}
                         </div>
                     )}
                     {flash?.error && (
-                        <div className="mb-4 rounded bg-red-50 p-4 text-red-800 bg-red-900/20 text-red-300">
+                        <div className="mb-4 rounded bg-red-50 p-4 text-red-800 dark:bg-red-900/20 dark:text-red-300">
                             ❌ {flash.error}
                         </div>
                     )}
 
-                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm bg-white">
-                        <h3 className="mb-2 text-lg font-semibold text-stone-900 text-white">🤖 Cara Setup Telegram Bot</h3>
-                        <ol className="ml-5 list-decimal space-y-2 text-sm text-stone-600 text-stone-400">
+                    <div className="mb-6 rounded-lg bg-white p-6 shadow-sm dark:bg-stone-900">
+                        <h3 className="mb-2 text-lg font-semibold text-stone-900 dark:text-white">🤖 Cara Setup Telegram Bot</h3>
+                        <ol className="ml-5 list-decimal space-y-2 text-sm text-stone-600 dark:text-stone-400">
                             <li>Buka Telegram, cari <b>@BotFather</b> dan klik <b>/newbot</b></li>
                             <li>Isi nama bot, lalu copy <b>Bot Token</b> (mulai dengan <code>123456789:ABC...</code>)</li>
                             <li>Cari bot kamu di Telegram, klik <b>Start</b></li>
@@ -71,7 +71,7 @@ export default function Settings({ settings, flash }: PageProps) {
                         </ol>
                     </div>
 
-                    <form onSubmit={submit} className="space-y-6 rounded-lg bg-white p-6 shadow-sm bg-white">
+                    <form onSubmit={submit} className="space-y-6 rounded-lg bg-white p-6 shadow-sm dark:bg-stone-900">
                         <div>
                             <label className={labelClass}>Bot Token</label>
                             <input

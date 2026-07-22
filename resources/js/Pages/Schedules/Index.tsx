@@ -164,6 +164,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
     const handleDelete = (id: number) => {
         if (confirm('Yakin hapus jadwal ini?')) {
             destroy(route('schedules.destroy', id));
+            setShowModal(false);
         }
     };
 
@@ -227,7 +228,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
     };
     const getClientStatusStyle = (schedule: ScheduleItem) => {
         if (!schedule.event) {
-            return 'bg-orange-100 text-orange-800 border border-orange-200';
+            return 'bg-orange-100 text-orange-800 border border-orange-200 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-800/60';
         }
 
         return schedule.client_status_name === 'MUA'
@@ -324,7 +325,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
             <div className="py-6">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Filter */}
-                    <div className="mb-4 rounded-lg bg-white p-4 shadow-sm bg-white">
+                    <div className="mb-4 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900">
                         <form onSubmit={submitFilter} className="grid grid-cols-1 gap-3 sm:grid-cols-5">
                             <select
                                 value={data.type}
@@ -355,7 +356,6 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                         <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Jenis</th>
                                         <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Tanggal & Waktu</th>
                                         <th className="px-3 py-2 text-left text-xs font-medium uppercase text-stone-500">Keterangan</th>
-                                        <th className="px-3 py-2 text-right text-xs font-medium uppercase text-stone-500">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-stone-100">
@@ -364,10 +364,18 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                         const style = getScheduleStyle(s);
 
                                         return (
-                                        <tr key={s.id} className={getScheduleRowClass(s)}>
+                                        <tr
+                                            key={s.id}
+                                            onClick={() => openEdit(s)}
+                                            className={`${getScheduleRowClass(s)} cursor-pointer transition hover:bg-stone-50 dark:hover:bg-stone-800`}
+                                        >
                                             <td className="px-3 py-3">
                                                 {s.event ? (
-                                                    <Link href={route('events.show', s.event.uuid)} className="text-sm font-medium text-rose-400 hover:underline text-rose-400">
+                                                    <Link
+                                                        href={route('events.show', s.event.uuid)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-sm font-medium text-rose-500 hover:underline"
+                                                    >
                                                         {s.client_name}
                                                     </Link>
                                                 ) : (
@@ -385,19 +393,15 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                                     </span>
                                                 </span>
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-stone-900 text-stone-100">
+                                            <td className="px-3 py-3 text-sm text-stone-900 dark:text-stone-100">
                                                 {formatScheduleDateTime(s.schedule_from)}
                                                 {s.schedule_to && ` - ${parseDateTime(s.schedule_to).time || formatScheduleDateTime(s.schedule_to)}`}
                                             </td>
-                                            <td className="px-3 py-3 text-sm text-stone-900 text-stone-100">
+                                            <td className="px-3 py-3 text-sm text-stone-900 dark:text-stone-100">
                                                 <span className={`mb-1 inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${getClientStatusStyle(s)}`}>
                                                     {s.client_status_name}
                                                 </span>
                                                 <p>{s.description || '-'}</p>
-                                            </td>
-                                            <td className="px-3 py-3 text-right text-sm">
-                                                <button onClick={() => openEdit(s)} className="mr-2 text-rose-400 hover:text-rose-500 text-rose-400">Edit</button>
-                                                <button onClick={() => handleDelete(s.id)} className="text-red-600 hover:text-red-900 text-red-400">Hapus</button>
                                             </td>
                                         </tr>
                                         );
@@ -407,9 +411,9 @@ export default function Index({ schedules, filters, events }: PageProps) {
 
                             <div className="mt-4 flex justify-end gap-1">
                                 {schedules.links.map((link, i) => link.url ? (
-                                    <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-stone-100 text-stone-600 bg-stone-100 text-stone-500'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
                                 ) : (
-                                    <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 bg-white" dangerouslySetInnerHTML={{ __html: link.label }} />
+                                    <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 dark:bg-stone-900" dangerouslySetInnerHTML={{ __html: link.label }} />
                                 ))}
                             </div>
                         </div>
@@ -420,8 +424,8 @@ export default function Index({ schedules, filters, events }: PageProps) {
             {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl bg-white">
-                        <h3 className="mb-4 text-lg font-semibold text-stone-900 text-white">
+                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-stone-900">
+                        <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
                         <form onSubmit={submitForm} className="space-y-4">
@@ -562,9 +566,22 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Keterangan</label>
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" rows={2} />
                             </div>
-                            <div className="flex justify-end gap-2 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)} className="rounded bg-stone-100 px-4 py-2 text-sm text-stone-700 bg-stone-100 text-stone-500">Batal</button>
-                                <button type="submit" disabled={processing || checkingSchedule || Boolean(scheduleConflict)} className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500 disabled:opacity-50">{editMode ? 'Update' : 'Simpan'}</button>
+                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                                <div>
+                                    {editMode && data.schedule_id && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(Number(data.schedule_id))}
+                                            className="rounded bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+                                        >
+                                            Hapus Jadwal
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button type="button" onClick={() => setShowModal(false)} className="rounded bg-stone-100 px-4 py-2 text-sm text-stone-700 bg-stone-100 text-stone-500">Batal</button>
+                                    <button type="submit" disabled={processing || checkingSchedule || Boolean(scheduleConflict)} className="rounded bg-rose-400 px-4 py-2 text-sm text-white hover:bg-rose-500 disabled:opacity-50">{editMode ? 'Update' : 'Simpan'}</button>
+                                </div>
                             </div>
                         </form>
                     </div>
