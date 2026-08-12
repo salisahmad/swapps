@@ -14,16 +14,46 @@ use App\Http\Controllers\WhatsappSettingController;
 use App\Http\Controllers\GoogleCalendarSettingController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StaffController;
+use App\Models\Item;
+use App\Models\WhatsappSetting;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    $featuredItems = collect();
+
+    if (Schema::hasTable('items')) {
+        $featuredItems = Item::with(['type', 'photos', 'variants'])
+            ->where('is_rentable', true)
+            ->where('is_sold', false)
+            ->latest()
+            ->take(6)
+            ->get()
+            ->map(fn (Item $item) => [
+                'id' => $item->id,
+                'code' => $item->code,
+                'name' => $item->name,
+                'type_name' => $item->type_name,
+                'premium_level_name' => $item->premium_level_name,
+                'image_url' => $item->image_url,
+                'rental_price' => $item->rental_price,
+                'package_rental_price' => $item->package_rental_price,
+                'stock_summary' => $item->stock_summary,
+            ]);
+    }
+
+    $whatsapp = Schema::hasTable('whatsapp_settings') ? WhatsappSetting::getInstance() : null;
+    $whatsappNumber = preg_replace('/\D+/', '', $whatsapp?->sender_number ?: $whatsapp?->test_phone ?: '') ?: null;
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
+        'featuredItems' => $featuredItems,
+        'whatsappNumber' => $whatsappNumber,
     ]);
 });
 
