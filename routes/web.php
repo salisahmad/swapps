@@ -48,8 +48,6 @@ Route::get('/', function () {
     $whatsappNumber = preg_replace('/\D+/', '', $whatsapp?->sender_number ?: $whatsapp?->test_phone ?: '') ?: null;
 
     return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
         'featuredItems' => $featuredItems,
@@ -57,7 +55,7 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', [DashboardController::class, 'index'])
+Route::get('/sw-admin/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

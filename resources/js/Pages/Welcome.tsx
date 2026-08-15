@@ -1,6 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { PageProps } from '@/types';
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 
 interface FeaturedItem {
     id: number;
@@ -20,11 +20,9 @@ interface WelcomeProps extends PageProps {
 }
 
 export default function Welcome({
-    auth,
     featuredItems = [],
     whatsappNumber,
 }: WelcomeProps) {
-    const isLoggedIn = Boolean(auth.user);
     const heroImage = featuredItems.find((item) => item.image_url)?.image_url;
     const waMessage = encodeURIComponent(
         'Halo Shofi Wedding, saya ingin konsultasi untuk acara saya.'
@@ -86,12 +84,6 @@ export default function Welcome({
                                 variant="horizontal"
                                 className="h-auto w-44 max-w-[52vw] object-contain brightness-0 invert"
                             />
-                            <Link
-                                href={isLoggedIn ? route('dashboard') : route('login')}
-                                className="inline-flex items-center justify-center rounded-lg border border-white/40 bg-white/10 px-4 py-2 text-sm font-semibold text-white backdrop-blur transition hover:bg-white hover:text-stone-950"
-                            >
-                                {isLoggedIn ? 'Dashboard' : 'Login'}
-                            </Link>
                         </header>
 
                         <div className="flex flex-1 items-end pb-10 pt-24 sm:pb-16">
@@ -268,9 +260,6 @@ export default function Welcome({
                         <div className="flex gap-4 text-sm font-semibold text-stone-500">
                             <a href="#katalog" className="hover:text-rose-500">Katalog</a>
                             <a href={whatsappHref} className="hover:text-rose-500">WhatsApp</a>
-                            <Link href={isLoggedIn ? route('dashboard') : route('login')} className="hover:text-rose-500">
-                                {isLoggedIn ? 'Dashboard' : 'Login'}
-                            </Link>
                         </div>
                     </div>
                 </footer>
