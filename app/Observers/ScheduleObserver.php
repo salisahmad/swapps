@@ -2,27 +2,50 @@
 
 namespace App\Observers;
 
+use App\Jobs\GoogleCalendarSyncJob;
 use App\Models\Schedule;
-use App\Services\GoogleCalendarService;
 use App\Services\TelegramNotification;
 
 class ScheduleObserver
 {
     public function created(Schedule $schedule): void
     {
-        $telegram = new TelegramNotification();
+        $telegram = new TelegramNotification;
         $telegram->notifySchedule($schedule);
 
-        app(GoogleCalendarService::class)->syncSchedule($schedule);
+        $this->queueGoogleSync($schedule);
     }
 
     public function updated(Schedule $schedule): void
     {
-        app(GoogleCalendarService::class)->syncSchedule($schedule);
+        $this->queueGoogleSync($schedule);
     }
 
     public function deleted(Schedule $schedule): void
     {
-        app(GoogleCalendarService::class)->deleteSchedule($schedule);
+        $schedule->forceFill([
+            'google_sync_status' => Schedule::GOOGLE_SYNC_PENDING,
+            'google_sync_error' => null,
+        ])->saveQuietly();
+
+        GoogleCalendarSyncJob::dispatch(
+            GoogleCalendarSyncJob::TYPE_SCHEDULE,
+            $schedule->id,
+            GoogleCalendarSyncJob::ACTION_DELETE,
+        )->afterCommit();
+    }
+
+    private function queueGoogleSync(Schedule $schedule): void
+    {
+        $schedule->forceFill([
+            'google_sync_status' => Schedule::GOOGLE_SYNC_PENDING,
+            'google_sync_error' => null,
+        ])->saveQuietly();
+
+        GoogleCalendarSyncJob::dispatch(
+            GoogleCalendarSyncJob::TYPE_SCHEDULE,
+            $schedule->id,
+            GoogleCalendarSyncJob::ACTION_SYNC,
+        )->afterCommit();
     }
 }

@@ -14,7 +14,7 @@ interface PaymentItem {
     status: number;
     status_name: string;
     receipt_image: string | null;
-    event: { id: number; uuid: string; name: string; date: string };
+    event: { id: number; uuid: string; name: string; date: string; deleted_at?: string | null } | null;
 }
 
 interface PageProps {
@@ -70,7 +70,7 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
         const message = [
             'Konfirmasi pembayaran ini?',
             '',
-            `Client: ${payment.event.name}`,
+            `Client: ${payment.event?.name || 'Client tidak ditemukan'}`,
             `Metode: ${payment.payment_type_name}`,
             `Tanggal: ${payment.payment_at || '-'}`,
             `Jumlah: ${formatRupiah(payment.amount)}`,
@@ -133,7 +133,7 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                             <span className="text-xs font-semibold uppercase text-stone-400">Status</span>
                             {[
                                 ['0', 'Pending'],
-                                ['1', 'Terkonfirmasi'],
+                                ['1', 'Dikonfirmasi'],
                                 ['2', 'Ditolak'],
                             ].map(([value, label]) => (
                                 <label key={value} className="flex items-center gap-1.5 text-sm text-stone-600">
@@ -147,12 +147,12 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                                 </label>
                             ))}
                         </div>
-                        <select value={data.is_expense} onChange={(e) => setData('is_expense', e.target.value)} className="input-field w-auto">
+                        <select value={data.is_expense} onChange={(e) => setData('is_expense', e.target.value)} className="input-field w-40 pr-9">
                             <option value="">Semua Jenis</option>
                             <option value="0">Pemasukan</option>
                             <option value="1">Pengeluaran</option>
                         </select>
-                        <select value={data.payment_type} onChange={(e) => setData('payment_type', e.target.value)} className="input-field w-auto">
+                        <select value={data.payment_type} onChange={(e) => setData('payment_type', e.target.value)} className="input-field w-44 pr-9">
                             <option value="">Semua Metode</option>
                             <option value="0">Cash</option>
                             <option value="1">BCA</option>
@@ -160,8 +160,8 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                             <option value="3">E-Wallet</option>
                             <option value="4">Lainnya</option>
                         </select>
-                        <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="input-field w-auto" placeholder="Dari" />
-                        <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="input-field w-auto" placeholder="Sampai" />
+                        <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="input-field w-40" placeholder="Dari" />
+                        <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="input-field w-40" placeholder="Sampai" />
                         <button type="submit" className="btn-primary py-2 px-4">Filter</button>
                         <Link href={route('payments.index')} className="btn-secondary py-2 px-4">Reset</Link>
                     </form>
@@ -173,10 +173,16 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                         <div key={p.id} className={`card p-4 ${p.is_expense === 0 ? 'border-l-4 border-emerald-300' : 'border-l-4 border-red-300'}`}>
                             <div className="flex items-start justify-between">
                                 <div className="min-w-0">
-                                    <Link href={route('events.show', p.event.uuid)} className="text-sm font-semibold text-rose-500 hover:underline">
-                                        {p.event.name}
-                                    </Link>
-                                    <p className="text-xs text-stone-400">Acara: {p.event.date}</p>
+                                    {p.event ? (
+                                        <Link href={route('events.show', p.event.uuid)} className="text-sm font-semibold text-rose-500 hover:underline">
+                                            {p.event.name}
+                                        </Link>
+                                    ) : (
+                                        <p className="text-sm font-semibold text-stone-500">Client tidak ditemukan</p>
+                                    )}
+                                    <p className="text-xs text-stone-400">
+                                        Acara: {p.event?.date || '-'} {p.event?.deleted_at ? '· Terhapus' : ''}
+                                    </p>
                                     <p className="text-xs text-stone-400">{p.description || '-'}</p>
                                     <div className="mt-2 flex flex-wrap gap-1">
                                         <span className="text-xs font-medium text-stone-600">{p.payment_type_name}</span>
@@ -240,14 +246,23 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                                             {p.payment_at || '-'}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <Link href={route('events.show', p.event.uuid)} className="text-sm font-medium text-rose-500 hover:underline">{p.event.name}</Link>
+                                            {p.event ? (
+                                                <Link href={route('events.show', p.event.uuid)} className="text-sm font-medium text-rose-500 hover:underline">
+                                                    {p.event.name}
+                                                </Link>
+                                            ) : (
+                                                <span className="text-sm font-medium text-stone-500">Client tidak ditemukan</span>
+                                            )}
                                             <p className="text-xs text-stone-400">{p.description || '-'}</p>
+                                            {p.event?.deleted_at && (
+                                                <p className="text-xs font-semibold text-red-500">Client terhapus</p>
+                                            )}
                                             {p.operational_cut > 0 && (
                                                 <p className="text-xs text-amber-600">Potongan: {formatRupiah(p.operational_cut)}</p>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-stone-600">
-                                            {p.event.date || '-'}
+                                            {p.event?.date || '-'}
                                         </td>
                                         <td className={`px-4 py-3 text-right font-semibold ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                                             {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}

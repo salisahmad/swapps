@@ -1,19 +1,21 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DynamicFormController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPhotoController;
+use App\Http\Controllers\GoogleCalendarSettingController;
+use App\Http\Controllers\GoogleCalendarSyncController;
+use App\Http\Controllers\ItemController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
-use App\Http\Controllers\DynamicFormController;
+use App\Http\Controllers\StaffController;
 use App\Http\Controllers\TelegramSettingController;
 use App\Http\Controllers\WhatsappSettingController;
-use App\Http\Controllers\GoogleCalendarSettingController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\StaffController;
 use App\Models\Item;
 use App\Models\WhatsappSetting;
 use Illuminate\Foundation\Application;
@@ -68,7 +70,7 @@ Route::middleware('auth')->group(function () {
 
     Route::redirect('/events', '/clients')->name('clients.index');
     Route::get('/clients', [EventController::class, 'index'])->name('events.index');
-    Route::get('/clients/{event}', [EventController::class, 'show'])->name('events.show');
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
     Route::middleware('operational')->group(function () {
         Route::get('/clients/by-date', [EventController::class, 'byDate'])->name('events.by-date');
@@ -108,6 +110,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/google-calendar-callback', [GoogleCalendarSettingController::class, 'callback'])->name('google-calendar.callback');
         Route::post('/google-calendar-disconnect', [GoogleCalendarSettingController::class, 'disconnect'])->name('google-calendar.disconnect');
         Route::post('/google-calendar-sync', [GoogleCalendarSettingController::class, 'sync'])->name('google-calendar.sync');
+        Route::get('/google-calendar-sync', [GoogleCalendarSyncController::class, 'index'])->name('google-calendar.sync.index');
+        Route::post('/google-calendar-sync/retry', [GoogleCalendarSyncController::class, 'retry'])->name('google-calendar.sync.retry');
+        Route::post('/google-calendar-sync/retry-all', [GoogleCalendarSyncController::class, 'retryAll'])->name('google-calendar.sync.retry-all');
 
         // Reports
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
@@ -135,6 +140,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/clients/{event}/dynamic-forms', [DynamicFormController::class, 'edit'])->name('dynamic-forms.edit');
         Route::post('/clients/{event}/dynamic-forms', [DynamicFormController::class, 'update'])->name('dynamic-forms.update');
     });
+
+    Route::get('/clients/{event}', [EventController::class, 'show'])
+        ->whereUuid('event')
+        ->name('events.show');
 });
 
 // Dynamic Forms (Public - Client facing, no auth required)

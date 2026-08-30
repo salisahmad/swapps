@@ -91,7 +91,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                             <select
                                 value={data.paid}
                                 onChange={(e) => setData('paid', e.target.value)}
-                                className="input-field w-auto"
+                                className="input-field min-w-[112px] pr-9"
                             >
                                 <option value="">Semua</option>
                                 <option value="1">Lunas</option>
@@ -101,7 +101,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                         <select
                             value={data.order_type}
                             onChange={(e) => setData('order_type', e.target.value)}
-                            className="input-field w-auto"
+                            className="input-field min-w-[144px] pr-9"
                         >
                             <option value="">Semua Jenis</option>
                             <option value="1">MUA</option>

@@ -47,6 +47,7 @@ interface Stats {
     overdue_unpaid_count: number;
     overdue_unpaid_total: number;
     this_year_earnings: number;
+    this_year_cash_in: number;
     this_year_total_events: number;
     this_month_earnings: number;
     this_month_total_events: number;
@@ -64,6 +65,17 @@ interface Stats {
         total: number;
         mua_clients: number;
         gown_clients: number;
+    };
+    remaining_this_year_client_summary: {
+        total: number;
+        mua_clients: number;
+        gown_clients: number;
+    };
+    future_paid_summary: {
+        this_year_total: number;
+        this_year_clients: number;
+        all_total: number;
+        all_clients: number;
     };
 }
 
@@ -252,13 +264,31 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
 
                 {authUser.is_admin && (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        <StatCard title="Omset Th. Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
+                        <StatCard title="Omset Event Th. Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
+                        <StatCard title="Kas Masuk Th. Ini" value={formatRupiah(stats.this_year_cash_in)} color="border-l-4 border-emerald-300" icon="💰" />
                         <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-stone-300 dark:border-stone-800 dark:bg-stone-900">
                             <p className="text-xs text-stone-500 dark:text-stone-400">Client Th. Ini</p>
                             <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{stats.this_year_client_summary.total}</p>
                             <div className="mt-1 flex flex-wrap gap-1">
                                 <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_year_client_summary.mua_clients}</span>
                                 <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_year_client_summary.gown_clients}</span>
+                            </div>
+                        </div>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-sky-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Sisa Client Th. Ini</p>
+                            <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{stats.remaining_this_year_client_summary.total}</p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                                <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.remaining_this_year_client_summary.mua_clients}</span>
+                                <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.remaining_this_year_client_summary.gown_clients}</span>
+                            </div>
+                        </div>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-indigo-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Total Hutang</p>
+                            <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.future_paid_summary.this_year_total)}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400">{stats.future_paid_summary.this_year_clients} client tahun ini</p>
+                            <div className="mt-2 border-t border-stone-100 pt-2 dark:border-stone-800">
+                                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{formatRupiah(stats.future_paid_summary.all_total)}</p>
+                                <p className="text-[10px] text-stone-500 dark:text-stone-400">{stats.future_paid_summary.all_clients} semua client</p>
                             </div>
                         </div>
                         <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-emerald-300">

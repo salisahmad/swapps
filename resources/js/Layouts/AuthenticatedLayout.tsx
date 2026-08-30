@@ -38,6 +38,7 @@ interface AuthenticatedPageProps {
 const navItems = [
     { href: 'dashboard', label: 'Dashboard', icon: '📊', route: 'dashboard' },
     { href: 'events.index', label: 'Clients', icon: '👥', route: 'events.*' },
+    { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
     { href: 'items.index', label: 'Katalog', icon: '👗', route: 'items.*' },
     { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
     { href: 'payments.index', label: 'Bayar', icon: '💰', route: 'payments.*' },
@@ -68,6 +69,7 @@ export default function Authenticated({
         ? [
             { href: 'dashboard', label: 'Dashboard', icon: '📊', route: 'dashboard' },
             { href: 'events.index', label: 'Clients', icon: '👥', route: 'events.*' },
+            { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
             { href: 'staff.index', label: 'Profil', icon: '🧑‍💼', route: 'staff.*' },
         ]
         : (isOwner ? [...navItems, ...adminNavItems] : navItems);
@@ -236,6 +238,7 @@ export default function Authenticated({
                                             <Dropdown.Link href={route('telegram.settings')}>⚙️ Telegram</Dropdown.Link>
                                             <Dropdown.Link href={route('whatsapp.settings')}>📱 WhatsApp</Dropdown.Link>
                                             <Dropdown.Link href={route('google-calendar.settings')}>📅 Google Calendar</Dropdown.Link>
+                                            <Dropdown.Link href={route('google-calendar.sync.index')}>🔁 Google Sync</Dropdown.Link>
                                         </>
                                     )}
                                     <div className="border-t border-stone-100 my-1 dark:border-stone-700" />
@@ -278,6 +281,9 @@ export default function Authenticated({
                             <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
                                 👥 Clients
                             </ResponsiveNavLink>
+                            <ResponsiveNavLink href={route('calendar.index')} active={route().current('calendar.*')}>
+                                📅 Kalender
+                            </ResponsiveNavLink>
                             <ResponsiveNavLink href={route('items.index')} active={route().current('items.*')}>
                                 👗 Katalog
                             </ResponsiveNavLink>
@@ -311,6 +317,9 @@ export default function Authenticated({
                                     </ResponsiveNavLink>
                                     <ResponsiveNavLink href={route('google-calendar.settings')}>
                                         📅 Google Calendar
+                                    </ResponsiveNavLink>
+                                    <ResponsiveNavLink href={route('google-calendar.sync.index')}>
+                                        🔁 Google Sync
                                     </ResponsiveNavLink>
                                 </>
                             )}

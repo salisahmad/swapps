@@ -19,6 +19,7 @@ class ReportController extends Controller
     {
         $year = $request->get('year', Carbon::now()->year);
         $month = $request->get('month', Carbon::now()->month);
+        $clientChartYear = $request->get('client_chart_year', $year);
 
         $start = Carbon::create($year, $month, 1)->startOfMonth();
         $end = $start->copy()->endOfMonth();
@@ -48,10 +49,11 @@ class ReportController extends Controller
             ->sum('amount');
 
         // Payment list for the month
-        $payments = Payment::with('event:id,uuid,name')
+        $payments = Payment::with(['event' => fn ($query) => $query->withTrashed()->select('id', 'uuid', 'name', 'deleted_at')])
             ->whereBetween('created_at', [$start, $end])
             ->orderBy('created_at', 'desc')
-            ->paginate(30);
+            ->paginate(30)
+            ->withQueryString();
 
         // Event stats
         $newEvents = Event::whereBetween('created_at', [$start, $end])->count();
@@ -76,9 +78,23 @@ class ReportController extends Controller
                     ->sum('amount'),
             ];
         }
+        $monthlyClientData = [];
+        $monthlyEventClientData = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $clientMonthStart = Carbon::create((int) $clientChartYear, $i, 1)->startOfMonth();
+            $clientMonthEnd = $clientMonthStart->copy()->endOfMonth();
+            $monthlyClientData[] = [
+                'month' => $clientMonthStart->format('M'),
+                'clients' => Event::whereBetween('created_at', [$clientMonthStart, $clientMonthEnd])->count(),
+            ];
+            $monthlyEventClientData[] = [
+                'month' => $clientMonthStart->format('M'),
+                'clients' => Event::whereBetween('date', [$clientMonthStart->toDateString(), $clientMonthEnd->toDateString()])->count(),
+            ];
+        }
 
         return Inertia::render('Reports/Index', [
-            'filters' => ['year' => (int) $year, 'month' => (int) $month],
+            'filters' => ['year' => (int) $year, 'month' => (int) $month, 'client_chart_year' => (int) $clientChartYear],
             'summary' => [
                 'earnings' => (float) $totalEarnings,
                 'expenses' => (float) $totalExpenses,
@@ -90,6 +106,8 @@ class ReportController extends Controller
             'daily' => $daily,
             'payments' => $payments,
             'chartData' => $chartData,
+            'monthlyClientData' => $monthlyClientData,
+            'monthlyEventClientData' => $monthlyEventClientData,
         ]);
     }
 }

@@ -14,6 +14,10 @@ class ScheduleController extends Controller
 {
     public function index(Request $request): Response
     {
+        $selectedEvent = $request->filled('event_id')
+            ? Event::find($request->event_id, ['id', 'uuid', 'name', 'mobile_phone', 'date', 'time', 'order_type'])
+            : null;
+
         $query = Schedule::with('event:id,uuid,name,mobile_phone,date,time,order_type')
             ->orderBy('schedule_from');
 
@@ -49,6 +53,8 @@ class ScheduleController extends Controller
             'schedules' => $schedules,
             'filters' => $request->only(['type', 'date_from', 'date_to', 'q']),
             'events' => $events,
+            'selected_event' => $selectedEvent,
+            'open_modal' => $request->boolean('open'),
         ]);
     }
 
@@ -88,6 +94,14 @@ class ScheduleController extends Controller
         }
 
         Schedule::create($validated);
+
+        if ($request->boolean('return_to_event') && $validated['event_id']) {
+            $event = Event::find($validated['event_id']);
+            if ($event) {
+                return redirect()->route('events.show', ['event' => $event, 'tab' => 'schedule'])
+                    ->with('success', 'Jadwal berhasil ditambahkan.');
+            }
+        }
 
         return redirect()->back()->with('success', 'Jadwal berhasil ditambahkan.');
     }

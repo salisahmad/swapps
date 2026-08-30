@@ -25,6 +25,8 @@ class TelegramSettingController extends Controller
             'chat_id' => 'nullable|string',
             'notify_new_event' => 'boolean',
             'notify_new_payment' => 'boolean',
+            'notify_event_date_changed' => 'boolean',
+            'notify_event_deleted' => 'boolean',
             'notify_schedule' => 'boolean',
         ]);
 

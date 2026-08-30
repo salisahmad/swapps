@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\TelegramSetting;
 use Illuminate\Support\Facades\Http;
 use App\Models\Event;
+use App\Models\Payment;
+use Illuminate\Support\Facades\Storage;
 
 class TelegramNotification
 {
@@ -23,7 +25,66 @@ class TelegramNotification
         return !empty($this->botToken) && !empty($this->chatId);
     }
 
-    public function sendMessage(string $message): bool
+    public function sendMessage(string $message, array $extraPayload = []): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $payload = array_merge([
+                'chat_id' => $this->chatId,
+                'text' => $message,
+                'parse_mode' => 'HTML',
+                'disable_web_page_preview' => true,
+            ], $extraPayload);
+
+            $response = Http::timeout(10)->post(
+                "https://api.telegram.org/bot{$this->botToken}/sendMessage",
+                $payload
+            );
+
+            return $response->successful() && $response->json('ok', false);
+        } catch (\Exception $e) {
+            \Log::error('Telegram notification failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendPhoto(string $photoPath, string $caption, array $extraPayload = []): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        $absolutePath = Storage::disk('public')->path($photoPath);
+        if (!is_file($absolutePath)) {
+            return $this->sendMessage($caption, $extraPayload);
+        }
+
+        try {
+            $payload = array_merge([
+                'chat_id' => $this->chatId,
+                'caption' => $caption,
+                'parse_mode' => 'HTML',
+            ], $extraPayload);
+
+            if (isset($payload['reply_markup']) && is_array($payload['reply_markup'])) {
+                $payload['reply_markup'] = json_encode($payload['reply_markup']);
+            }
+
+            $response = Http::timeout(20)
+                ->attach('photo', file_get_contents($absolutePath), basename($absolutePath))
+                ->post("https://api.telegram.org/bot{$this->botToken}/sendPhoto", $payload);
+
+            return $response->successful() && $response->json('ok', false);
+        } catch (\Exception $e) {
+            \Log::error('Telegram photo notification failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function answerCallbackQuery(string $callbackQueryId, string $text): bool
     {
         if (!$this->isConfigured()) {
             return false;
@@ -31,17 +92,40 @@ class TelegramNotification
 
         try {
             $response = Http::timeout(10)->post(
-                "https://api.telegram.org/bot{$this->botToken}/sendMessage",
+                "https://api.telegram.org/bot{$this->botToken}/answerCallbackQuery",
                 [
-                    'chat_id' => $this->chatId,
-                    'text' => $message,
-                    'parse_mode' => 'HTML',
+                    'callback_query_id' => $callbackQueryId,
+                    'text' => $text,
+                    'show_alert' => false,
                 ]
             );
 
             return $response->successful() && $response->json('ok', false);
         } catch (\Exception $e) {
-            \Log::error('Telegram notification failed: ' . $e->getMessage());
+            \Log::error('Telegram callback answer failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function editMessageReplyMarkup(int|string $chatId, int $messageId): bool
+    {
+        if (!$this->isConfigured()) {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(10)->post(
+                "https://api.telegram.org/bot{$this->botToken}/editMessageReplyMarkup",
+                [
+                    'chat_id' => $chatId,
+                    'message_id' => $messageId,
+                    'reply_markup' => ['inline_keyboard' => []],
+                ]
+            );
+
+            return $response->successful() && $response->json('ok', false);
+        } catch (\Exception $e) {
+            \Log::error('Telegram edit reply markup failed: ' . $e->getMessage());
             return false;
         }
     }
@@ -53,22 +137,26 @@ class TelegramNotification
 
         $message = "<b>🎉 Booking Baru!</b>\n\n" .
             "<b>Client:</b> {$event->name}\n" .
-            "<b>Tanggal:</b> {$event->date}\n" .
+            "<b>Tanggal:</b> {$event->date?->format('Y-m-d')}\n" .
             "<b>Telepon:</b> {$event->mobile_phone}\n" .
+            "<b>Jenis:</b> {$event->order_type_name}\n" .
             "<b>Paket:</b> " . ($event->package_description ?: '-') . "\n" .
-            "<b>Total:</b> Rp " . number_format($event->total_amount, 0, ',', '.') . "\n" .
+            "<b>Total:</b> Rp " . number_format($event->grand_total, 0, ',', '.') . "\n" .
             "<b>Status:</b> " . ($event->is_fully_paid ? 'Lunas' : 'Belum Lunas') . "\n\n" .
             "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
 
         return $this->sendMessage($message);
     }
 
-    public function notifyNewPayment(\App\Models\Payment $payment): bool
+    public function notifyNewPayment(Payment $payment): bool
     {
         $settings = TelegramSetting::getInstance();
         if (!$settings?->notify_new_payment) return false;
 
+        $payment->loadMissing('event');
         $event = $payment->event;
+        if (!$event) return false;
+
         $type = $payment->is_expense === 0 ? 'Pemasukan' : 'Pengeluaran';
         $emoji = $payment->is_expense === 0 ? '💰' : '💸';
 
@@ -80,6 +168,52 @@ class TelegramNotification
             "<b>Keterangan:</b> " . ($payment->description ?: '-') . "\n" .
             "<b>Status:</b> {$payment->status_name}\n\n" .
             "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
+
+        $payload = [];
+        if ($payment->status === Payment::STATUS_PENDING) {
+            $payload['reply_markup'] = [
+                'inline_keyboard' => [
+                    [
+                        ['text' => 'Konfirmasi', 'callback_data' => "payment:confirm:{$payment->id}"],
+                        ['text' => 'Tolak', 'callback_data' => "payment:reject:{$payment->id}"],
+                    ],
+                ],
+            ];
+        }
+
+        if ($payment->receipt_image) {
+            return $this->sendPhoto($payment->receipt_image, $message, $payload);
+        }
+
+        return $this->sendMessage($message, $payload);
+    }
+
+    public function notifyEventDateChanged(Event $event, ?string $oldDate, ?string $newDate): bool
+    {
+        $settings = TelegramSetting::getInstance();
+        if (!$settings?->notify_event_date_changed) return false;
+
+        $message = "<b>📌 Tanggal Acara Berubah</b>\n\n" .
+            "<b>Client:</b> {$event->name}\n" .
+            "<b>Jenis:</b> {$event->order_type_name}\n" .
+            "<b>Dari:</b> " . ($oldDate ?: '-') . "\n" .
+            "<b>Ke:</b> " . ($newDate ?: '-') . "\n\n" .
+            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
+
+        return $this->sendMessage($message);
+    }
+
+    public function notifyEventDeleted(Event $event): bool
+    {
+        $settings = TelegramSetting::getInstance();
+        if (!$settings?->notify_event_deleted) return false;
+
+        $message = "<b>🗑️ Client Cancel / Dihapus</b>\n\n" .
+            "<b>Client:</b> {$event->name}\n" .
+            "<b>Tanggal:</b> {$event->date?->format('Y-m-d')}\n" .
+            "<b>Jenis:</b> {$event->order_type_name}\n" .
+            "<b>Telepon:</b> " . ($event->mobile_phone ?: '-') . "\n" .
+            "<b>Total:</b> Rp " . number_format($event->grand_total, 0, ',', '.');
 
         return $this->sendMessage($message);
     }

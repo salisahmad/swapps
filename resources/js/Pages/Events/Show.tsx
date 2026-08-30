@@ -105,7 +105,10 @@ interface PageProps {
 type ClientTab = 'info' | 'payment' | 'schedule';
 
 export default function Show({ event, authUser }: PageProps) {
-    const [activeTab, setActiveTab] = useState<ClientTab>('info');
+    const initialTab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'schedule'
+        ? 'schedule'
+        : 'info';
+    const [activeTab, setActiveTab] = useState<ClientTab>(initialTab);
     const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
     const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
@@ -561,12 +564,14 @@ export default function Show({ event, authUser }: PageProps) {
                         </div>
                     )}
 
-                    {activeTab === 'schedule' && (
-                        <div>
-                            <div className="mb-4 flex items-center justify-between">
-                                <h3 className="font-semibold text-stone-800">Jadwal Fitting & Konsultasi</h3>
-                                <span className="text-xs text-stone-400">Coming soon</span>
-                            </div>
+	                    {activeTab === 'schedule' && (
+	                        <div>
+	                            <div className="mb-4 flex items-center justify-between">
+	                                <h3 className="font-semibold text-stone-800">Jadwal Fitting & Konsultasi</h3>
+	                                <Link href={route('schedules.index', { event_id: event.id, open: 1 })} className="btn-primary text-sm py-2 px-3">
+	                                    + Jadwal
+	                                </Link>
+	                            </div>
                             {event.schedules.length === 0 ? (
                                 <p className="py-8 text-center text-sm text-stone-400">Belum ada jadwal</p>
                             ) : (

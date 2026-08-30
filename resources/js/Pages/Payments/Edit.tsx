@@ -198,15 +198,15 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                             {authUser.is_admin && (
                             <div>
                                 <label className="block text-sm font-medium text-stone-600">Status</label>
-                                <select
-                                    value={data.status}
-                                    onChange={(e) => setData('status', e.target.value)}
-                                    className="input-field"
-                                >
-                                    <option value="1">✅ Terkonfirmasi</option>
-                                    <option value="0">⏳ Pending</option>
-                                    <option value="2">❌ Ditolak</option>
-                                </select>
+	                                <select
+	                                    value={data.status}
+	                                    onChange={(e) => setData('status', e.target.value)}
+	                                    className="input-field w-full pr-10"
+	                                >
+	                                    <option value="0">⏳ Pending</option>
+	                                    <option value="1">✅ Dikonfirmasi</option>
+	                                    <option value="2">❌ Ditolak</option>
+	                                </select>
                             </div>
                             )}
 

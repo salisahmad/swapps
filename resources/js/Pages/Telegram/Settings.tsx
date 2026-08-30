@@ -6,6 +6,8 @@ interface Settings {
     chat_id: string | null;
     notify_new_event: boolean;
     notify_new_payment: boolean;
+    notify_event_date_changed: boolean;
+    notify_event_deleted: boolean;
     notify_schedule: boolean;
 }
 
@@ -20,6 +22,8 @@ export default function Settings({ settings, flash }: PageProps) {
         chat_id: settings.chat_id || '',
         notify_new_event: settings.notify_new_event,
         notify_new_payment: settings.notify_new_payment,
+        notify_event_date_changed: settings.notify_event_date_changed ?? true,
+        notify_event_deleted: settings.notify_event_deleted ?? true,
         notify_schedule: settings.notify_schedule,
     });
 
@@ -65,9 +69,10 @@ export default function Settings({ settings, flash }: PageProps) {
                             <li>Buka Telegram, cari <b>@BotFather</b> dan klik <b>/newbot</b></li>
                             <li>Isi nama bot, lalu copy <b>Bot Token</b> (mulai dengan <code>123456789:ABC...</code>)</li>
                             <li>Cari bot kamu di Telegram, klik <b>Start</b></li>
-                            <li>Buka <b>https://api.telegram.org/botTOKEN/getUpdates</b> (ganti TOKEN) di browser</li>
-                            <li>Cari <b>chat.id</b> — itu Chat ID kamu (biasanya angka, misal <code>123456789</code>)</li>
-                            <li>Paste Bot Token & Chat ID di bawah, lalu klik <b>Simpan</b></li>
+	                            <li>Buka <b>https://api.telegram.org/botTOKEN/getUpdates</b> (ganti TOKEN) di browser</li>
+	                            <li>Cari <b>chat.id</b> — itu Chat ID kamu (biasanya angka, misal <code>123456789</code>)</li>
+	                            <li>Paste Bot Token & Chat ID di bawah, lalu klik <b>Simpan</b></li>
+	                            <li>Untuk tombol konfirmasi/tolak pembayaran, set webhook ke <code>/api/telegram/webhook/SECRET</code></li>
                         </ol>
                     </div>
 
@@ -115,6 +120,24 @@ export default function Settings({ settings, flash }: PageProps) {
                                     className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                 />
                                 <span className="text-sm text-stone-700 text-stone-500">Pembayaran Baru</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={data.notify_event_date_changed}
+                                    onChange={(e) => setData('notify_event_date_changed', e.target.checked)}
+                                    className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
+                                />
+                                <span className="text-sm text-stone-700 text-stone-500">Client Pindah Tanggal Acara</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={data.notify_event_deleted}
+                                    onChange={(e) => setData('notify_event_deleted', e.target.checked)}
+                                    className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
+                                />
+                                <span className="text-sm text-stone-700 text-stone-500">Client Cancel / Dihapus</span>
                             </label>
                             <label className="flex items-center gap-2">
                                 <input

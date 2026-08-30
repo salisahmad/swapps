@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GoogleCalendarSyncJob;
 use App\Models\Event;
 use App\Models\GoogleCalendarSetting;
 use App\Models\Schedule;
@@ -30,6 +31,7 @@ class GoogleCalendarSettingController extends Controller
                 'is_connected' => filled($settings->refresh_token),
                 'redirect_uri' => rtrim((string) config('app.url'), '/') . route('google-calendar.callback', [], false),
             ],
+            'sync_summary' => $this->syncSummary(),
         ]);
     }
 
@@ -105,27 +107,100 @@ class GoogleCalendarSettingController extends Controller
         return redirect()->back()->with('success', 'Google Calendar diputus.');
     }
 
-    public function sync(GoogleCalendarService $calendar): RedirectResponse
+    public function sync(): RedirectResponse
     {
         $this->authorizeOwner();
 
-        Event::whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
+        $eventCount = Event::whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
             ->whereNull('deleted_at')
             ->orderBy('date')
             ->get()
-            ->each(fn (Event $event) => $calendar->syncEvent($event));
+            ->each(function (Event $event): void {
+                $event->forceFill([
+                    'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
+                    'google_sync_error' => null,
+                ])->saveQuietly();
 
-        Schedule::with('event')
+                GoogleCalendarSyncJob::dispatch(
+                    GoogleCalendarSyncJob::TYPE_EVENT,
+                    $event->id,
+                    GoogleCalendarSyncJob::ACTION_SYNC,
+                );
+            })
+            ->count();
+
+        $scheduleCount = Schedule::with('event')
             ->whereNull('deleted_at')
             ->orderBy('schedule_from')
             ->get()
-            ->each(fn (Schedule $schedule) => $calendar->syncSchedule($schedule));
+            ->each(function (Schedule $schedule): void {
+                $schedule->forceFill([
+                    'google_sync_status' => Schedule::GOOGLE_SYNC_PENDING,
+                    'google_sync_error' => null,
+                ])->saveQuietly();
 
-        return redirect()->back()->with('success', 'Sync Google Calendar dijalankan untuk client dan jadwal.');
+                GoogleCalendarSyncJob::dispatch(
+                    GoogleCalendarSyncJob::TYPE_SCHEDULE,
+                    $schedule->id,
+                    GoogleCalendarSyncJob::ACTION_SYNC,
+                );
+            })
+            ->count();
+
+        return redirect()->back()->with('success', "Sync Google Calendar dimasukkan ke antrean untuk {$eventCount} client dan {$scheduleCount} jadwal.");
     }
 
     private function authorizeOwner(): void
     {
         abort_unless(request()->user()?->isOwner(), 403);
+    }
+
+    private function syncSummary(): array
+    {
+        $eventCounts = Event::query()
+            ->selectRaw('google_sync_status, COUNT(*) as total')
+            ->whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
+            ->whereNull('deleted_at')
+            ->groupBy('google_sync_status')
+            ->pluck('total', 'google_sync_status');
+
+        $scheduleCounts = Schedule::query()
+            ->selectRaw('google_sync_status, COUNT(*) as total')
+            ->whereNull('deleted_at')
+            ->groupBy('google_sync_status')
+            ->pluck('total', 'google_sync_status');
+
+        $failedEvents = Event::query()
+            ->where('google_sync_status', Event::GOOGLE_SYNC_FAILED)
+            ->whereNull('deleted_at')
+            ->latest('updated_at')
+            ->take(5)
+            ->get(['id', 'uuid', 'name', 'google_sync_attempts', 'google_sync_error', 'updated_at']);
+
+        $failedSchedules = Schedule::query()
+            ->where('google_sync_status', Schedule::GOOGLE_SYNC_FAILED)
+            ->whereNull('deleted_at')
+            ->latest('updated_at')
+            ->take(5)
+            ->get(['id', 'prospect_name', 'event_id', 'google_sync_attempts', 'google_sync_error', 'updated_at'])
+            ->load('event:id,uuid,name');
+
+        return [
+            'events' => $this->normalizeCounts($eventCounts),
+            'schedules' => $this->normalizeCounts($scheduleCounts),
+            'failed_events' => $failedEvents,
+            'failed_schedules' => $failedSchedules,
+        ];
+    }
+
+    private function normalizeCounts($counts): array
+    {
+        return [
+            Event::GOOGLE_SYNC_PENDING => (int) ($counts[Event::GOOGLE_SYNC_PENDING] ?? 0),
+            Event::GOOGLE_SYNC_SYNCED => (int) ($counts[Event::GOOGLE_SYNC_SYNCED] ?? 0),
+            Event::GOOGLE_SYNC_FAILED => (int) ($counts[Event::GOOGLE_SYNC_FAILED] ?? 0),
+            Event::GOOGLE_SYNC_SKIPPED => (int) ($counts[Event::GOOGLE_SYNC_SKIPPED] ?? 0),
+            Event::GOOGLE_SYNC_DELETED => (int) ($counts[Event::GOOGLE_SYNC_DELETED] ?? 0),
+        ];
     }
 }

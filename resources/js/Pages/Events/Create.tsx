@@ -39,7 +39,7 @@ export default function Create({ items }: PageProps) {
         name: '',
         mobile_phone: '',
         date: '',
-        time: '',
+        time: '08:00',
         address: '',
         location: '',
         package_description: '',

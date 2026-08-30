@@ -11,12 +11,16 @@ class TelegramSetting extends Model
         'chat_id',
         'notify_new_event',
         'notify_new_payment',
+        'notify_event_date_changed',
+        'notify_event_deleted',
         'notify_schedule',
     ];
 
     protected $casts = [
         'notify_new_event' => 'boolean',
         'notify_new_payment' => 'boolean',
+        'notify_event_date_changed' => 'boolean',
+        'notify_event_deleted' => 'boolean',
         'notify_schedule' => 'boolean',
     ];
 

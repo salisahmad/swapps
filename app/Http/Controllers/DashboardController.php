@@ -35,29 +35,37 @@ class DashboardController extends Controller
         $thisMonthInputRange = $toAppTimezoneRange($startOfMonth, $endOfMonth);
         $todayInputRange = $toAppTimezoneRange($today, $today->copy()->endOfDay());
         $yesterdayInputRange = $toAppTimezoneRange($yesterday->copy()->startOfDay(), $yesterday->copy()->endOfDay());
+        $lastYearDateRange = [$startOfLastYear->toDateString(), $endOfLastYear->toDateString()];
+        $thisYearDateRange = [$startOfYear->toDateString(), $endOfYear->toDateString()];
+        $thisMonthDateRange = [$startOfMonth->toDateString(), $endOfMonth->toDateString()];
+        $revenueDisplayStatuses = [Payment::STATUS_PENDING, Payment::STATUS_CONFIRMED];
 
         // ===== 1. Omset Tahun Lalu =====
         $lastYearEarnings = Payment::where('is_expense', Payment::EARNING)
-            ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', $lastYearInputRange)
+            ->whereIn('status', $revenueDisplayStatuses)
+            ->whereHas('event', fn ($query) => $query->whereBetween('date', $lastYearDateRange))
             ->sum('amount');
 
         // ===== 2. Total Client Tahun Lalu =====
-        $lastYearTotalEvents = Event::whereBetween('created_at', $lastYearInputRange)->count();
+        $lastYearTotalEvents = Event::whereBetween('date', $lastYearDateRange)->count();
 
         // ===== 3. Omset Tahun Ini =====
         $thisYearEarnings = Payment::where('is_expense', Payment::EARNING)
+            ->whereIn('status', $revenueDisplayStatuses)
+            ->whereHas('event', fn ($query) => $query->whereBetween('date', $thisYearDateRange))
+            ->sum('amount');
+        $thisYearCashIn = Payment::where('is_expense', Payment::EARNING)
             ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', $thisYearInputRange)
+            ->whereBetween('payment_at', $thisYearDateRange)
             ->sum('amount');
 
         // ===== 4. Total Client Tahun Ini =====
-        $thisYearTotalEvents = Event::whereBetween('created_at', $thisYearInputRange)->count();
+        $thisYearTotalEvents = Event::whereBetween('date', $thisYearDateRange)->count();
 
         // ===== 5. Omset Bulan Ini =====
         $thisMonthEarnings = Payment::where('is_expense', Payment::EARNING)
-            ->where('status', Payment::STATUS_CONFIRMED)
-            ->whereBetween('created_at', $thisMonthInputRange)
+            ->whereIn('status', $revenueDisplayStatuses)
+            ->whereHas('event', fn ($query) => $query->whereBetween('date', $thisMonthDateRange))
             ->sum('amount');
 
         // ===== 6. Total Client Bulan Ini =====
@@ -68,12 +76,38 @@ class DashboardController extends Controller
         $thisMonthGownEvents = Event::whereBetween('created_at', $thisMonthInputRange)
             ->where('order_type', Event::ORDER_TYPE_GOWN)
             ->count();
-        $thisYearMuaEvents = Event::whereBetween('created_at', $thisYearInputRange)
+        $thisYearMuaEvents = Event::whereBetween('date', $thisYearDateRange)
             ->where('order_type', Event::ORDER_TYPE_MUA)
             ->count();
-        $thisYearGownEvents = Event::whereBetween('created_at', $thisYearInputRange)
+        $thisYearGownEvents = Event::whereBetween('date', $thisYearDateRange)
             ->where('order_type', Event::ORDER_TYPE_GOWN)
             ->count();
+        $remainingThisYearEvents = Event::whereBetween('date', [$todayDate, $endOfYear->toDateString()])
+            ->count();
+        $remainingThisYearMuaEvents = Event::whereBetween('date', [$todayDate, $endOfYear->toDateString()])
+            ->where('order_type', Event::ORDER_TYPE_MUA)
+            ->count();
+        $remainingThisYearGownEvents = Event::whereBetween('date', [$todayDate, $endOfYear->toDateString()])
+            ->where('order_type', Event::ORDER_TYPE_GOWN)
+            ->count();
+        $futurePaidThisYearEvents = Event::whereBetween('date', [$todayDate, $endOfYear->toDateString()])
+            ->whereHas('payments', fn ($query) => $query
+                ->where('is_expense', Payment::EARNING)
+                ->where('status', Payment::STATUS_CONFIRMED))
+            ->count();
+        $futurePaidThisYearTotal = Payment::where('is_expense', Payment::EARNING)
+            ->where('status', Payment::STATUS_CONFIRMED)
+            ->whereHas('event', fn ($query) => $query->whereBetween('date', [$todayDate, $endOfYear->toDateString()]))
+            ->sum('amount');
+        $futurePaidAllEvents = Event::whereDate('date', '>=', $todayDate)
+            ->whereHas('payments', fn ($query) => $query
+                ->where('is_expense', Payment::EARNING)
+                ->where('status', Payment::STATUS_CONFIRMED))
+            ->count();
+        $futurePaidAllTotal = Payment::where('is_expense', Payment::EARNING)
+            ->where('status', Payment::STATUS_CONFIRMED)
+            ->whereHas('event', fn ($query) => $query->whereDate('date', '>=', $todayDate))
+            ->sum('amount');
 
         // ===== 7. Client belum lunas sampai dua hari ke depan =====
         $overdueUnpaidEvents = Event::whereDate('date', '<=', $unpaidClientCutoffDate)
@@ -139,6 +173,7 @@ class DashboardController extends Controller
                 'overdue_unpaid_count' => $overdueUnpaidCount,
                 'overdue_unpaid_total' => (float) $overdueUnpaidTotal,
                 'this_year_earnings' => (float) $thisYearEarnings,
+                'this_year_cash_in' => (float) $thisYearCashIn,
                 'this_year_total_events' => $thisYearTotalEvents,
                 'this_month_earnings' => (float) $thisMonthEarnings,
                 'this_month_total_events' => $thisMonthTotalEvents,
@@ -157,6 +192,17 @@ class DashboardController extends Controller
                     'total' => $thisYearTotalEvents,
                     'mua_clients' => $thisYearMuaEvents,
                     'gown_clients' => $thisYearGownEvents,
+                ],
+                'remaining_this_year_client_summary' => [
+                    'total' => $remainingThisYearEvents,
+                    'mua_clients' => $remainingThisYearMuaEvents,
+                    'gown_clients' => $remainingThisYearGownEvents,
+                ],
+                'future_paid_summary' => [
+                    'this_year_total' => (float) $futurePaidThisYearTotal,
+                    'this_year_clients' => $futurePaidThisYearEvents,
+                    'all_total' => (float) $futurePaidAllTotal,
+                    'all_clients' => $futurePaidAllEvents,
                 ],
             ],
             'todayFittingSchedules' => $todaySchedules,

@@ -15,7 +15,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Payment::with('event:id,uuid,name,date');
+        $query = Payment::with(['event' => fn ($q) => $q->withTrashed()->select('id', 'uuid', 'name', 'date', 'deleted_at')]);
         $statusFilter = $request->input('status', [
             (string) Payment::STATUS_PENDING,
             (string) Payment::STATUS_REJECTED,
@@ -84,13 +84,18 @@ class PaymentController extends Controller
 
     public function create(Request $request): Response
     {
+        $selectedEvent = $request->filled('event_id')
+            ? Event::find($request->event_id, ['id', 'name', 'date', 'total_amount'])
+            : null;
+
         $events = Event::where('is_fully_paid', false)
             ->orderBy('name')
             ->get(['id', 'name', 'date', 'total_amount']);
 
         return Inertia::render('Payments/Create', [
             'events' => $events,
-            'event_id' => $request->event_id,
+            'event_id' => $selectedEvent?->id,
+            'selected_event' => $selectedEvent,
             'authUser' => [
                 'id' => auth()->id(),
                 'role' => auth()->user()->role,

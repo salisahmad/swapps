@@ -19,6 +19,10 @@ class Schedule extends Model
         'prospect_mobile_phone',
         'description',
         'google_event_id',
+        'google_sync_status',
+        'google_sync_attempts',
+        'google_synced_at',
+        'google_sync_error',
         'created_by',
     ];
 
@@ -26,6 +30,8 @@ class Schedule extends Model
         'schedule_from' => 'datetime',
         'schedule_to' => 'datetime',
         'type' => 'integer',
+        'google_sync_attempts' => 'integer',
+        'google_synced_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -47,6 +53,12 @@ class Schedule extends Model
 
     const TYPE_FITTING = 1;
     const TYPE_CONSULT = 2;
+
+    public const GOOGLE_SYNC_PENDING = 'pending';
+    public const GOOGLE_SYNC_SYNCED = 'synced';
+    public const GOOGLE_SYNC_FAILED = 'failed';
+    public const GOOGLE_SYNC_SKIPPED = 'skipped';
+    public const GOOGLE_SYNC_DELETED = 'deleted';
 
     const TYPES = [
         self::TYPE_FITTING => 'Fitting',

@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClientActivityLog;
 use App\Models\Event;
 use App\Models\EventAdditionalCost;
 use App\Models\Item;
 use App\Models\Payment;
-use App\Models\ClientActivityLog;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,8 +23,8 @@ class EventController extends Controller
 
         // Search
         if ($request->filled('q')) {
-            $query->where('name', 'like', '%' . $request->q . '%')
-                ->orWhere('mobile_phone', 'like', '%' . $request->q . '%');
+            $query->where('name', 'like', '%'.$request->q.'%')
+                ->orWhere('mobile_phone', 'like', '%'.$request->q.'%');
         }
 
         // Date range
@@ -116,72 +118,88 @@ class EventController extends Controller
             'down_payment' => 'required|numeric|min:0',
             'down_payment_type' => 'required|integer|in:0,1,2,3,4',
             'additional_costs' => 'nullable|array',
-            'additional_costs.*.type' => 'required_with:additional_costs|string|in:' . implode(',', EventAdditionalCost::TYPES),
+            'additional_costs.*.type' => 'required_with:additional_costs|string|in:'.implode(',', EventAdditionalCost::TYPES),
             'additional_costs.*.total' => 'nullable|numeric|min:0',
             'additional_costs.*.notes' => 'nullable|string',
         ]);
 
-        $itemIds = $this->itemIdsForOrder($validated);
-        $eventData = collect($validated)->except(['item_ids', 'down_payment', 'down_payment_type', 'additional_costs'])->all();
-        $eventData['discount_amount'] = $eventData['discount_amount'] ?? 0;
+        $lock = Cache::lock('client-create:'.$this->duplicateClientKey($validated), 10);
 
-        $event = Event::create([
-            ...$eventData,
-            'uuid' => (string) Str::uuid(),
-            'created_by' => auth()->id(),
-        ]);
-
-        if (!empty($itemIds)) {
-            $event->items()->attach($itemIds);
+        try {
+            $lock->block(5);
+        } catch (LockTimeoutException) {
+            throw ValidationException::withMessages([
+                'name' => 'Client sedang diproses. Tunggu sebentar lalu cek daftar client sebelum menyimpan ulang.',
+            ]);
         }
 
-        $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
+        try {
+            $this->ensureNoDuplicateClient($validated);
 
-        if ($validated['down_payment'] > 0) {
-            $payment = Payment::create([
-                'event_id' => $event->id,
-                'is_expense' => Payment::EARNING,
-                'payment_at' => now(),
-                'payment_type' => $validated['down_payment_type'],
-                'amount' => $validated['down_payment'],
-                'operational_cut' => 0,
-                'description' => 'DP awal client',
-                'status' => auth()->user()->isStaff() ? Payment::STATUS_PENDING : Payment::STATUS_CONFIRMED,
+            $itemIds = $this->itemIdsForOrder($validated);
+            $eventData = collect($validated)->except(['item_ids', 'down_payment', 'down_payment_type', 'additional_costs'])->all();
+            $eventData['discount_amount'] = $eventData['discount_amount'] ?? 0;
+
+            $event = Event::create([
+                ...$eventData,
+                'uuid' => (string) Str::uuid(),
                 'created_by' => auth()->id(),
             ]);
 
-            $event->update([
-                'is_fully_paid' => $validated['down_payment'] >= $event->fresh()->grand_total,
-            ]);
+            if (! empty($itemIds)) {
+                $event->items()->attach($itemIds);
+            }
+
+            $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
+
+            if ($validated['down_payment'] > 0) {
+                $payment = Payment::create([
+                    'event_id' => $event->id,
+                    'is_expense' => Payment::EARNING,
+                    'payment_at' => now(),
+                    'payment_type' => $validated['down_payment_type'],
+                    'amount' => $validated['down_payment'],
+                    'operational_cut' => 0,
+                    'description' => 'DP awal client',
+                    'status' => auth()->user()->isStaff() ? Payment::STATUS_PENDING : Payment::STATUS_CONFIRMED,
+                    'created_by' => auth()->id(),
+                ]);
+
+                $event->update([
+                    'is_fully_paid' => $validated['down_payment'] >= $event->fresh()->grand_total,
+                ]);
+
+                $this->logClientActivity(
+                    $event,
+                    ClientActivityLog::TYPE_PAYMENT_CHANGED,
+                    'DP awal client dicatat.',
+                    null,
+                    [
+                        'payment_id' => $payment->id,
+                        'amount' => $payment->amount,
+                        'status' => $payment->status_name,
+                    ],
+                );
+            }
 
             $this->logClientActivity(
                 $event,
-                ClientActivityLog::TYPE_PAYMENT_CHANGED,
-                'DP awal client dicatat.',
+                ClientActivityLog::TYPE_CREATED,
+                'Client dibuat.',
                 null,
                 [
-                    'payment_id' => $payment->id,
-                    'amount' => $payment->amount,
-                    'status' => $payment->status_name,
+                    'name' => $event->name,
+                    'date' => $event->date?->format('Y-m-d'),
+                    'total_amount' => $event->total_amount,
+                    'discount_amount' => $event->discount_amount,
+                    'grand_total' => $event->fresh()->grand_total,
                 ],
             );
+
+            return redirect()->route('events.show', $event)->with('success', 'Client berhasil dibuat.');
+        } finally {
+            $lock->release();
         }
-
-        $this->logClientActivity(
-            $event,
-            ClientActivityLog::TYPE_CREATED,
-            'Client dibuat.',
-            null,
-            [
-                'name' => $event->name,
-                'date' => $event->date?->format('Y-m-d'),
-                'total_amount' => $event->total_amount,
-                'discount_amount' => $event->discount_amount,
-                'grand_total' => $event->fresh()->grand_total,
-            ],
-        );
-
-        return redirect()->route('events.show', $event)->with('success', 'Client berhasil dibuat.');
     }
 
     public function show(Event $event): Response
@@ -194,7 +212,7 @@ class EventController extends Controller
             'photos',
         ];
 
-        if (!auth()->user()->isLimitedStaff()) {
+        if (! auth()->user()->isLimitedStaff()) {
             $relations[] = 'additionalCosts';
             $relations['payments'] = function ($q) {
                 $q->orderBy('created_at', 'desc');
@@ -286,10 +304,12 @@ class EventController extends Controller
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
             'additional_costs' => 'nullable|array',
-            'additional_costs.*.type' => 'required_with:additional_costs|string|in:' . implode(',', EventAdditionalCost::TYPES),
+            'additional_costs.*.type' => 'required_with:additional_costs|string|in:'.implode(',', EventAdditionalCost::TYPES),
             'additional_costs.*.total' => 'nullable|numeric|min:0',
             'additional_costs.*.notes' => 'nullable|string',
         ]);
+
+        $this->ensureNoDuplicateClient($validated, $event);
 
         $oldTotal = $event->total_amount;
         $oldDiscount = $event->discount_amount;
@@ -364,7 +384,7 @@ class EventController extends Controller
             return redirect()->route('events.show', $event)->with('success', 'Permintaan hapus client dikirim ke admin.');
         }
 
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
             abort(403);
         }
 
@@ -380,16 +400,17 @@ class EventController extends Controller
         );
 
         $event->delete();
+
         return redirect()->route('events.index')->with('success', 'Client berhasil dihapus.');
     }
 
     public function approveDelete(Event $event)
     {
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
             abort(403);
         }
 
-        if (!$this->hasPendingDeleteRequest($event)) {
+        if (! $this->hasPendingDeleteRequest($event)) {
             return redirect()->route('events.show', $event)->with('success', 'Tidak ada request hapus yang perlu dikonfirmasi.');
         }
 
@@ -462,7 +483,7 @@ class EventController extends Controller
     {
         $orderType = (int) $validated['order_type'];
 
-        if (!in_array($orderType, [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN], true)) {
+        if (! in_array($orderType, [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN], true)) {
             return [];
         }
 
@@ -495,6 +516,72 @@ class EventController extends Controller
         }
 
         return $validItemIds;
+    }
+
+    private function ensureNoDuplicateClient(array $validated, ?Event $ignoreEvent = null): void
+    {
+        $duplicate = Event::query()
+            ->whereNull('deleted_at')
+            ->whereDate('date', $validated['date'])
+            ->when($ignoreEvent, fn ($query) => $query->whereKeyNot($ignoreEvent->id))
+            ->whereRaw('LOWER(TRIM(name)) = ?', [$this->normalizedName($validated['name'])])
+            ->whereRaw(
+                "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(mobile_phone, ' ', ''), '-', ''), '+', ''), '.', ''), '(', ''), ')', ''), '/', '') in (?, ?, ?)",
+                $this->phoneVariants($validated['mobile_phone']),
+            )
+            ->first(['id', 'uuid', 'name', 'date']);
+
+        if (! $duplicate) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'name' => "Client dengan nama, nomor telepon, dan tanggal acara yang sama sudah ada: {$duplicate->name}. Buka data lama tersebut, jangan simpan ulang.",
+        ]);
+    }
+
+    private function duplicateClientKey(array $validated): string
+    {
+        return sha1(implode('|', [
+            $this->normalizedName($validated['name']),
+            $this->normalizedPhone($validated['mobile_phone']),
+            $validated['date'],
+        ]));
+    }
+
+    private function normalizedName(string $name): string
+    {
+        return strtolower(trim(preg_replace('/\s+/', ' ', $name)));
+    }
+
+    private function normalizedPhone(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone);
+
+        if (str_starts_with($digits, '62')) {
+            return '0'.substr($digits, 2);
+        }
+
+        if (str_starts_with($digits, '8')) {
+            return '0'.$digits;
+        }
+
+        return $digits;
+    }
+
+    private function phoneVariants(string $phone): array
+    {
+        $normalized = $this->normalizedPhone($phone);
+
+        if (! str_starts_with($normalized, '0')) {
+            return [$normalized, $normalized, $normalized];
+        }
+
+        return [
+            $normalized,
+            '62'.substr($normalized, 1),
+            substr($normalized, 1),
+        ];
     }
 
     private function updateEventPaidStatus(Event $event): void

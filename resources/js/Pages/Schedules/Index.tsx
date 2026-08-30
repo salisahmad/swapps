@@ -40,6 +40,8 @@ interface PageProps {
         q?: string;
     };
     events: Event[];
+    selected_event?: Event | null;
+    open_modal?: boolean;
 }
 
 interface TakenTime {
@@ -47,7 +49,7 @@ interface TakenTime {
     to: string | null;
 }
 
-export default function Index({ schedules, filters, events }: PageProps) {
+export default function Index({ schedules, filters, events, selected_event, open_modal }: PageProps) {
     const { data, setData, get, post, put, delete: destroy, processing, reset } = useForm({
         type: filters.type || '',
         date_from: filters.date_from || '',
@@ -55,7 +57,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
         q: filters.q || '',
         // form fields
         client_source: 'booked',
-        event_id: '',
+        event_id: selected_event ? String(selected_event.id) : '',
         prospect_name: '',
         prospect_mobile_phone: '',
         schedule_type: '1',
@@ -65,6 +67,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
         schedule_to: '',
         description: '',
         schedule_id: '',
+        return_to_event: selected_event ? '1' : '',
     });
 
     const [showModal, setShowModal] = useState(false);
@@ -75,7 +78,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
     const [checkingSchedule, setCheckingSchedule] = useState(false);
     const [scheduleConflict, setScheduleConflict] = useState('');
 
-    const selectedEvent = events.find((event) => String(event.id) === data.event_id);
+    const selectedEvent = selected_event || events.find((event) => String(event.id) === data.event_id);
     const filteredEvents = clientSearch.length > 0
         ? events.filter((event) => (
             event.name.toLowerCase().includes(clientSearch.toLowerCase())
@@ -93,7 +96,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
         setData({
             ...data,
             client_source: 'booked',
-            event_id: '',
+            event_id: selected_event ? String(selected_event.id) : '',
             prospect_name: '',
             prospect_mobile_phone: '',
             schedule_type: '1',
@@ -103,8 +106,9 @@ export default function Index({ schedules, filters, events }: PageProps) {
             schedule_to: '',
             description: '',
             schedule_id: '',
+            return_to_event: selected_event ? '1' : '',
         });
-        setClientSearch('');
+        setClientSearch(selected_event?.name || '');
         setShowClientDropdown(false);
         setEditMode(false);
         setShowModal(true);
@@ -128,6 +132,7 @@ export default function Index({ schedules, filters, events }: PageProps) {
             time_to: schedule.schedule_to ? new Date(schedule.schedule_to).toTimeString().slice(0, 5) : '16:00',
             description: schedule.description || '',
             schedule_id: String(schedule.id),
+            return_to_event: '',
         });
         setClientSearch(selectedScheduleEvent?.name || schedule.event?.name || '');
         setShowClientDropdown(false);
@@ -226,6 +231,32 @@ export default function Index({ schedules, filters, events }: PageProps) {
         setClientSearch(event.name);
         setShowClientDropdown(false);
     };
+
+    useEffect(() => {
+        if (!open_modal || !selected_event) {
+            return;
+        }
+
+        setData({
+            ...data,
+            client_source: 'booked',
+            event_id: String(selected_event.id),
+            prospect_name: '',
+            prospect_mobile_phone: '',
+            schedule_type: '1',
+            schedule_from: '',
+            time_from: '14:00',
+            time_to: '15:00',
+            schedule_to: '',
+            description: '',
+            schedule_id: '',
+            return_to_event: '1',
+        });
+        setClientSearch(selected_event.name);
+        setShowClientDropdown(false);
+        setEditMode(false);
+        setShowModal(true);
+    }, []);
     const getClientStatusStyle = (schedule: ScheduleItem) => {
         if (!schedule.event) {
             return 'bg-orange-100 text-orange-800 border border-orange-200 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-800/60';
@@ -428,55 +459,64 @@ export default function Index({ schedules, filters, events }: PageProps) {
                         <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
-                        <form onSubmit={submitForm} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Status Client</label>
-                                <div className="mt-2 grid grid-cols-2 gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setData({
-                                            ...data,
-                                            client_source: 'booked',
-                                            prospect_name: '',
-                                            prospect_mobile_phone: '',
-                                        })}
-                                        className={`rounded-lg border px-3 py-2 text-sm font-semibold ${data.client_source === 'booked' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-stone-200 bg-white text-stone-600'}`}
-                                    >
-                                        Client booking
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setData({
-                                            ...data,
-                                            client_source: 'prospect',
-                                            event_id: '',
-                                        })}
-                                        className={`rounded-lg border px-3 py-2 text-sm font-semibold ${data.client_source === 'prospect' ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-stone-200 bg-white text-stone-600'}`}
-                                    >
-                                        Calon client
-                                    </button>
-                                </div>
-                            </div>
+	                        <form onSubmit={submitForm} className="space-y-4">
+	                            {!selected_event && (
+	                                <div>
+	                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Status Client</label>
+	                                    <div className="mt-2 grid grid-cols-2 gap-2">
+	                                        <button
+	                                            type="button"
+	                                            onClick={() => setData({
+	                                                ...data,
+	                                                client_source: 'booked',
+	                                                prospect_name: '',
+	                                                prospect_mobile_phone: '',
+	                                            })}
+	                                            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${data.client_source === 'booked' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-stone-200 bg-white text-stone-600'}`}
+	                                        >
+	                                            Client booking
+	                                        </button>
+	                                        <button
+	                                            type="button"
+	                                            onClick={() => setData({
+	                                                ...data,
+	                                                client_source: 'prospect',
+	                                                event_id: '',
+	                                            })}
+	                                            className={`rounded-lg border px-3 py-2 text-sm font-semibold ${data.client_source === 'prospect' ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-stone-200 bg-white text-stone-600'}`}
+	                                        >
+	                                            Calon client
+	                                        </button>
+	                                    </div>
+	                                </div>
+	                            )}
 
-                            {data.client_source === 'booked' ? (
-                                <div className="relative">
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Client</label>
-                                    <input
-                                        type="text"
-                                        value={clientSearch}
-                                        onChange={(e) => {
-                                            setClientSearch(e.target.value);
-                                            setShowClientDropdown(true);
-                                            setData('event_id', '');
-                                        }}
-                                        onFocus={() => setShowClientDropdown(true)}
-                                        className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
-                                        placeholder="Cari nama / nomor client..."
-                                        required
-                                    />
-                                    {showClientDropdown && (
-                                        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
-                                            {filteredEvents.length === 0 ? (
+	                            {data.client_source === 'booked' ? (
+	                                <div className="relative">
+	                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Client</label>
+	                                    {selected_event ? (
+	                                        <div className="mt-1 rounded-lg border border-rose-100 bg-rose-50 p-3">
+	                                            <p className="text-base font-semibold text-rose-700">{selected_event.name}</p>
+	                                            <p className="text-xs text-rose-600">{selected_event.mobile_phone || '-'} / {formatDisplayDate(selected_event.date)}</p>
+	                                        </div>
+	                                    ) : (
+	                                        <input
+	                                            type="text"
+	                                            value={clientSearch}
+	                                            onChange={(e) => {
+	                                                setClientSearch(e.target.value);
+	                                                setShowClientDropdown(true);
+	                                                setData('event_id', '');
+	                                            }}
+	                                            onFocus={() => setShowClientDropdown(true)}
+	                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800"
+	                                            placeholder="Cari nama / nomor client..."
+	                                            required
+	                                        />
+	                                    )}
+	                                    {!selected_event && showClientDropdown && (
+	                                        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
+	                                            {filteredEvents.length === 0 ? (
                                                 <p className="px-4 py-3 text-sm text-stone-400">Tidak ditemukan</p>
                                             ) : (
                                                 filteredEvents.map((event) => (
@@ -493,9 +533,9 @@ export default function Index({ schedules, filters, events }: PageProps) {
                                             )}
                                         </div>
                                     )}
-                                    {selectedEvent && (
-                                        <p className="mt-1 text-xs text-stone-500">Tanggal acara: {formatDisplayDate(selectedEvent.date)}</p>
-                                    )}
+	                                    {!selected_event && selectedEvent && (
+	                                        <p className="mt-1 text-xs text-stone-500">Tanggal acara: {formatDisplayDate(selectedEvent.date)}</p>
+	                                    )}
                                     <input type="hidden" value={data.event_id} name="event_id" />
                                 </div>
                             ) : (

@@ -57,7 +57,7 @@ class Payment extends Model
 
     const STATUSES = [
         self::STATUS_PENDING => 'Pending',
-        self::STATUS_CONFIRMED => 'Terkonfirmasi',
+        self::STATUS_CONFIRMED => 'Dikonfirmasi',
         self::STATUS_REJECTED => 'Ditolak',
     ];
 

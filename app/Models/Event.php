@@ -26,6 +26,10 @@ class Event extends Model
         'is_fully_paid',
         'uuid',
         'google_event_id',
+        'google_sync_status',
+        'google_sync_attempts',
+        'google_synced_at',
+        'google_sync_error',
         'created_by',
     ];
 
@@ -36,6 +40,8 @@ class Event extends Model
         'discount_amount' => 'double',
         'order_type' => 'integer',
         'is_fully_paid' => 'boolean',
+        'google_sync_attempts' => 'integer',
+        'google_synced_at' => 'datetime',
     ];
 
     protected $appends = [
@@ -47,6 +53,12 @@ class Event extends Model
     public const ORDER_TYPE_MUA = 1;
     public const ORDER_TYPE_GOWN = 2;
     public const ORDER_TYPE_TIME_PERIOD = 3;
+
+    public const GOOGLE_SYNC_PENDING = 'pending';
+    public const GOOGLE_SYNC_SYNCED = 'synced';
+    public const GOOGLE_SYNC_FAILED = 'failed';
+    public const GOOGLE_SYNC_SKIPPED = 'skipped';
+    public const GOOGLE_SYNC_DELETED = 'deleted';
 
     public const ORDER_TYPES = [
         self::ORDER_TYPE_MUA => 'MUA',
@@ -101,7 +113,7 @@ class Event extends Model
 
     public function getOrderTypeNameAttribute(): string
     {
-        return self::ORDER_TYPES[$this->order_type] ?? 'Unknown';
+        return self::ORDER_TYPES[(int) $this->order_type] ?? 'Unknown';
     }
 
     public function getAdditionalCostTotalAttribute(): float

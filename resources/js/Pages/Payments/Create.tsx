@@ -18,10 +18,11 @@ interface AuthUser {
 interface PageProps {
     events: Event[];
     event_id?: number | null;
+    selected_event?: Event | null;
     authUser: AuthUser;
 }
 
-export default function Create({ events, event_id, authUser }: PageProps) {
+export default function Create({ events, event_id, selected_event, authUser }: PageProps) {
     const { data, setData, post, processing, errors } = useForm({
         event_id: event_id ? String(event_id) : '',
         is_expense: '0',
@@ -31,7 +32,7 @@ export default function Create({ events, event_id, authUser }: PageProps) {
         amount: '',
         operational_cut: '',
         description: '',
-        status: authUser.is_admin ? '1' : '0',
+        status: '0',
         receipt_image: null as File | null,
     });
 
@@ -39,7 +40,7 @@ export default function Create({ events, event_id, authUser }: PageProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [showDropdown, setShowDropdown] = useState(false);
 
-    const selectedEvent = events.find((e) => String(e.id) === data.event_id);
+    const selectedEvent = selected_event || events.find((e) => String(e.id) === data.event_id);
 
     const filteredEvents = searchQuery.length > 0
         ? events.filter((e) => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -86,15 +87,15 @@ export default function Create({ events, event_id, authUser }: PageProps) {
                 <div className="mx-auto max-w-3xl">
                     <div className="card-elevated p-5 sm:p-6">
                         <form onSubmit={submit} className="space-y-4" encType="multipart/form-data">
-                            {/* Event - Searchable Dropdown */}
-                            <div className="relative">
-                                <label className="block text-sm font-medium text-stone-600">Client</label>
-                                {event_id && selectedEvent ? (
-                                    <div className="rounded-lg bg-rose-50 p-3">
-                                        <p className="text-sm font-semibold text-rose-700">{selectedEvent.name}</p>
-                                        <p className="text-xs text-rose-600">{formatDisplayDate(selectedEvent.date)} — {formatRupiah(selectedEvent.total_amount)}</p>
-                                    </div>
-                                ) : (
+	                            {/* Client */}
+	                            <div className="relative">
+	                                <label className="block text-sm font-medium text-stone-600">Client</label>
+	                                {selected_event ? (
+	                                    <div className="rounded-lg border border-rose-100 bg-rose-50 p-3">
+	                                        <p className="text-base font-semibold text-rose-700">{selected_event.name}</p>
+	                                        <p className="text-xs text-rose-600">{formatDisplayDate(selected_event.date)} — {formatRupiah(selected_event.total_amount)}</p>
+	                                    </div>
+	                                ) : (
                                     <>
                                         <input
                                             type="text"
@@ -210,15 +211,15 @@ export default function Create({ events, event_id, authUser }: PageProps) {
                             </div>
 
                             {/* Status - Admin only */}
-                            {authUser.is_admin && (
-                                <div>
-                                    <label className="block text-sm font-medium text-stone-600">Status</label>
-                                    <select value={data.status} onChange={(e) => setData('status', e.target.value)} className="input-field">
-                                        <option value="1">✅ Terkonfirmasi</option>
-                                        <option value="0">⏳ Pending</option>
-                                        <option value="2">❌ Ditolak</option>
-                                    </select>
-                                </div>
+	                            {authUser.is_admin && (
+	                                <div>
+	                                    <label className="block text-sm font-medium text-stone-600">Status</label>
+	                                    <select value={data.status} onChange={(e) => setData('status', e.target.value)} className="input-field w-full pr-10">
+	                                        <option value="0">⏳ Pending</option>
+	                                        <option value="1">✅ Dikonfirmasi</option>
+	                                        <option value="2">❌ Ditolak</option>
+	                                    </select>
+	                                </div>
                             )}
 
                             {/* Upload Bukti Bayar */}
