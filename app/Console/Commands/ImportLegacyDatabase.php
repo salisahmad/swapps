@@ -19,13 +19,17 @@ class ImportLegacyDatabase extends Command
     protected $description = 'Import old Shofi Wedding database data into the current schema.';
 
     private array $coreTables = [
+        'notification_reads',
+        'client_activity_logs',
+        'failed_jobs',
+        'jobs',
+        'job_batches',
         'dynamic_forms',
         'dynamic_form_templates',
         'event_additional_costs',
         'event_photos',
         'item_photos',
         'item_variants',
-        'employee_event_bonus_claims',
         'event_item',
         'payments',
         'schedules',
@@ -223,7 +227,11 @@ class ImportLegacyDatabase extends Command
                     'order_type' => $event->order_type,
                     'is_fully_paid' => $event->is_fully_paid,
                     'uuid' => $event->uuid ?: (string) Str::uuid(),
-                    'google_event_id' => $event->google_event_id,
+                    'google_event_id' => $this->nullableGoogleEventId($event->google_event_id),
+                    'google_sync_status' => $this->googleSyncStatus($event->google_event_id, $event->deleted_at),
+                    'google_sync_attempts' => 0,
+                    'google_synced_at' => $this->googleSyncedAt($event->google_event_id, $event->updated_at),
+                    'google_sync_error' => null,
                     'created_by' => $this->validUserId($event->created_by, $validUserIds),
                     'deleted_at' => $this->legacyTimestamp($event->deleted_at),
                     'created_at' => $this->legacyTimestamp($event->created_at),
@@ -298,7 +306,11 @@ class ImportLegacyDatabase extends Command
                     'prospect_name' => null,
                     'prospect_mobile_phone' => null,
                     'description' => $schedule->description,
-                    'google_event_id' => $schedule->google_event_id,
+                    'google_event_id' => $this->nullableGoogleEventId($schedule->google_event_id),
+                    'google_sync_status' => $this->googleSyncStatus($schedule->google_event_id, $schedule->deleted_at),
+                    'google_sync_attempts' => 0,
+                    'google_synced_at' => $this->googleSyncedAt($schedule->google_event_id, $schedule->updated_at),
+                    'google_sync_error' => null,
                     'created_by' => $this->validUserId($schedule->created_by, $validUserIds),
                     'deleted_at' => $this->legacyTimestamp($schedule->deleted_at),
                     'created_at' => $this->legacyTimestamp($schedule->created_at),
@@ -421,6 +433,31 @@ class ImportLegacyDatabase extends Command
         }
 
         return Carbon::parse($value)->subHours(7)->format('Y-m-d H:i:s');
+    }
+
+    private function nullableGoogleEventId(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function googleSyncStatus(mixed $googleEventId, mixed $deletedAt): string
+    {
+        if ($deletedAt) {
+            return 'deleted';
+        }
+
+        return $this->nullableGoogleEventId($googleEventId) ? 'synced' : 'pending';
+    }
+
+    private function googleSyncedAt(mixed $googleEventId, mixed $updatedAt): ?string
+    {
+        if (! $this->nullableGoogleEventId($googleEventId)) {
+            return null;
+        }
+
+        return $this->legacyTimestamp($updatedAt) ?? now()->format('Y-m-d H:i:s');
     }
 
     private function fieldType(int $type, ?string $options): string
