@@ -48,6 +48,7 @@ export default function Create({ items }: PageProps) {
         additional_costs: [] as AdditionalCost[],
         down_payment: '1000000',
         down_payment_type: '0',
+        down_payment_receipt_image: null as File | null,
         order_type: '1',
         item_ids: [] as number[],
     });
@@ -58,10 +59,17 @@ export default function Create({ items }: PageProps) {
     const [selectedItems, setSelectedItems] = useState<Item[]>([]);
     const [searchingItems, setSearchingItems] = useState(false);
     const [previewItem, setPreviewItem] = useState<Item | null>(null);
+    const [downPaymentReceiptPreview, setDownPaymentReceiptPreview] = useState<string | null>(null);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('events.store'));
+        post(route('events.store'), { forceFormData: true });
+    };
+
+    const handleDownPaymentReceiptChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] || null;
+        setData('down_payment_receipt_image', file);
+        setDownPaymentReceiptPreview(file ? URL.createObjectURL(file) : null);
     };
 
     const toggleItem = (item: Item) => {
@@ -199,7 +207,7 @@ export default function Create({ items }: PageProps) {
             <div className="py-6">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
                     <div className="bg-white p-6 shadow-sm dark:bg-stone-900 sm:rounded-lg">
-                        <form onSubmit={submit} className="space-y-4">
+                        <form onSubmit={submit} className="space-y-4" encType="multipart/form-data">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className={labelClass}>Nama Client / Pengantin</label>
@@ -424,6 +432,35 @@ export default function Create({ items }: PageProps) {
                                     </select>
                                     {errors.down_payment_type && <p className="mt-1 text-sm text-red-600">{errors.down_payment_type}</p>}
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className={labelClass}>Bukti Transfer DP</label>
+                                <div className="mt-2">
+                                    {downPaymentReceiptPreview ? (
+                                        <div className="relative inline-block">
+                                            <img src={downPaymentReceiptPreview} alt="Preview bukti DP" className="h-40 rounded-lg object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setDownPaymentReceiptPreview(null);
+                                                    setData('down_payment_receipt_image', null);
+                                                }}
+                                                className="absolute -right-2 -top-2 rounded-full bg-red-500 px-2 py-1 text-xs text-white"
+                                            >
+                                                x
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 transition hover:bg-stone-100 dark:border-stone-700 dark:bg-stone-800 dark:hover:bg-stone-700">
+                                            <span className="text-3xl">📷</span>
+                                            <span className="mt-2 text-sm text-stone-500 dark:text-stone-300">Tap untuk upload foto bukti DP</span>
+                                            <span className="text-xs text-stone-400">JPG, PNG (max 5MB)</span>
+                                            <input type="file" accept="image/*" onChange={handleDownPaymentReceiptChange} className="hidden" />
+                                        </label>
+                                    )}
+                                </div>
+                                {errors.down_payment_receipt_image && <p className="mt-1 text-sm text-red-600">{errors.down_payment_receipt_image}</p>}
                             </div>
 
                             {/* Item selection */}

@@ -10,8 +10,10 @@ use App\Models\Payment;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Intervention\Image\Laravel\Facades\Image;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -117,6 +119,7 @@ class EventController extends Controller
             'item_ids.*' => 'exists:items,id',
             'down_payment' => 'required|numeric|min:0',
             'down_payment_type' => 'required|integer|in:0,1,2,3,4',
+            'down_payment_receipt_image' => 'nullable|image|max:5120',
             'additional_costs' => 'nullable|array',
             'additional_costs.*.type' => 'required_with:additional_costs|string|in:'.implode(',', EventAdditionalCost::TYPES),
             'additional_costs.*.total' => 'nullable|numeric|min:0',
@@ -153,6 +156,11 @@ class EventController extends Controller
             $this->syncAdditionalCosts($event, $validated['additional_costs'] ?? []);
 
             if ($validated['down_payment'] > 0) {
+                $receiptPath = null;
+                if ($request->hasFile('down_payment_receipt_image')) {
+                    $receiptPath = $this->compressAndStoreReceiptImage($request->file('down_payment_receipt_image'));
+                }
+
                 $payment = Payment::create([
                     'event_id' => $event->id,
                     'is_expense' => Payment::EARNING,
@@ -160,6 +168,7 @@ class EventController extends Controller
                     'payment_type' => $validated['down_payment_type'],
                     'amount' => $validated['down_payment'],
                     'operational_cut' => 0,
+                    'receipt_image' => $receiptPath,
                     'description' => 'DP awal client',
                     'status' => auth()->user()->isStaff() ? Payment::STATUS_PENDING : Payment::STATUS_CONFIRMED,
                     'created_by' => auth()->id(),
@@ -592,5 +601,18 @@ class EventController extends Controller
             ->sum('amount');
 
         $event->update(['is_fully_paid' => $paid >= $event->fresh()->grand_total]);
+    }
+
+    private function compressAndStoreReceiptImage($file): string
+    {
+        $image = Image::decodePath($file->getRealPath());
+        $image->scaleDown(width: 800);
+
+        $filename = 'receipts/' . uniqid() . '.jpg';
+
+        Storage::disk('public')->makeDirectory('receipts');
+        Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 80));
+
+        return $filename;
     }
 }
