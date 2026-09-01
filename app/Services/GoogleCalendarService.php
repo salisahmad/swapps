@@ -311,11 +311,7 @@ class GoogleCalendarService
         return [
             'summary' => $event->name,
             'location' => $event->location,
-            'description' => implode("\n", [
-                'Link Client: '.$this->publicRoute('events.show', $event),
-                'Alamat: '.($event->address ?: '-'),
-                'Deskripsi Paket: '.($event->package_description ?: '-'),
-            ]),
+            'description' => $this->eventDescription($event, $date, $time),
             'colorId' => (int) $event->order_type === Event::ORDER_TYPE_GOWN
                 ? self::COLOR_COBALT
                 : ($settings->color_id ?: self::COLOR_CHERRY_BLOSSOM),
@@ -328,6 +324,22 @@ class GoogleCalendarService
                 'timeZone' => config('app.timezone'),
             ],
         ];
+    }
+
+    private function eventDescription(Event $event, string $date, string $time): string
+    {
+        return implode("\n", [
+            'Client Detail:',
+            $this->publicRoute('events.show', $event),
+            '',
+            '- Jenis: '.$event->order_type_name,
+            '- Nomor WA: '.($event->mobile_phone ?: '-'),
+            '- Tanggal Acara: '.$date,
+            '- Jam Acara: '.($event->time ? Carbon::parse($time)->format('H:i') : '-'),
+            '- Link Maps: '.($event->location ?: '-'),
+            '- Alamat: '.($event->address ?: '-'),
+            '- Deskripsi Paket: '.($event->package_description ?: '-'),
+        ]);
     }
 
     private function schedulePayload(Schedule $schedule): array

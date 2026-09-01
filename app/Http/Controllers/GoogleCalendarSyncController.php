@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\GoogleCalendarSyncJob;
 use App\Models\Event;
+use App\Models\GoogleCalendarSetting;
 use App\Models\Schedule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,6 +60,9 @@ class GoogleCalendarSyncController extends Controller
     public function retry(Request $request): RedirectResponse
     {
         $this->authorizeOwner();
+        if (! GoogleCalendarSetting::getInstance()->isConfigured()) {
+            return redirect()->back()->with('error', 'Hubungkan Google Calendar dulu sebelum menjalankan sync.');
+        }
 
         $validated = $request->validate([
             'type' => 'required|string|in:event,schedule',
@@ -86,6 +90,9 @@ class GoogleCalendarSyncController extends Controller
     public function retryAll(Request $request): RedirectResponse
     {
         $this->authorizeOwner();
+        if (! GoogleCalendarSetting::getInstance()->isConfigured()) {
+            return redirect()->back()->with('error', 'Hubungkan Google Calendar dulu sebelum menjalankan sync.');
+        }
 
         $validated = $request->validate([
             'status' => 'required|string|in:pending,failed,skipped',
@@ -132,7 +139,7 @@ class GoogleCalendarSyncController extends Controller
             'google_sync_error' => null,
         ])->saveQuietly();
 
-        GoogleCalendarSyncJob::dispatch($type, $model->id, GoogleCalendarSyncJob::ACTION_SYNC);
+        GoogleCalendarSyncJob::dispatchAfterResponse($type, $model->id, GoogleCalendarSyncJob::ACTION_SYNC);
     }
 
     private function authorizeOwner(): void

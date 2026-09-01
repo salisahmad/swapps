@@ -111,41 +111,54 @@ class GoogleCalendarSettingController extends Controller
     {
         $this->authorizeOwner();
 
+        $settings = GoogleCalendarSetting::getInstance();
+        if (! $settings->isConfigured()) {
+            return redirect()->back()->with('error', 'Hubungkan Google Calendar dulu sebelum menjalankan sync.');
+        }
+
+        Event::whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
+            ->whereNull('deleted_at')
+            ->update([
+                'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
+                'google_sync_error' => null,
+            ]);
+
         $eventCount = Event::whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
             ->whereNull('deleted_at')
-            ->orderBy('date')
-            ->get()
-            ->each(function (Event $event): void {
-                $event->forceFill([
-                    'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
-                    'google_sync_error' => null,
-                ])->saveQuietly();
-
-                GoogleCalendarSyncJob::dispatch(
-                    GoogleCalendarSyncJob::TYPE_EVENT,
-                    $event->id,
-                    GoogleCalendarSyncJob::ACTION_SYNC,
-                );
-            })
             ->count();
 
-        $scheduleCount = Schedule::with('event')
+        Event::whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
             ->whereNull('deleted_at')
-            ->orderBy('schedule_from')
-            ->get()
-            ->each(function (Schedule $schedule): void {
-                $schedule->forceFill([
-                    'google_sync_status' => Schedule::GOOGLE_SYNC_PENDING,
-                    'google_sync_error' => null,
-                ])->saveQuietly();
+            ->orderBy('id')
+            ->chunkById(200, function ($events): void {
+                foreach ($events as $event) {
+                    GoogleCalendarSyncJob::dispatchAfterResponse(
+                        GoogleCalendarSyncJob::TYPE_EVENT,
+                        $event->id,
+                        GoogleCalendarSyncJob::ACTION_SYNC,
+                    );
+                }
+            });
 
-                GoogleCalendarSyncJob::dispatch(
-                    GoogleCalendarSyncJob::TYPE_SCHEDULE,
-                    $schedule->id,
-                    GoogleCalendarSyncJob::ACTION_SYNC,
-                );
-            })
-            ->count();
+        Schedule::whereNull('deleted_at')
+            ->update([
+                'google_sync_status' => Schedule::GOOGLE_SYNC_PENDING,
+                'google_sync_error' => null,
+            ]);
+
+        $scheduleCount = Schedule::whereNull('deleted_at')->count();
+
+        Schedule::whereNull('deleted_at')
+            ->orderBy('id')
+            ->chunkById(200, function ($schedules): void {
+                foreach ($schedules as $schedule) {
+                    GoogleCalendarSyncJob::dispatchAfterResponse(
+                        GoogleCalendarSyncJob::TYPE_SCHEDULE,
+                        $schedule->id,
+                        GoogleCalendarSyncJob::ACTION_SYNC,
+                    );
+                }
+            });
 
         return redirect()->back()->with('success', "Sync Google Calendar dimasukkan ke antrean untuk {$eventCount} client dan {$scheduleCount} jadwal.");
     }
