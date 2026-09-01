@@ -195,9 +195,21 @@ export default function Settings({ settings, sync_summary, flash, errors = {} }:
                                 ? `Terhubung${settings.connected_email ? ` sebagai ${settings.connected_email}` : ''}.`
                                 : 'Belum terhubung ke Google Calendar.'}
                         </p>
+                        {!settings.is_connected && (
+                            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                Simpan Client ID, Client Secret, dan Calendar ID, lalu klik <b>Connect Google</b>.
+                                Setelah Google berhasil memberi izin, tombol sync baru bisa dipakai.
+                            </div>
+                        )}
                         <div className="mt-4 flex flex-wrap gap-2">
-                            <button type="button" onClick={sync} disabled={processing || !settings.is_connected} className="rounded bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
-                                Sync Ulang Semua Data
+                            <button
+                                type="button"
+                                onClick={sync}
+                                disabled={processing || !settings.is_connected}
+                                className="rounded bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                title={!settings.is_connected ? 'Connect Google Calendar dulu sebelum sync.' : undefined}
+                            >
+                                {settings.is_connected ? 'Sync Ulang Semua Data' : 'Sync Belum Aktif'}
                             </button>
                             <Link href={route('google-calendar.sync.index')} className="rounded bg-stone-800 px-5 py-2 text-sm font-semibold text-white hover:bg-stone-900">
                                 Lihat Detail Sync
