@@ -312,7 +312,7 @@ class GoogleCalendarService
         return [
             'summary' => $event->name,
             'location' => $event->location,
-            'description' => $this->eventDescription($event, $clientUrl),
+            'description' => $this->eventDescription($event),
             'colorId' => (int) $event->order_type === Event::ORDER_TYPE_GOWN
                 ? self::COLOR_COBALT
                 : ($settings->color_id ?: self::COLOR_CHERRY_BLOSSOM),
@@ -331,12 +331,9 @@ class GoogleCalendarService
         ];
     }
 
-    private function eventDescription(Event $event, string $clientUrl): string
+    private function eventDescription(Event $event): string
     {
         return implode("<br>\n", [
-            '<b>Client Detail:</b>',
-            '<a href="'.$clientUrl.'">Buka Detail Client</a>',
-            '',
             '- Jenis: '.e($event->order_type_name),
             '- Nomor WA: '.$this->whatsappLink($event->mobile_phone),
             '- Link Maps: '.$this->linkedText($event->location, 'Buka Maps'),
@@ -358,7 +355,6 @@ class GoogleCalendarService
         $payload = [
             'summary' => "{$typeName}{$prospectMarker} {$schedule->client_name}",
             'description' => implode("<br>\n", array_filter([
-                $clientUrl ? '<b>Client Detail:</b><br><a href="'.$clientUrl.'">Buka Detail Client</a>' : null,
                 'Status: '.e($schedule->client_status_name),
                 'Telepon: '.e($schedule->client_phone ?: '-'),
                 'Keterangan: '.nl2br(e($schedule->description ?: '-')),
