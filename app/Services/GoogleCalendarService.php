@@ -301,6 +301,7 @@ class GoogleCalendarService
 
     private function eventPayload(Event $event, GoogleCalendarSetting $settings): array
     {
+        $clientUrl = $this->publicRoute('events.show', $event);
         $date = $event->date instanceof Carbon
             ? $event->date->format('Y-m-d')
             : Carbon::parse($event->date)->format('Y-m-d');
@@ -311,10 +312,14 @@ class GoogleCalendarService
         return [
             'summary' => $event->name,
             'location' => $event->location,
-            'description' => $this->eventDescription($event, $date, $time),
+            'description' => $this->eventDescription($event, $date, $time, $clientUrl),
             'colorId' => (int) $event->order_type === Event::ORDER_TYPE_GOWN
                 ? self::COLOR_COBALT
                 : ($settings->color_id ?: self::COLOR_CHERRY_BLOSSOM),
+            'source' => [
+                'title' => 'Buka Detail Client',
+                'url' => $clientUrl,
+            ],
             'start' => [
                 'dateTime' => $start->toRfc3339String(),
                 'timeZone' => config('app.timezone'),
@@ -326,10 +331,8 @@ class GoogleCalendarService
         ];
     }
 
-    private function eventDescription(Event $event, string $date, string $time): string
+    private function eventDescription(Event $event, string $date, string $time, string $clientUrl): string
     {
-        $clientUrl = $this->publicRoute('events.show', $event);
-
         return implode("<br>\n", [
             '<b>Client Detail:</b>',
             '<a href="'.$clientUrl.'">Buka Detail Client</a>',
@@ -352,11 +355,12 @@ class GoogleCalendarService
             : $start->copy()->addHour();
         $typeName = (int) $schedule->type === Schedule::TYPE_CONSULT ? '[K]' : '[F]';
         $prospectMarker = $schedule->event ? '' : ' [TW]';
+        $clientUrl = $schedule->event ? $this->publicRoute('events.show', $schedule->event) : null;
 
-        return [
+        $payload = [
             'summary' => "{$typeName}{$prospectMarker} {$schedule->client_name}",
             'description' => implode("<br>\n", array_filter([
-                $schedule->event ? '<b>Client Detail:</b><br><a href="'.$this->publicRoute('events.show', $schedule->event).'">Buka Detail Client</a>' : null,
+                $clientUrl ? '<b>Client Detail:</b><br><a href="'.$clientUrl.'">Buka Detail Client</a>' : null,
                 'Status: '.e($schedule->client_status_name),
                 'Telepon: '.e($schedule->client_phone ?: '-'),
                 'Keterangan: '.nl2br(e($schedule->description ?: '-')),
@@ -373,6 +377,15 @@ class GoogleCalendarService
                 'timeZone' => config('app.timezone'),
             ],
         ];
+
+        if ($clientUrl) {
+            $payload['source'] = [
+                'title' => 'Buka Detail Client',
+                'url' => $clientUrl,
+            ];
+        }
+
+        return $payload;
     }
 
     private function publicRoute(string $name, mixed $parameters = []): string
