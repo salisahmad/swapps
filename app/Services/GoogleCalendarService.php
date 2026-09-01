@@ -312,7 +312,7 @@ class GoogleCalendarService
         return [
             'summary' => $event->name,
             'location' => $event->location,
-            'description' => $this->eventDescription($event, $date, $time, $clientUrl),
+            'description' => $this->eventDescription($event, $clientUrl),
             'colorId' => (int) $event->order_type === Event::ORDER_TYPE_GOWN
                 ? self::COLOR_COBALT
                 : ($settings->color_id ?: self::COLOR_CHERRY_BLOSSOM),
@@ -331,16 +331,14 @@ class GoogleCalendarService
         ];
     }
 
-    private function eventDescription(Event $event, string $date, string $time, string $clientUrl): string
+    private function eventDescription(Event $event, string $clientUrl): string
     {
         return implode("<br>\n", [
             '<b>Client Detail:</b>',
             '<a href="'.$clientUrl.'">Buka Detail Client</a>',
             '',
             '- Jenis: '.e($event->order_type_name),
-            '- Nomor WA: '.e($event->mobile_phone ?: '-'),
-            '- Tanggal Acara: '.e($date),
-            '- Jam Acara: '.e($event->time ? Carbon::parse($time)->format('H:i') : '-'),
+            '- Nomor WA: '.$this->whatsappLink($event->mobile_phone),
             '- Link Maps: '.$this->linkedText($event->location, 'Buka Maps'),
             '- Alamat: '.nl2br(e($event->address ?: '-')),
             '- Deskripsi Paket: '.nl2br(e($event->package_description ?: '-')),
@@ -402,5 +400,21 @@ class GoogleCalendarService
         }
 
         return '<a href="'.e($url).'">'.e($label).'</a>';
+    }
+
+    private function whatsappLink(?string $phone): string
+    {
+        $rawPhone = trim((string) $phone);
+        $digits = preg_replace('/\D+/', '', $rawPhone) ?: '';
+
+        if ($digits === '') {
+            return '-';
+        }
+
+        if (str_starts_with($digits, '0')) {
+            $digits = '62'.substr($digits, 1);
+        }
+
+        return '<a href="https://wa.me/'.e($digits).'">'.e($rawPhone).'</a>';
     }
 }
