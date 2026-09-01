@@ -278,7 +278,9 @@ class ImportLegacyDatabase extends Command
                     'payment_type' => $payment->payment_type,
                     'amount' => $payment->amount,
                     'operational_cut' => 0,
-                    'receipt_image' => $receiptFiles->get($payment->id),
+                    'receipt_image' => $this->shouldKeepReceiptImage($payment->payment_at)
+                        ? $receiptFiles->get($payment->id)
+                        : null,
                     'description' => $payment->description,
                     'status' => $this->mapPaymentStatus((int) $payment->status),
                     'created_by' => $this->validUserId($payment->created_by, $validUserIds),
@@ -287,6 +289,15 @@ class ImportLegacyDatabase extends Command
                     'updated_at' => $this->legacyTimestamp($payment->updated_at),
                 ])->all());
             });
+    }
+
+    private function shouldKeepReceiptImage(?string $paymentAt): bool
+    {
+        if (! $paymentAt) {
+            return false;
+        }
+
+        return Carbon::parse($paymentAt)->gte(Carbon::parse('2026-01-01'));
     }
 
     private function importSchedules(string $legacyDb): void
