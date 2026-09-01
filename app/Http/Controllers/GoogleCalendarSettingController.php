@@ -9,6 +9,7 @@ use App\Models\Schedule;
 use App\Services\GoogleCalendarService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -61,7 +62,7 @@ class GoogleCalendarSettingController extends Controller
         return redirect()->back()->with('success', 'Pengaturan Google Calendar disimpan.');
     }
 
-    public function connect(GoogleCalendarService $calendar): RedirectResponse
+    public function connect(GoogleCalendarService $calendar): RedirectResponse|SymfonyResponse
     {
         $this->authorizeOwner();
 
@@ -71,7 +72,7 @@ class GoogleCalendarSettingController extends Controller
             return redirect()->back()->with('error', 'Isi Client ID dan Client Secret dulu.');
         }
 
-        return redirect()->away($calendar->authUrl($settings));
+        return Inertia::location($calendar->authUrl($settings));
     }
 
     public function callback(Request $request, GoogleCalendarService $calendar): RedirectResponse
