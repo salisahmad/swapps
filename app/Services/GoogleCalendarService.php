@@ -328,17 +328,19 @@ class GoogleCalendarService
 
     private function eventDescription(Event $event, string $date, string $time): string
     {
-        return implode("\n", [
-            'Client Detail:',
-            $this->publicRoute('events.show', $event),
+        $clientUrl = $this->publicRoute('events.show', $event);
+
+        return implode("<br>\n", [
+            '<b>Client Detail:</b>',
+            '<a href="'.$clientUrl.'">Buka Detail Client</a>',
             '',
-            '- Jenis: '.$event->order_type_name,
-            '- Nomor WA: '.($event->mobile_phone ?: '-'),
-            '- Tanggal Acara: '.$date,
-            '- Jam Acara: '.($event->time ? Carbon::parse($time)->format('H:i') : '-'),
-            '- Link Maps: '.($event->location ?: '-'),
-            '- Alamat: '.($event->address ?: '-'),
-            '- Deskripsi Paket: '.($event->package_description ?: '-'),
+            '- Jenis: '.e($event->order_type_name),
+            '- Nomor WA: '.e($event->mobile_phone ?: '-'),
+            '- Tanggal Acara: '.e($date),
+            '- Jam Acara: '.e($event->time ? Carbon::parse($time)->format('H:i') : '-'),
+            '- Link Maps: '.$this->linkedText($event->location, 'Buka Maps'),
+            '- Alamat: '.nl2br(e($event->address ?: '-')),
+            '- Deskripsi Paket: '.nl2br(e($event->package_description ?: '-')),
         ]);
     }
 
@@ -353,11 +355,11 @@ class GoogleCalendarService
 
         return [
             'summary' => "{$typeName}{$prospectMarker} {$schedule->client_name}",
-            'description' => implode("\n", array_filter([
-                $schedule->event ? 'Link Client: '.$this->publicRoute('events.show', $schedule->event) : null,
-                'Status: '.$schedule->client_status_name,
-                'Telepon: '.($schedule->client_phone ?: '-'),
-                'Keterangan: '.($schedule->description ?: '-'),
+            'description' => implode("<br>\n", array_filter([
+                $schedule->event ? '<b>Client Detail:</b><br><a href="'.$this->publicRoute('events.show', $schedule->event).'">Buka Detail Client</a>' : null,
+                'Status: '.e($schedule->client_status_name),
+                'Telepon: '.e($schedule->client_phone ?: '-'),
+                'Keterangan: '.nl2br(e($schedule->description ?: '-')),
             ])),
             'colorId' => (int) $schedule->type === Schedule::TYPE_CONSULT
                 ? self::COLOR_AVOCADO
@@ -376,5 +378,16 @@ class GoogleCalendarService
     private function publicRoute(string $name, mixed $parameters = []): string
     {
         return rtrim((string) config('app.url'), '/').route($name, $parameters, false);
+    }
+
+    private function linkedText(?string $url, string $label): string
+    {
+        $url = trim((string) $url);
+
+        if ($url === '') {
+            return '-';
+        }
+
+        return '<a href="'.e($url).'">'.e($label).'</a>';
     }
 }
