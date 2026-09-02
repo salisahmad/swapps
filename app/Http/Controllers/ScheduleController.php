@@ -30,9 +30,12 @@ class ScheduleController extends Controller
             $query->where('type', $request->type);
         }
 
-        if ($request->filled('date_from')) {
-            $query->whereDate('schedule_from', '>=', $request->date_from);
-        }
+        $dateFrom = $request->filled('date_from')
+            ? Carbon::parse($request->date_from)->max(Carbon::today())
+            : Carbon::today();
+
+        $query->whereDate('schedule_from', '>=', $dateFrom);
+
         if ($request->filled('date_to')) {
             $query->whereDate('schedule_from', '<=', $request->date_to);
         }
@@ -192,7 +195,7 @@ class ScheduleController extends Controller
             $query->where('id', '!=', $request->exclude_id);
         }
 
-        $taken = $query->get(['schedule_from', 'schedule_to'])->map(function ($s) {
+        $taken = $query->orderBy('schedule_from')->get(['schedule_from', 'schedule_to'])->map(function ($s) {
             return [
                 'from' => Carbon::parse($s->schedule_from)->format('H:i'),
                 'to' => $s->schedule_to ? Carbon::parse($s->schedule_to)->format('H:i') : null,

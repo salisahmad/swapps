@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatShortDate, formatShortDateTime } from '@/utils/date';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ItemType {
     name: string;
@@ -20,6 +20,11 @@ interface Schedule {
     schedule_from: string;
     schedule_to: string | null;
     description: string | null;
+}
+
+interface TakenTime {
+    from: string;
+    to: string | null;
 }
 
 interface PaymentItem {
@@ -92,6 +97,21 @@ interface Event {
     dynamic_forms: DynamicFormItem[];
     activity_logs?: ClientActivityLog[];
 }
+
+const SCHEDULE_TIME_SLOTS = [
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00',
+];
 
 interface PageProps {
     event: Event;
@@ -195,6 +215,9 @@ export default function Show({ event, authUser }: PageProps) {
         description: '',
         return_to_event: '1',
     });
+    const [takenScheduleTimes, setTakenScheduleTimes] = useState<TakenTime[]>([]);
+    const [checkingScheduleSlot, setCheckingScheduleSlot] = useState(false);
+    const [scheduleConflict, setScheduleConflict] = useState('');
     const {
         data: photoData,
         setData: setPhotoData,
@@ -269,8 +292,36 @@ export default function Show({ event, authUser }: PageProps) {
         });
     };
 
+    const timeToMinutes = (time: string | null) => {
+        if (!time) return null;
+
+        const [hour, minute] = time.split(':').map(Number);
+        return (hour * 60) + (minute || 0);
+    };
+
+    const isScheduleTimeConflict = (times: TakenTime[], startTime: string) => {
+        const start = timeToMinutes(startTime);
+        const end = start === null ? null : start + 60;
+
+        if (start === null || end === null) return false;
+
+        return times.some((time) => {
+            const existingStart = timeToMinutes(time.from);
+            const existingEnd = timeToMinutes(time.to) ?? ((existingStart ?? 0) + 60);
+
+            if (existingStart === null) return false;
+
+            return start < existingEnd && end > existingStart;
+        });
+    };
+
     const submitSchedule = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (scheduleConflict) {
+            alert(scheduleConflict);
+            return;
+        }
 
         if (!selectedSchedule) {
             createSchedule(route('schedules.store'), {
@@ -292,6 +343,49 @@ export default function Show({ event, authUser }: PageProps) {
             },
         });
     };
+
+    useEffect(() => {
+        if (!showScheduleModal || !scheduleData.schedule_from) {
+            setTakenScheduleTimes([]);
+            setScheduleConflict('');
+            return;
+        }
+
+        const controller = new AbortController();
+        const params = new URLSearchParams({
+            date: scheduleData.schedule_from,
+        });
+
+        if (selectedSchedule) {
+            params.set('exclude_id', String(selectedSchedule.id));
+        }
+
+        setCheckingScheduleSlot(true);
+
+        fetch(`${route('schedules.taken-times')}?${params.toString()}`, {
+            signal: controller.signal,
+            headers: { Accept: 'application/json' },
+        })
+            .then((response) => response.json())
+            .then((times: TakenTime[]) => {
+                setTakenScheduleTimes(times);
+                setScheduleConflict(
+                    isScheduleTimeConflict(times, scheduleData.time_from)
+                        ? 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.'
+                        : '',
+                );
+            })
+            .catch((error) => {
+                if (error.name !== 'AbortError') {
+                    setScheduleConflict('');
+                }
+            })
+            .finally(() => {
+                setCheckingScheduleSlot(false);
+            });
+
+        return () => controller.abort();
+    }, [showScheduleModal, scheduleData.schedule_from, scheduleData.time_from, selectedSchedule]);
 
     const handleDeleteSchedule = () => {
         if (!selectedSchedule || !confirm('Yakin hapus jadwal ini?')) {
@@ -827,18 +921,52 @@ export default function Show({ event, authUser }: PageProps) {
 
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jam Kedatangan</label>
-                                    <input
-                                        type="time"
-                                        value={scheduleData.time_from}
-                                        onChange={(e) => setScheduleData('time_from', e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-                                        required
-                                    />
+                                    <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                        {SCHEDULE_TIME_SLOTS.map((slot) => {
+                                            const disabled = !scheduleData.schedule_from || isScheduleTimeConflict(takenScheduleTimes, slot);
+                                            const selected = scheduleData.time_from === slot;
+
+                                            return (
+                                                <button
+                                                    key={slot}
+                                                    type="button"
+                                                    onClick={() => setScheduleData('time_from', slot)}
+                                                    disabled={disabled}
+                                                    className={`min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                                                        selected
+                                                            ? 'border-rose-400 bg-rose-500 text-white shadow-sm'
+                                                            : 'border-stone-300 bg-stone-100 text-stone-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100'
+                                                    } disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-300 disabled:line-through dark:disabled:border-stone-800 dark:disabled:bg-stone-900 dark:disabled:text-stone-600`}
+                                                >
+                                                    {slot}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <input type="hidden" value={scheduleData.time_from} required />
                                 </div>
-                                {scheduleErrors.schedule_from && (
+                                {checkingScheduleSlot ? (
+                                    <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-500 dark:bg-stone-800 dark:text-stone-300">
+                                        Mengecek jadwal...
+                                    </p>
+                                ) : scheduleConflict ? (
+                                    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-950/30 dark:text-red-300">
+                                        {scheduleConflict}
+                                    </p>
+                                ) : scheduleErrors.schedule_from ? (
                                     <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-950/30 dark:text-red-300">
                                         {scheduleErrors.schedule_from}
                                     </p>
+                                ) : scheduleData.schedule_from && scheduleData.time_from && (
+                                    <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                        Slot jadwal tersedia.
+                                    </p>
+                                )}
+                                {takenScheduleTimes.length > 0 && (
+                                    <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+                                        <p className="font-semibold">Jadwal terisi di tanggal ini:</p>
+                                        <p>{takenScheduleTimes.map((time) => time.from).join(', ')}</p>
+                                    </div>
                                 )}
 
                                 <div>
@@ -877,7 +1005,7 @@ export default function Show({ event, authUser }: PageProps) {
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={scheduleProcessing}
+                                            disabled={scheduleProcessing || checkingScheduleSlot || Boolean(scheduleConflict)}
                                             className="rounded bg-rose-400 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
                                         >
                                             {selectedSchedule ? 'Update' : 'Simpan'}

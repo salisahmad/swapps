@@ -51,6 +51,21 @@ interface TakenTime {
     to: string | null;
 }
 
+const SCHEDULE_TIME_SLOTS = [
+    '09:00',
+    '10:00',
+    '11:00',
+    '12:00',
+    '13:00',
+    '14:00',
+    '15:00',
+    '16:00',
+    '17:00',
+    '18:00',
+    '19:00',
+    '20:00',
+];
+
 export default function Index({ schedules, filters, events, selected_event, selected_schedule, open_modal }: PageProps) {
     const { data, setData, post, put, delete: destroy, processing, reset, errors } = useForm({
         type: filters.type || '',
@@ -628,7 +643,29 @@ export default function Index({ schedules, filters, events, selected_event, sele
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Kedatangan</label>
-                                <input type="time" value={data.time_from} onChange={(e) => handleStartTimeChange(e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
+                                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                    {SCHEDULE_TIME_SLOTS.map((slot) => {
+                                        const disabled = !data.schedule_from || isTimeConflict(takenTimes, slot);
+                                        const selected = data.time_from === slot;
+
+                                        return (
+                                            <button
+                                                key={slot}
+                                                type="button"
+                                                onClick={() => handleStartTimeChange(slot)}
+                                                disabled={disabled}
+                                                className={`min-h-11 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                                                    selected
+                                                        ? 'border-rose-400 bg-rose-500 text-white shadow-sm'
+                                                        : 'border-stone-300 bg-stone-100 text-stone-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-100'
+                                                } disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-300 disabled:line-through dark:disabled:border-stone-800 dark:disabled:bg-stone-900 dark:disabled:text-stone-600`}
+                                            >
+                                                {slot}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <input type="hidden" value={data.time_from} required />
                             </div>
                             {checkingSchedule ? (
                                 <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-500">Mengecek jadwal...</p>
