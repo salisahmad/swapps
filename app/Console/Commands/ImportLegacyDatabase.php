@@ -190,7 +190,7 @@ class ImportLegacyDatabase extends Command
                     ->whereIn('uploadable_id', $validItemIds)
                     ->map(fn ($file) => [
                         'item_id' => $file->uploadable_id,
-                        'path' => 'catalog/'.$file->filename,
+                        'path' => 'catalog/'.$this->legacyUploadedFilename($file),
                         'original_name' => $file->filename,
                         'created_by' => null,
                         'created_at' => $this->legacyTimestamp($file->created_at),
@@ -203,6 +203,11 @@ class ImportLegacyDatabase extends Command
                     DB::table('item_photos')->insert($rows);
                 }
             });
+    }
+
+    private function legacyUploadedFilename(object $file): string
+    {
+        return 'uploadable_file_'.$file->id.'.'.$file->type;
     }
 
     private function importEvents(string $legacyDb): void
