@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatShortDate } from '@/utils/date';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 
 interface EventItem {
     id: number;
@@ -62,7 +62,10 @@ export default function Index({ events, filters, authUser }: PageProps) {
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
             : 'bg-violet-100 text-violet-700 border border-violet-200';
-    const compactLinks = compactPaginationLinks(events.links);
+    const previousPage = events.links[0];
+    const nextPage = events.links[events.links.length - 1];
+    const pageLinks = events.links.slice(1, -1);
+    const activePage = pageLinks.find((link) => link.active)?.label || '1';
 
     return (
         <AuthenticatedLayout
@@ -224,67 +227,54 @@ export default function Index({ events, filters, authUser }: PageProps) {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex justify-center gap-1 pt-2">
-                    {compactLinks.map((link, i) =>
-                        link.url ? (
+                {pageLinks.length > 1 && (
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                        {previousPage.url ? (
                             <Link
-                                key={i}
-                                href={link.url}
-                                className={`rounded-lg px-3 py-1.5 text-sm transition ${
-                                    link.active
-                                        ? 'bg-rose-400 text-white font-semibold'
-                                        : 'bg-white text-stone-600 border border-stone-100 hover:bg-stone-50'
-                                }`}
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
+                                href={previousPage.url}
+                                className="rounded-lg border border-stone-100 bg-white px-3 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-50"
+                            >
+                                Prev
+                            </Link>
                         ) : (
-                            <span
-                                key={i}
-                                className="rounded-lg px-3 py-1.5 text-sm bg-stone-100 text-stone-500"
-                                dangerouslySetInnerHTML={{ __html: link.label }}
-                            />
-                        ),
-                    )}
-                </div>
+                            <span className="rounded-lg border border-stone-100 bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-300">
+                                Prev
+                            </span>
+                        )}
+
+                        <select
+                            value={activePage}
+                            onChange={(e) => {
+                                const selected = pageLinks.find((link) => link.label === e.target.value);
+                                if (selected?.url) {
+                                    router.visit(selected.url, { preserveScroll: true });
+                                }
+                            }}
+                            className="min-w-[132px] rounded-lg border border-stone-200 bg-white px-3 py-2 pr-9 text-sm font-semibold text-stone-700"
+                            aria-label="Pilih halaman client"
+                        >
+                            {pageLinks.map((link) => (
+                                <option key={link.label} value={link.label}>
+                                    Page {link.label}
+                                </option>
+                            ))}
+                        </select>
+
+                        {nextPage.url ? (
+                            <Link
+                                href={nextPage.url}
+                                className="rounded-lg border border-stone-100 bg-white px-3 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-50"
+                            >
+                                Next
+                            </Link>
+                        ) : (
+                            <span className="rounded-lg border border-stone-100 bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-300">
+                                Next
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );
-}
-
-function compactPaginationLinks(links: PaginationLink[]): PaginationLink[] {
-    if (links.length <= 10) {
-        return links;
-    }
-
-    const previous = links[0];
-    const next = links[links.length - 1];
-    const pages = links.slice(1, -1);
-    const visibleIndexes = new Set<number>();
-
-    pages.slice(0, 5).forEach((_, index) => visibleIndexes.add(index));
-    pages.slice(-1).forEach((_, index) => visibleIndexes.add(pages.length - 1 + index));
-    pages.forEach((page, index) => {
-        if (page.active) {
-            visibleIndexes.add(index);
-        }
-    });
-
-    const compact: PaginationLink[] = [previous];
-    let addedEllipsis = false;
-
-    pages.forEach((page, index) => {
-        if (visibleIndexes.has(index)) {
-            compact.push(page);
-            return;
-        }
-
-        if (!addedEllipsis) {
-            compact.push({ url: null, label: '...', active: false });
-            addedEllipsis = true;
-        }
-    });
-
-    compact.push(next);
-
-    return compact;
 }
