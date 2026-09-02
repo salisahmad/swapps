@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 interface Event {
@@ -51,7 +51,7 @@ interface TakenTime {
 }
 
 export default function Index({ schedules, filters, events, selected_event, selected_schedule, open_modal }: PageProps) {
-    const { data, setData, get, post, put, delete: destroy, processing, reset } = useForm({
+    const { data, setData, post, put, delete: destroy, processing, reset } = useForm({
         type: filters.type || '',
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
@@ -91,7 +91,14 @@ export default function Index({ schedules, filters, events, selected_event, sele
 
     const submitFilter = (e: React.FormEvent) => {
         e.preventDefault();
-        get(route('schedules.index'));
+        router.get(route('schedules.index'), {
+            type: data.type,
+            date_from: data.date_from,
+            date_to: data.date_to,
+            q: data.q,
+        }, {
+            preserveScroll: true,
+        });
     };
 
     const openCreate = () => {
