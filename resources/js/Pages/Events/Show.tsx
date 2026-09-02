@@ -181,6 +181,7 @@ export default function Show({ event, authUser }: PageProps) {
         put: updateSchedule,
         delete: deleteSchedule,
         processing: scheduleProcessing,
+        errors: scheduleErrors,
     } = useForm({
         client_source: 'booked',
         event_id: String(event.id),
@@ -233,8 +234,6 @@ export default function Show({ event, authUser }: PageProps) {
 
     const openScheduleModal = (schedule: Schedule) => {
         const from = parseScheduleDateTime(schedule.schedule_from);
-        const to = schedule.schedule_to ? parseScheduleDateTime(schedule.schedule_to) : null;
-
         setSelectedSchedule(schedule);
         setShowScheduleModal(true);
         setScheduleData({
@@ -245,8 +244,8 @@ export default function Show({ event, authUser }: PageProps) {
             schedule_type: schedule.type_name === 'Konsultasi' ? '2' : '1',
             schedule_from: from.date,
             time_from: from.time,
-            schedule_to: to?.date || '',
-            time_to: to?.time || '',
+            schedule_to: '',
+            time_to: '',
             description: schedule.description || '',
             return_to_event: '1',
         });
@@ -264,7 +263,7 @@ export default function Show({ event, authUser }: PageProps) {
             schedule_from: '',
             time_from: '14:00',
             schedule_to: '',
-            time_to: '15:00',
+            time_to: '',
             description: '',
             return_to_event: '1',
         });
@@ -826,27 +825,21 @@ export default function Show({ event, authUser }: PageProps) {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jam Mulai</label>
-                                        <input
-                                            type="time"
-                                            value={scheduleData.time_from}
-                                            onChange={(e) => setScheduleData('time_from', e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jam Selesai</label>
-                                        <input
-                                            type="time"
-                                            value={scheduleData.time_to}
-                                            onChange={(e) => setScheduleData('time_to', e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jam Kedatangan</label>
+                                    <input
+                                        type="time"
+                                        value={scheduleData.time_from}
+                                        onChange={(e) => setScheduleData('time_from', e.target.value)}
+                                        className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                                        required
+                                    />
                                 </div>
+                                {scheduleErrors.schedule_from && (
+                                    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-950/30 dark:text-red-300">
+                                        {scheduleErrors.schedule_from}
+                                    </p>
+                                )}
 
                                 <div>
                                     <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Keterangan</label>

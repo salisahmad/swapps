@@ -52,7 +52,7 @@ interface TakenTime {
 }
 
 export default function Index({ schedules, filters, events, selected_event, selected_schedule, open_modal }: PageProps) {
-    const { data, setData, post, put, delete: destroy, processing, reset } = useForm({
+    const { data, setData, post, put, delete: destroy, processing, reset, errors } = useForm({
         type: filters.type || '',
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
@@ -65,8 +65,8 @@ export default function Index({ schedules, filters, events, selected_event, sele
         schedule_type: '1',
         schedule_from: '',
         time_from: '14:00',
-        time_to: '15:00',
         schedule_to: '',
+        time_to: '',
         description: '',
         schedule_id: '',
         return_to_event: selected_event ? '1' : '',
@@ -113,8 +113,8 @@ export default function Index({ schedules, filters, events, selected_event, sele
             schedule_type: '1',
             schedule_from: '',
             time_from: '14:00',
-            time_to: '15:00',
             schedule_to: '',
+            time_to: '',
             description: '',
             schedule_id: '',
             return_to_event: selected_event ? '1' : '',
@@ -128,7 +128,6 @@ export default function Index({ schedules, filters, events, selected_event, sele
 
     const openEdit = (schedule: ScheduleItem) => {
         const fromDate = parseDateTime(schedule.schedule_from);
-        const toDate = schedule.schedule_to ? parseDateTime(schedule.schedule_to) : null;
         const selectedScheduleEvent = schedule.event
             ? events.find((event) => event.id === schedule.event?.id)
             : null;
@@ -141,8 +140,8 @@ export default function Index({ schedules, filters, events, selected_event, sele
             schedule_type: schedule.type_name === 'Fitting' ? '1' : '2',
             schedule_from: fromDate.date,
             time_from: fromDate.time,
-            schedule_to: toDate?.date || '',
-            time_to: toDate?.time || '16:00',
+            schedule_to: '',
+            time_to: '',
             description: schedule.description || '',
             schedule_id: String(schedule.id),
             return_to_event: selected_event && schedule.event?.id === selected_event.id ? '1' : '',
@@ -173,11 +172,16 @@ export default function Index({ schedules, filters, events, selected_event, sele
         }
 
         if (editMode && data.schedule_id) {
-            put(route('schedules.update', data.schedule_id));
+            put(route('schedules.update', data.schedule_id), {
+                preserveScroll: true,
+                onSuccess: () => setShowModal(false),
+            });
         } else {
-            post(route('schedules.store'));
+            post(route('schedules.store'), {
+                preserveScroll: true,
+                onSuccess: () => setShowModal(false),
+            });
         }
-        setShowModal(false);
     };
 
     const handleDelete = (id: number) => {
@@ -246,20 +250,8 @@ export default function Index({ schedules, filters, events, selected_event, sele
     const formatDisplayDate = (value: string) => {
         return formatShortDate(value);
     };
-    const addOneHour = (time: string) => {
-        if (!time) return '';
-
-        const [hour, minute] = time.split(':').map(Number);
-        const nextHour = (hour + 1) % 24;
-
-        return `${String(nextHour).padStart(2, '0')}:${String(minute || 0).padStart(2, '0')}`;
-    };
     const handleStartTimeChange = (time: string) => {
-        setData({
-            ...data,
-            time_from: time,
-            time_to: addOneHour(time),
-        });
+        setData('time_from', time);
     };
     const selectEvent = (event: Event) => {
         setData('event_id', String(event.id));
@@ -287,8 +279,8 @@ export default function Index({ schedules, filters, events, selected_event, sele
             schedule_type: '1',
             schedule_from: '',
             time_from: '14:00',
-            time_to: '15:00',
             schedule_to: '',
+            time_to: '',
             description: '',
             schedule_id: '',
             return_to_event: '1',
@@ -317,9 +309,9 @@ export default function Index({ schedules, filters, events, selected_event, sele
         const [hour, minute] = time.split(':').map(Number);
         return (hour * 60) + (minute || 0);
     };
-    const isTimeConflict = (times: TakenTime[], startTime: string, endTime: string) => {
+    const isTimeConflict = (times: TakenTime[], startTime: string) => {
         const start = timeToMinutes(startTime);
-        const end = timeToMinutes(endTime);
+        const end = start === null ? null : start + 60;
 
         if (start === null || end === null) return false;
 
@@ -343,7 +335,6 @@ export default function Index({ schedules, filters, events, selected_event, sele
         const controller = new AbortController();
         const params = new URLSearchParams({
             date: data.schedule_from,
-            type: data.schedule_type,
         });
 
         if (editMode && data.schedule_id) {
@@ -360,7 +351,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
             .then((times: TakenTime[]) => {
                 setTakenTimes(times);
                 setScheduleConflict(
-                    isTimeConflict(times, data.time_from, data.time_to)
+                    isTimeConflict(times, data.time_from)
                         ? 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.'
                         : '',
                 );
@@ -375,7 +366,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
             });
 
         return () => controller.abort();
-    }, [showModal, data.schedule_from, data.schedule_type, data.time_from, data.time_to, data.schedule_id, editMode]);
+    }, [showModal, data.schedule_from, data.time_from, data.schedule_id, editMode]);
 
     return (
         <AuthenticatedLayout
@@ -468,7 +459,6 @@ export default function Index({ schedules, filters, events, selected_event, sele
                                             </td>
                                             <td className="px-3 py-3 text-sm text-stone-900 dark:text-stone-100">
                                                 {formatScheduleDateTime(s.schedule_from)}
-                                                {s.schedule_to && ` - ${parseDateTime(s.schedule_to).time || formatScheduleDateTime(s.schedule_to)}`}
                                             </td>
                                             <td className="px-3 py-3 text-sm text-stone-900 dark:text-stone-100">
                                                 <span className={`mb-1 inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${getClientStatusStyle(s)}`}>
@@ -636,27 +626,23 @@ export default function Index({ schedules, filters, events, selected_event, sele
                                     <input type="date" value={data.schedule_from} onChange={(e) => setData('schedule_from', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Mulai</label>
-                                    <input type="time" value={data.time_from} onChange={(e) => handleStartTimeChange(e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Selesai</label>
-                                    <input type="time" value={data.time_to} onChange={(e) => setData('time_to', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" />
-                                </div>
+                            <div>
+                                <label className="block text-sm font-medium text-stone-700 text-stone-500">Jam Kedatangan</label>
+                                <input type="time" value={data.time_from} onChange={(e) => handleStartTimeChange(e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" required />
                             </div>
                             {checkingSchedule ? (
                                 <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm text-stone-500">Mengecek jadwal...</p>
                             ) : scheduleConflict ? (
                                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{scheduleConflict}</p>
+                            ) : errors.schedule_from ? (
+                                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{errors.schedule_from}</p>
                             ) : data.schedule_from && data.time_from && (
                                 <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">Slot jadwal tersedia.</p>
                             )}
                             {takenTimes.length > 0 && (
                                 <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
                                     <p className="font-semibold">Jadwal terisi di tanggal ini:</p>
-                                    <p>{takenTimes.map((time) => `${time.from} - ${time.to || '-'}`).join(', ')}</p>
+                                    <p>{takenTimes.map((time) => time.from).join(', ')}</p>
                                 </div>
                             )}
                             <div>

@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Schedule;
 use Carbon\Carbon;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -87,17 +89,23 @@ class ScheduleController extends Controller
         if ($request->has('time_from')) {
             $validated['schedule_from'] = $request->schedule_from . ' ' . $request->time_from;
         }
-        if ($request->has('time_to') && $request->time_to) {
-            $validated['schedule_to'] = ($request->schedule_to ?: $request->schedule_from) . ' ' . $request->time_to;
-        }
+        $validated['schedule_to'] = Carbon::parse($validated['schedule_from'])->addHour();
 
-        if ($this->hasConflict($validated['type'], $validated['schedule_from'], $validated['schedule_to'] ?? null)) {
-            return redirect()->back()->withErrors([
-                'schedule_from' => 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.',
+        try {
+            Cache::lock($this->slotLockKey($validated['schedule_from']), 10)->block(5, function () use ($validated) {
+                if ($this->hasConflict($validated['schedule_from'], $validated['schedule_to'] ?? null)) {
+                    throw ValidationException::withMessages([
+                        'schedule_from' => 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.',
+                    ]);
+                }
+
+                Schedule::create($validated);
+            });
+        } catch (LockTimeoutException) {
+            throw ValidationException::withMessages([
+                'schedule_from' => 'Slot jadwal sedang diproses. Silakan coba lagi.',
             ]);
         }
-
-        Schedule::create($validated);
 
         if ($request->boolean('return_to_event') && $validated['event_id']) {
             $event = Event::find($validated['event_id']);
@@ -132,17 +140,23 @@ class ScheduleController extends Controller
         if ($request->has('time_from')) {
             $validated['schedule_from'] = $request->schedule_from . ' ' . $request->time_from;
         }
-        if ($request->has('time_to') && $request->time_to) {
-            $validated['schedule_to'] = ($request->schedule_to ?: $request->schedule_from) . ' ' . $request->time_to;
-        }
+        $validated['schedule_to'] = Carbon::parse($validated['schedule_from'])->addHour();
 
-        if ($this->hasConflict($validated['type'], $validated['schedule_from'], $validated['schedule_to'] ?? null, $schedule->id)) {
-            return redirect()->back()->withErrors([
-                'schedule_from' => 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.',
+        try {
+            Cache::lock($this->slotLockKey($validated['schedule_from']), 10)->block(5, function () use ($schedule, $validated) {
+                if ($this->hasConflict($validated['schedule_from'], $validated['schedule_to'] ?? null, $schedule->id)) {
+                    throw ValidationException::withMessages([
+                        'schedule_from' => 'Jadwal bentrok dengan jadwal lain di tanggal dan jam tersebut.',
+                    ]);
+                }
+
+                $schedule->update($validated);
+            });
+        } catch (LockTimeoutException) {
+            throw ValidationException::withMessages([
+                'schedule_from' => 'Slot jadwal sedang diproses. Silakan coba lagi.',
             ]);
         }
-
-        $schedule->update($validated);
 
         if ($request->boolean('return_to_event') && $schedule->event) {
             return redirect()->route('events.show', ['event' => $schedule->event, 'tab' => 'schedule'])
@@ -169,12 +183,10 @@ class ScheduleController extends Controller
     {
         $request->validate([
             'date' => 'required|date',
-            'type' => 'required|integer|in:1,2',
             'exclude_id' => 'nullable|integer',
         ]);
 
-        $query = Schedule::whereDate('schedule_from', $request->date)
-            ->where('type', $request->type);
+        $query = Schedule::whereDate('schedule_from', $request->date);
 
         if ($request->exclude_id) {
             $query->where('id', '!=', $request->exclude_id);
@@ -190,13 +202,12 @@ class ScheduleController extends Controller
         return response()->json($taken);
     }
 
-    private function hasConflict(int $type, string $from, ?string $to = null, ?int $excludeId = null): bool
+    private function hasConflict(string $from, ?string $to = null, ?int $excludeId = null): bool
     {
         $start = Carbon::parse($from);
         $end = $to ? Carbon::parse($to) : $start->copy()->addHour();
 
-        $query = Schedule::where('type', $type)
-            ->whereDate('schedule_from', $start->toDateString());
+        $query = Schedule::whereDate('schedule_from', $start->toDateString());
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
@@ -210,6 +221,11 @@ class ScheduleController extends Controller
 
             return $start->lt($existingEnd) && $end->gt($existingStart);
         });
+    }
+
+    private function slotLockKey(string $from): string
+    {
+        return 'schedule-slot:' . Carbon::parse($from)->format('YmdHi');
     }
 
     private function validateClientData(Request $request): void
