@@ -45,6 +45,7 @@ interface PageProps {
 
 export default function Index({ events, filters, authUser }: PageProps) {
     const [showDateRange, setShowDateRange] = useState(false);
+    const [dateRangeMonth, setDateRangeMonth] = useState(() => startOfMonth(parseLocalDate(filters.date_from) ?? new Date()));
     const { data, setData, get } = useForm({
         q: filters.q || '',
         date_from: filters.date_from || '',
@@ -63,6 +64,39 @@ export default function Index({ events, filters, authUser }: PageProps) {
     const dateRangeLabel = data.date_from || data.date_to
         ? `${data.date_from ? formatDate(data.date_from) : 'Awal'} - ${data.date_to ? formatDate(data.date_to) : 'Akhir'}`
         : 'Tanggal Acara';
+    const calendarMonths = [dateRangeMonth, addMonths(dateRangeMonth, 1)];
+    const selectedRange = {
+        start: parseLocalDate(data.date_from),
+        end: parseLocalDate(data.date_to),
+    };
+    const selectRangeDate = (dateKey: string) => {
+        if (!data.date_from || data.date_to) {
+            setData({
+                ...data,
+                date_from: dateKey,
+                date_to: '',
+            });
+            return;
+        }
+
+        if (dateKey < data.date_from) {
+            setData({
+                ...data,
+                date_from: dateKey,
+                date_to: data.date_from,
+            });
+            return;
+        }
+
+        setData('date_to', dateKey);
+    };
+    const clearDateRange = () => {
+        setData({
+            ...data,
+            date_from: '',
+            date_to: '',
+        });
+    };
     const orderTypeClass = (name: string) =>
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
@@ -119,37 +153,44 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                 <span className="text-stone-400">▾</span>
                             </button>
                             {showDateRange && (
-                                <div className="absolute left-0 top-full z-20 mt-2 w-full min-w-[280px] rounded-xl border border-stone-100 bg-white p-3 shadow-lg dark:border-stone-700 dark:bg-stone-900">
-                                    <div className="grid gap-3">
-                                        <label>
-                                            <span className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">Dari Tanggal</span>
-                                            <input
-                                                type="date"
-                                                value={data.date_from}
-                                                onChange={(e) => setData('date_from', e.target.value)}
-                                                className="input-field w-full"
-                                            />
-                                        </label>
-                                        <label>
-                                            <span className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">Sampai Tanggal</span>
-                                            <input
-                                                type="date"
-                                                value={data.date_to}
-                                                onChange={(e) => setData('date_to', e.target.value)}
-                                                className="input-field w-full"
-                                            />
-                                        </label>
+                                <div className="absolute left-0 top-full z-20 mt-2 w-[calc(100vw-2rem)] max-w-[640px] rounded-xl border border-stone-100 bg-white p-3 shadow-lg dark:border-stone-700 dark:bg-stone-900 sm:w-[640px]">
+                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDateRangeMonth(addMonths(dateRangeMonth, -1))}
+                                            className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold text-stone-500 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                                            aria-label="Bulan sebelumnya"
+                                        >
+                                            ‹
+                                        </button>
+                                        <div className="text-center text-xs font-semibold uppercase tracking-wide text-stone-400">
+                                            Tanggal Acara
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDateRangeMonth(addMonths(dateRangeMonth, 1))}
+                                            className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-semibold text-stone-500 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                                            aria-label="Bulan berikutnya"
+                                        >
+                                            ›
+                                        </button>
                                     </div>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {calendarMonths.map((month) => (
+                                            <MonthCalendar
+                                                key={month.toISOString()}
+                                                month={month}
+                                                range={selectedRange}
+                                                onSelect={selectRangeDate}
+                                            />
+                                        ))}
+                                    </div>
+
                                     <div className="mt-3 flex justify-between gap-2">
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setData({
-                                                    ...data,
-                                                    date_from: '',
-                                                    date_to: '',
-                                                });
-                                            }}
+                                            onClick={clearDateRange}
                                             className="rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200"
                                         >
                                             Clear
@@ -360,4 +401,111 @@ function pageUrlFromPaginator(links: PaginationLink[], page: number): string | n
     parsedUrl.searchParams.set('page', String(page));
 
     return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+}
+
+function MonthCalendar({
+    month,
+    range,
+    onSelect,
+}: {
+    month: Date;
+    range: { start: Date | null; end: Date | null };
+    onSelect: (date: string) => void;
+}) {
+    const days = calendarMonthDays(month);
+
+    return (
+        <div>
+            <p className="mb-3 text-center text-sm font-semibold text-stone-700 dark:text-stone-200">
+                {month.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}
+            </p>
+            <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-semibold uppercase text-stone-400">
+                {['S', 'M', 'S', 'R', 'K', 'J', 'S'].map((day, index) => (
+                    <span key={`${day}-${index}`} className="py-1">{day}</span>
+                ))}
+            </div>
+            <div className="grid grid-cols-7 gap-y-1 text-center text-sm">
+                {days.map((date, index) => {
+                    if (!date) {
+                        return <span key={`empty-${index}`} className="h-9" />;
+                    }
+
+                    const dateKey = localDateKey(date);
+                    const selectedStart = range.start ? sameDate(date, range.start) : false;
+                    const selectedEnd = range.end ? sameDate(date, range.end) : false;
+                    const inRange = isDateInRange(date, range.start, range.end);
+
+                    return (
+                        <button
+                            key={dateKey}
+                            type="button"
+                            onClick={() => onSelect(dateKey)}
+                            className={`mx-auto flex h-9 w-full max-w-10 items-center justify-center text-sm transition ${
+                                selectedStart || selectedEnd
+                                    ? 'rounded-full bg-rose-500 font-bold text-white shadow-sm'
+                                    : inRange
+                                        ? 'rounded-full bg-rose-50 font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-200'
+                                        : 'rounded-full text-stone-700 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800'
+                            }`}
+                        >
+                            {date.getDate()}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function calendarMonthDays(month: Date): Array<Date | null> {
+    const first = startOfMonth(month);
+    const totalDays = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    const days: Array<Date | null> = Array.from({ length: first.getDay() }, () => null);
+
+    for (let day = 1; day <= totalDays; day += 1) {
+        days.push(new Date(first.getFullYear(), first.getMonth(), day));
+    }
+
+    return days;
+}
+
+function parseLocalDate(value?: string | null): Date | null {
+    if (!value) {
+        return null;
+    }
+
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+        return null;
+    }
+
+    return new Date(year, month - 1, day);
+}
+
+function startOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, months: number): Date {
+    return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function localDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function sameDate(a: Date, b: Date): boolean {
+    return localDateKey(a) === localDateKey(b);
+}
+
+function isDateInRange(date: Date, start: Date | null, end: Date | null): boolean {
+    if (!start || !end) {
+        return false;
+    }
+
+    return date >= start && date <= end;
 }
