@@ -37,11 +37,26 @@ class TelegramWebhookController extends Controller
         }
 
         [$entity, $action, $id] = array_pad(explode(':', $data), 3, null);
-        if ($entity !== 'payment' || !in_array($action, ['confirm', 'reject'], true) || !$id) {
+        if (!in_array($entity, ['payment', 'event_delete'], true) || !in_array($action, ['confirm', 'reject'], true) || !$id) {
             $telegram->answerCallbackQuery($callbackId, 'Aksi tidak dikenali.');
             return response()->json(['ok' => true]);
         }
 
+        if ($entity === 'event_delete') {
+            return $this->handleEventDeleteCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
+        }
+
+        return $this->handlePaymentCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
+    }
+
+    private function handlePaymentCallback(
+        TelegramNotification $telegram,
+        string $callbackId,
+        string $chatId,
+        int $messageId,
+        string $action,
+        int $id,
+    ): JsonResponse {
         $payment = Payment::with('event')->find($id);
         if (!$payment) {
             $telegram->answerCallbackQuery($callbackId, 'Data pembayaran tidak ditemukan.');
@@ -83,6 +98,69 @@ class TelegramWebhookController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    private function handleEventDeleteCallback(
+        TelegramNotification $telegram,
+        string $callbackId,
+        string $chatId,
+        int $messageId,
+        string $action,
+        int $id,
+    ): JsonResponse {
+        $event = Event::find($id);
+        if (!$event) {
+            $telegram->answerCallbackQuery($callbackId, 'Data client tidak ditemukan.');
+            return response()->json(['ok' => true]);
+        }
+
+        if (! $this->hasPendingDeleteRequest($event)) {
+            $telegram->answerCallbackQuery($callbackId, 'Request hapus ini sudah diproses.');
+            if ($messageId) {
+                $telegram->editMessageReplyMarkup($chatId, $messageId);
+            }
+
+            return response()->json(['ok' => true]);
+        }
+
+        if ($action === 'confirm') {
+            ClientActivityLog::create([
+                'event_id' => $event->id,
+                'user_id' => null,
+                'type' => ClientActivityLog::TYPE_DELETE_APPROVED,
+                'message' => 'Request hapus client dikonfirmasi dari Telegram.',
+            ]);
+            ClientActivityLog::create([
+                'event_id' => $event->id,
+                'user_id' => null,
+                'type' => ClientActivityLog::TYPE_DELETED,
+                'message' => 'Client dihapus setelah request Telegram disetujui.',
+                'before' => [
+                    'name' => $event->name,
+                    'date' => $event->date?->format('Y-m-d'),
+                    'total_amount' => $event->grand_total,
+                ],
+            ]);
+            $event->delete();
+
+            $telegram->answerCallbackQuery($callbackId, 'Client dihapus.');
+        } else {
+            ClientActivityLog::create([
+                'event_id' => $event->id,
+                'user_id' => null,
+                'type' => ClientActivityLog::TYPE_DELETE_REJECTED,
+                'message' => 'Request hapus client ditolak dari Telegram.',
+            ]);
+
+            $telegram->answerCallbackQuery($callbackId, 'Request hapus ditolak.');
+            $telegram->sendMessage("<b>Request hapus client ditolak</b>\n\n<b>Client:</b> " . e($event->name));
+        }
+
+        if ($messageId) {
+            $telegram->editMessageReplyMarkup($chatId, $messageId);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
     private function updateEventPaidStatus(int $eventId): void
     {
         $event = Event::find($eventId);
@@ -120,5 +198,19 @@ class TelegramWebhookController extends Controller
                 'status' => $payment->status_name,
             ],
         ]);
+    }
+
+    private function hasPendingDeleteRequest(Event $event): bool
+    {
+        $lastDeleteLog = $event->activityLogs()
+            ->whereIn('type', [
+                ClientActivityLog::TYPE_DELETE_REQUESTED,
+                ClientActivityLog::TYPE_DELETE_APPROVED,
+                ClientActivityLog::TYPE_DELETE_REJECTED,
+            ])
+            ->latest()
+            ->first();
+
+        return $lastDeleteLog?->type === ClientActivityLog::TYPE_DELETE_REQUESTED;
     }
 }

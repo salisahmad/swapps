@@ -12,3 +12,7 @@ Schedule::command('db:backup')
     ->dailyAt(env('BACKUP_DATABASE_TIME', '02:00'))
     ->when(fn () => !filter_var(env('BACKUP_DATABASE_EVERY_TWO_DAYS', false), FILTER_VALIDATE_BOOLEAN) || now()->day % 2 === 0)
     ->withoutOverlapping();
+
+Schedule::command('telegram:daily-summary')
+    ->dailyAt('06:00')
+    ->withoutOverlapping();

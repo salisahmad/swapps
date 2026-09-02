@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventAdditionalCost;
 use App\Models\Item;
 use App\Models\Payment;
+use App\Services\TelegramNotification;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -389,6 +390,7 @@ class EventController extends Controller
                 ClientActivityLog::TYPE_DELETE_REQUESTED,
                 'Staff meminta konfirmasi admin untuk menghapus client.',
             );
+            (new TelegramNotification())->notifyDeleteRequested($event);
 
             return redirect()->route('events.show', $event)->with('success', 'Permintaan hapus client dikirim ke admin.');
         }
@@ -463,6 +465,7 @@ class EventController extends Controller
             ->whereIn('type', [
                 ClientActivityLog::TYPE_DELETE_REQUESTED,
                 ClientActivityLog::TYPE_DELETE_APPROVED,
+                ClientActivityLog::TYPE_DELETE_REJECTED,
             ])
             ->latest()
             ->first();

@@ -28,6 +28,7 @@ class TelegramSettingController extends Controller
             'notify_event_date_changed' => 'boolean',
             'notify_event_deleted' => 'boolean',
             'notify_schedule' => 'boolean',
+            'notify_daily_summary' => 'boolean',
         ]);
 
         $settings = TelegramSetting::firstOrCreate([]);

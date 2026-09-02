@@ -2,10 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\EmployeeLeaveRequest;
 use App\Models\TelegramSetting;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use App\Models\Event;
 use App\Models\Payment;
+use App\Models\Schedule;
 use Illuminate\Support\Facades\Storage;
 
 class TelegramNotification
@@ -218,6 +221,84 @@ class TelegramNotification
         return $this->sendMessage($message);
     }
 
+    public function notifyDeleteRequested(Event $event): bool
+    {
+        $settings = TelegramSetting::getInstance();
+        if (!$settings?->notify_event_deleted) return false;
+
+        $message = "<b>⚠️ Request Hapus / Cancel Client</b>\n\n" .
+            "<b>Client:</b> {$this->escape($event->name)}\n" .
+            "<b>Tanggal:</b> " . ($event->date?->format('Y-m-d') ?: '-') . "\n" .
+            "<b>Jenis:</b> {$this->escape($event->order_type_name)}\n" .
+            "<b>Telepon:</b> " . $this->escape($event->mobile_phone ?: '-') . "\n" .
+            "<b>Total:</b> Rp " . number_format($event->grand_total, 0, ',', '.') . "\n\n" .
+            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
+
+        return $this->sendMessage($message, [
+            'reply_markup' => [
+                'inline_keyboard' => [
+                    [
+                        ['text' => 'Konfirmasi Hapus', 'callback_data' => "event_delete:confirm:{$event->id}"],
+                        ['text' => 'Tolak', 'callback_data' => "event_delete:reject:{$event->id}"],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
+    public function notifyDailySummary(): bool
+    {
+        $settings = TelegramSetting::getInstance();
+        if (!$settings?->notify_daily_summary) return false;
+
+        $today = Carbon::today();
+        $yesterday = Carbon::yesterday();
+
+        $newClients = Event::whereBetween('created_at', [
+            $yesterday->copy()->startOfDay(),
+            $yesterday->copy()->endOfDay(),
+        ])->orderBy('created_at')->get();
+
+        $leaves = EmployeeLeaveRequest::with('user')
+            ->where('status', EmployeeLeaveRequest::STATUS_APPROVED)
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->orderBy('start_date')
+            ->get();
+
+        $fittings = Schedule::with('event')
+            ->whereDate('schedule_from', $today)
+            ->where('type', Schedule::TYPE_FITTING)
+            ->orderBy('schedule_from')
+            ->get();
+
+        $events = Event::whereDate('date', $today)
+            ->orderBy('time')
+            ->orderBy('name')
+            ->get();
+
+        $message = "<b>☀️ Rekapan Pagi Shofi Wedding</b>\n" .
+            "<b>Tanggal:</b> " . $today->translatedFormat('d F Y') . "\n\n" .
+            "<b>Client Baru Kemarin:</b> {$newClients->count()}\n" .
+            $this->formatList($newClients->map(
+                fn (Event $event) => $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
+            )->all()) . "\n\n" .
+            "<b>Cuti / Libur Hari Ini:</b>\n" .
+            $this->formatList($leaves->map(
+                fn (EmployeeLeaveRequest $leave) => $this->escape($leave->user?->name ?: '-') . ' - ' . $this->escape($leave->leave_type_name)
+            )->all()) . "\n\n" .
+            "<b>Fitting Hari Ini:</b>\n" .
+            $this->formatList($fittings->map(
+                fn (Schedule $schedule) => $schedule->schedule_from->format('H:i') . ' - ' . $this->escape($schedule->client_name)
+            )->all()) . "\n\n" .
+            "<b>Manten Hari Ini:</b>\n" .
+            $this->formatList($events->map(
+                fn (Event $event) => ($event->time?->format('H:i') ?: '-') . ' - ' . $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
+            )->all());
+
+        return $this->sendMessage($message);
+    }
+
     public function notifySchedule(\App\Models\Schedule $schedule): bool
     {
         $settings = TelegramSetting::getInstance();
@@ -237,5 +318,21 @@ class TelegramNotification
             $detailLink;
 
         return $this->sendMessage($message);
+    }
+
+    private function formatList(array $items): string
+    {
+        if ($items === []) {
+            return '- Tidak ada';
+        }
+
+        return collect($items)
+            ->map(fn (string $item) => '- ' . $item)
+            ->implode("\n");
+    }
+
+    private function escape(?string $value): string
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
