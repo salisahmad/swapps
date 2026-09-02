@@ -18,6 +18,7 @@ class PaymentController extends Controller
         $query = Payment::with(['event' => fn ($q) => $q->withTrashed()->select('id', 'uuid', 'name', 'date', 'deleted_at')]);
         $statusFilter = $request->input('status', [
             (string) Payment::STATUS_PENDING,
+            (string) Payment::STATUS_CONFIRMED,
             (string) Payment::STATUS_REJECTED,
         ]);
         $statusFilter = is_array($statusFilter) ? $statusFilter : [$statusFilter];

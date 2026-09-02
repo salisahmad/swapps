@@ -124,11 +124,11 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                                         onChange={(e) => setData('payment_type', e.target.value)}
                                         className="input-field"
                                     >
-                                        <option value="0">💵 Cash</option>
-                                        <option value="1">🏦 BCA</option>
-                                        <option value="2">📱 QRIS</option>
-                                        <option value="3">📲 E-Wallet</option>
-                                        <option value="4">📝 Lainnya</option>
+                                        <option value="1">💵 Cash</option>
+                                        <option value="2">🏦 BCA</option>
+                                        <option value="3">🏦 Mandiri</option>
+                                        <option value="4">🏦 BRI</option>
+                                        <option value="0">📝 Lainnya</option>
                                     </select>
                                 </div>
                             </div>

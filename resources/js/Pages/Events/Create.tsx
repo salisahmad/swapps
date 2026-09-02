@@ -47,7 +47,7 @@ export default function Create({ items }: PageProps) {
         discount_amount: '',
         additional_costs: [] as AdditionalCost[],
         down_payment: '1000000',
-        down_payment_type: '0',
+        down_payment_type: '1',
         down_payment_receipt_image: null as File | null,
         order_type: '1',
         item_ids: [] as number[],
@@ -424,11 +424,11 @@ export default function Create({ items }: PageProps) {
                                         className={inputClass}
                                         required
                                     >
-                                        <option value="0">Cash</option>
-                                        <option value="1">BCA</option>
-                                        <option value="2">QRIS</option>
-                                        <option value="3">E-Wallet</option>
-                                        <option value="4">Lainnya</option>
+                                        <option value="1">Cash</option>
+                                        <option value="2">BCA</option>
+                                        <option value="3">Mandiri</option>
+                                        <option value="4">BRI</option>
+                                        <option value="0">Lainnya</option>
                                     </select>
                                     {errors.down_payment_type && <p className="mt-1 text-sm text-red-600">{errors.down_payment_type}</p>}
                                 </div>

@@ -61,18 +61,18 @@ class Payment extends Model
         self::STATUS_REJECTED => 'Ditolak',
     ];
 
-    const PAYMENT_CASH = 0;
-    const PAYMENT_BCA = 1;
-    const PAYMENT_QRIS = 2;
-    const PAYMENT_EWALLET = 3;
-    const PAYMENT_OTHER = 4;
+    const PAYMENT_OTHER = 0;
+    const PAYMENT_CASH = 1;
+    const PAYMENT_BCA = 2;
+    const PAYMENT_MANDIRI = 3;
+    const PAYMENT_BRI = 4;
 
     const PAYMENT_TYPES = [
+        self::PAYMENT_OTHER => 'Lainnya',
         self::PAYMENT_CASH => 'Cash',
         self::PAYMENT_BCA => 'BCA',
-        self::PAYMENT_QRIS => 'QRIS',
-        self::PAYMENT_EWALLET => 'E-Wallet',
-        self::PAYMENT_OTHER => 'Lainnya',
+        self::PAYMENT_MANDIRI => 'Mandiri',
+        self::PAYMENT_BRI => 'BRI',
     ];
 
     public function getTypeNameAttribute(): string

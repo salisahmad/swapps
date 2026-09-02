@@ -28,7 +28,7 @@ export default function Create({ events, event_id, selected_event, authUser }: P
         is_expense: '0',
         type: '',
         payment_at: new Date().toISOString().split('T')[0],
-        payment_type: '0',
+        payment_type: '1',
         amount: '',
         operational_cut: '',
         description: '',
@@ -152,11 +152,11 @@ export default function Create({ events, event_id, selected_event, authUser }: P
                                 <div>
                                     <label className="block text-sm font-medium text-stone-600">Metode Pembayaran</label>
                                     <select value={data.payment_type} onChange={(e) => setData('payment_type', e.target.value)} className="input-field">
-                                        <option value="0">💵 Cash</option>
-                                        <option value="1">🏦 BCA</option>
-                                        <option value="2">📱 QRIS</option>
-                                        <option value="3">📲 E-Wallet</option>
-                                        <option value="4">📝 Lainnya</option>
+                                        <option value="1">💵 Cash</option>
+                                        <option value="2">🏦 BCA</option>
+                                        <option value="3">🏦 Mandiri</option>
+                                        <option value="4">🏦 BRI</option>
+                                        <option value="0">📝 Lainnya</option>
                                     </select>
                                 </div>
                             </div>

@@ -44,7 +44,7 @@ interface PageProps {
 
 export default function Index({ payments, filters, stats, authUser }: PageProps) {
     const { data, setData, get, post } = useForm({
-        status: filters.status || ['0', '2'],
+        status: filters.status || ['0', '1', '2'],
         is_expense: filters.is_expense || '',
         payment_type: filters.payment_type || '',
         date_from: filters.date_from || '',
@@ -154,11 +154,11 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                         </select>
                         <select value={data.payment_type} onChange={(e) => setData('payment_type', e.target.value)} className="input-field w-44 pr-9">
                             <option value="">Semua Metode</option>
-                            <option value="0">Cash</option>
-                            <option value="1">BCA</option>
-                            <option value="2">QRIS</option>
-                            <option value="3">E-Wallet</option>
-                            <option value="4">Lainnya</option>
+                            <option value="0">Lainnya</option>
+                            <option value="1">Cash</option>
+                            <option value="2">BCA</option>
+                            <option value="3">Mandiri</option>
+                            <option value="4">BRI</option>
                         </select>
                         <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="input-field w-40" placeholder="Dari" />
                         <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="input-field w-40" placeholder="Sampai" />
