@@ -44,8 +44,8 @@ interface PageProps {
 
 export default function Index({ payments, filters, stats, authUser }: PageProps) {
     const { data, setData, get, post } = useForm({
-        status: filters.status || ['0', '1', '2'],
-        is_expense: filters.is_expense || '',
+        status: filters.status || ['0'],
+        is_expense: filters.is_expense || '0',
         payment_type: filters.payment_type || '',
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',

@@ -16,24 +16,21 @@ class PaymentController extends Controller
     public function index(Request $request): Response
     {
         $query = Payment::with(['event' => fn ($q) => $q->withTrashed()->select('id', 'uuid', 'name', 'date', 'deleted_at')]);
-        $statusFilter = $request->input('status', [
-            (string) Payment::STATUS_PENDING,
-            (string) Payment::STATUS_CONFIRMED,
-            (string) Payment::STATUS_REJECTED,
-        ]);
+        $statusFilter = $request->input('status', [(string) Payment::STATUS_PENDING]);
         $statusFilter = is_array($statusFilter) ? $statusFilter : [$statusFilter];
         $statusFilter = array_values(array_intersect($statusFilter, [
             (string) Payment::STATUS_PENDING,
             (string) Payment::STATUS_CONFIRMED,
             (string) Payment::STATUS_REJECTED,
         ]));
+        $isExpenseFilter = $request->input('is_expense', (string) Payment::EARNING);
 
         if (!empty($statusFilter)) {
             $query->whereIn('status', $statusFilter);
         }
 
-        if ($request->filled('is_expense')) {
-            $query->where('is_expense', $request->is_expense);
+        if ($isExpenseFilter !== '') {
+            $query->where('is_expense', $isExpenseFilter);
         }
 
         if ($request->filled('payment_type')) {
@@ -61,13 +58,16 @@ class PaymentController extends Controller
             ->where('status', Payment::STATUS_CONFIRMED)
             ->sum('amount');
         $totalPending = Payment::where('status', Payment::STATUS_PENDING)
+            ->where('is_expense', Payment::EARNING)
+            ->whereHas('event')
             ->sum('amount');
 
         return Inertia::render('Payments/Index', [
             'payments' => $payments,
             'filters' => [
-                ...$request->only(['is_expense', 'payment_type', 'date_from', 'date_to']),
+                ...$request->only(['payment_type', 'date_from', 'date_to']),
                 'status' => $statusFilter,
+                'is_expense' => $isExpenseFilter,
             ],
             'stats' => [
                 'total_earnings' => (float) $totalEarnings,
