@@ -33,6 +33,13 @@ class PaymentController extends Controller
             $query->where('is_expense', $isExpenseFilter);
         }
 
+        if (
+            $isExpenseFilter === (string) Payment::EARNING
+            && $statusFilter === [(string) Payment::STATUS_PENDING]
+        ) {
+            $query->whereHas('event');
+        }
+
         if ($request->filled('payment_type')) {
             $query->where('payment_type', $request->payment_type);
         }
