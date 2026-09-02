@@ -356,7 +356,7 @@ class GoogleCalendarService
             'summary' => "{$typeName}{$prospectMarker} {$schedule->client_name}",
             'description' => implode("<br>\n", array_filter([
                 'Status: '.e($schedule->client_status_name),
-                'Telepon: '.e($schedule->client_phone ?: '-'),
+                'Telepon: '.$this->whatsappLink($schedule->client_phone),
                 'Keterangan: '.nl2br(e($schedule->description ?: '-')),
             ])),
             'colorId' => (int) $schedule->type === Schedule::TYPE_CONSULT
@@ -411,6 +411,9 @@ class GoogleCalendarService
             $digits = '62'.substr($digits, 1);
         }
 
-        return '<a href="https://wa.me/'.e($digits).'">'.e($rawPhone).'</a>';
+        $url = 'https://wa.me/'.$digits;
+        $label = $rawPhone !== '' ? $rawPhone : $digits;
+
+        return '<a href="'.e($url).'">'.e($label).'</a> ('.e($url).')';
     }
 }
