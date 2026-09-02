@@ -101,17 +101,6 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
     const formatDate = (value: string | null) => formatShortDate(value);
 
-    const StatCard = ({ title, value, sub, color, icon }: { title: string; value: string; sub?: string; color: string; icon: string }) => (
-        <div className={`rounded-xl bg-white border border-stone-100 p-3 flex items-center gap-3 dark:border-stone-800 dark:bg-stone-900 ${color}`}>
-            <span className="text-2xl">{icon}</span>
-            <div className="min-w-0">
-                <p className="text-xs text-stone-500 truncate dark:text-stone-400">{title}</p>
-                <p className="truncate text-sm font-bold text-stone-800 dark:text-stone-100 sm:text-lg">{value}</p>
-                {sub && <p className="text-xs text-stone-500 dark:text-stone-400">{sub}</p>}
-            </div>
-        </div>
-    );
-
     const getClientTypeName = (client: { order_type?: number | string; order_type_name?: string }) => {
         if (client.order_type_name === 'MUA' || client.order_type_name === 'Sewa Gaun') {
             return client.order_type_name;
@@ -263,8 +252,11 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
 
                 {authUser.is_admin && (
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        <StatCard title="Omset Event Th. Ini" value={formatRupiah(stats.this_year_earnings)} color="border-l-4 border-rose-300" icon="💍" />
-                        <StatCard title="Kas Masuk Th. Ini" value={formatRupiah(stats.this_year_cash_in)} color="border-l-4 border-emerald-300" icon="💰" />
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-amber-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Th. Lalu</p>
+                            <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.last_year_summary.earnings)}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400">{stats.last_year_summary.clients} client</p>
+                        </div>
                         <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-stone-300 dark:border-stone-800 dark:bg-stone-900">
                             <p className="text-xs text-stone-500 dark:text-stone-400">Client Th. Ini</p>
                             <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{stats.this_year_client_summary.total}</p>
@@ -281,6 +273,23 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                                 <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.remaining_this_year_client_summary.gown_clients}</span>
                             </div>
                         </div>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-emerald-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Client Bln. Ini</p>
+                            <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.this_month_summary.earnings)}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400">{stats.this_month_summary.clients} client</p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                                <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_month_summary.mua_clients}</span>
+                                <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_month_summary.gown_clients}</span>
+                            </div>
+                        </div>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-rose-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Omset Event Th. Ini</p>
+                            <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.this_year_earnings)}</p>
+                            <div className="mt-2 border-t border-stone-100 pt-2 dark:border-stone-800">
+                                <p className="text-xs text-stone-500 dark:text-stone-400">Kas Masuk Th. Ini</p>
+                                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-300">{formatRupiah(stats.this_year_cash_in)}</p>
+                            </div>
+                        </div>
                         <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-indigo-300 dark:border-stone-800 dark:bg-stone-900">
                             <p className="text-xs text-stone-500 dark:text-stone-400">Total Hutang</p>
                             <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.future_paid_summary.this_year_total)}</p>
@@ -290,20 +299,10 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                                 <p className="text-[10px] text-stone-500 dark:text-stone-400">{stats.future_paid_summary.all_clients} semua client</p>
                             </div>
                         </div>
-                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-emerald-300">
-                            <p className="text-xs text-stone-500">Bln. Ini</p>
-                            <p className="text-sm font-bold text-stone-800">{formatRupiah(stats.this_month_summary.earnings)}</p>
-                            <p className="text-xs text-stone-500">{stats.this_month_summary.clients} client</p>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                                <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_month_summary.mua_clients}</span>
-                                <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_month_summary.gown_clients}</span>
-                            </div>
-                        </div>
-                        <StatCard title="Client Belum Lunas" value={formatRupiah(stats.overdue_unpaid_total)} sub={`${stats.overdue_unpaid_count} client`} color="border-l-4 border-red-300" icon="💸" />
-                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-amber-300">
-                            <p className="text-xs text-stone-500">Th. Lalu</p>
-                            <p className="text-sm font-bold text-stone-800">{formatRupiah(stats.last_year_summary.earnings)}</p>
-                            <p className="text-xs text-stone-500">{stats.last_year_summary.clients} client</p>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-red-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Client Belum Lunas</p>
+                            <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.overdue_unpaid_total)}</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400">{stats.overdue_unpaid_count} client</p>
                         </div>
                     </div>
                 )}
