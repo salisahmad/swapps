@@ -111,6 +111,8 @@ export default function Show({ event, authUser }: PageProps) {
     const [activeTab, setActiveTab] = useState<ClientTab>(initialTab);
     const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
     const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+    const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
     const formatDate = (date?: string | null) => formatIndonesianDate(date);
     const formatDateTime = (date?: string | null) => formatIndonesianDateTime(date);
@@ -172,6 +174,26 @@ export default function Show({ event, authUser }: PageProps) {
     const { delete: destroy, post, processing: deleteProcessing } = useForm();
     const { post: syncDynamicForm, processing: syncProcessing } = useForm();
     const {
+        data: scheduleData,
+        setData: setScheduleData,
+        post: createSchedule,
+        put: updateSchedule,
+        delete: deleteSchedule,
+        processing: scheduleProcessing,
+    } = useForm({
+        client_source: 'booked',
+        event_id: String(event.id),
+        prospect_name: '',
+        prospect_mobile_phone: '',
+        schedule_type: '1',
+        schedule_from: '',
+        time_from: '',
+        schedule_to: '',
+        time_to: '',
+        description: '',
+        return_to_event: '1',
+    });
+    const {
         data: photoData,
         setData: setPhotoData,
         post: uploadPhotos,
@@ -206,6 +228,87 @@ export default function Show({ event, authUser }: PageProps) {
                 preserveState: false,
             });
         }
+    };
+
+    const openScheduleModal = (schedule: Schedule) => {
+        const from = parseScheduleDateTime(schedule.schedule_from);
+        const to = schedule.schedule_to ? parseScheduleDateTime(schedule.schedule_to) : null;
+
+        setSelectedSchedule(schedule);
+        setShowScheduleModal(true);
+        setScheduleData({
+            client_source: 'booked',
+            event_id: String(event.id),
+            prospect_name: '',
+            prospect_mobile_phone: '',
+            schedule_type: schedule.type_name === 'Konsultasi' ? '2' : '1',
+            schedule_from: from.date,
+            time_from: from.time,
+            schedule_to: to?.date || '',
+            time_to: to?.time || '',
+            description: schedule.description || '',
+            return_to_event: '1',
+        });
+    };
+
+    const openCreateScheduleModal = () => {
+        setSelectedSchedule(null);
+        setShowScheduleModal(true);
+        setScheduleData({
+            client_source: 'booked',
+            event_id: String(event.id),
+            prospect_name: '',
+            prospect_mobile_phone: '',
+            schedule_type: '1',
+            schedule_from: '',
+            time_from: '14:00',
+            schedule_to: '',
+            time_to: '15:00',
+            description: '',
+            return_to_event: '1',
+        });
+    };
+
+    const submitSchedule = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!selectedSchedule) {
+            createSchedule(route('schedules.store'), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setActiveTab('schedule');
+                    setShowScheduleModal(false);
+                },
+            });
+            return;
+        }
+
+        updateSchedule(route('schedules.update', selectedSchedule.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setActiveTab('schedule');
+                setSelectedSchedule(null);
+                setShowScheduleModal(false);
+            },
+        });
+    };
+
+    const handleDeleteSchedule = () => {
+        if (!selectedSchedule || !confirm('Yakin hapus jadwal ini?')) {
+            return;
+        }
+
+        deleteSchedule(route('schedules.destroy', {
+            schedule: selectedSchedule.id,
+            return_to_event: 1,
+        }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setActiveTab('schedule');
+                setSelectedSchedule(null);
+                setShowScheduleModal(false);
+            },
+        });
     };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -573,22 +676,20 @@ export default function Show({ event, authUser }: PageProps) {
 	                        <div>
 	                            <div className="mb-4 flex items-center justify-between">
 	                                <h3 className="font-semibold text-stone-800">Jadwal Fitting & Konsultasi</h3>
-	                                <Link href={route('schedules.index', { event_id: event.id, open: 1 })} className="btn-primary text-sm py-2 px-3">
+	                                <button type="button" onClick={openCreateScheduleModal} className="btn-primary text-sm py-2 px-3">
 	                                    + Jadwal
-	                                </Link>
+	                                </button>
 	                            </div>
                             {event.schedules.length === 0 ? (
                                 <p className="py-8 text-center text-sm text-stone-400">Belum ada jadwal</p>
                             ) : (
                                 <div className="space-y-2">
                                     {event.schedules.map((s) => (
-                                        <Link
+                                        <button
                                             key={s.id}
-                                            href={route('schedules.index', {
-                                                event_id: event.id,
-                                                schedule_id: s.id,
-                                            })}
-                                            className="mobile-card-row block border-l-4 border-violet-300 transition hover:bg-stone-50 active:scale-[0.99]"
+                                            type="button"
+                                            onClick={() => openScheduleModal(s)}
+                                            className="mobile-card-row block w-full border-l-4 border-violet-300 text-left transition hover:bg-stone-50 active:scale-[0.99]"
                                         >
                                             <div className="min-w-0">
                                                 <span className="badge-purple">{s.type_name}</span>
@@ -597,7 +698,7 @@ export default function Show({ event, authUser }: PageProps) {
                                                 </p>
                                                 {s.description && <p className="text-xs text-stone-400">{s.description}</p>}
                                             </div>
-                                        </Link>
+                                        </button>
                                     ))}
                                 </div>
                             )}
@@ -685,9 +786,127 @@ export default function Show({ event, authUser }: PageProps) {
                         </button>
                     </div>
                 )}
+
+                {showScheduleModal && (
+                    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
+                        <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl dark:bg-stone-900 sm:max-h-[calc(100vh-2rem)] sm:p-6">
+                            <div className="mb-4">
+                                <p className="text-xs font-semibold uppercase text-stone-400">{selectedSchedule ? 'Edit Jadwal' : 'Tambah Jadwal'}</p>
+                                <h3 className="mt-1 text-lg font-semibold text-stone-900 dark:text-white">{event.name}</h3>
+                            </div>
+
+                            <form onSubmit={submitSchedule} className="space-y-4">
+                                <div className="rounded-lg border border-rose-100 bg-rose-50 p-3">
+                                    <p className="text-base font-semibold text-rose-700">{event.name}</p>
+                                    <p className="text-xs text-rose-600">{event.mobile_phone || '-'} / {formatDate(event.date)}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jenis</label>
+                                        <select
+                                            value={scheduleData.schedule_type}
+                                            onChange={(e) => setScheduleData('schedule_type', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                                        >
+                                            <option value="1">Fitting</option>
+                                            <option value="2">Konsultasi</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Tanggal</label>
+                                        <input
+                                            type="date"
+                                            value={scheduleData.schedule_from}
+                                            onChange={(e) => setScheduleData('schedule_from', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jam Mulai</label>
+                                        <input
+                                            type="time"
+                                            value={scheduleData.time_from}
+                                            onChange={(e) => setScheduleData('time_from', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Jam Selesai</label>
+                                        <input
+                                            type="time"
+                                            value={scheduleData.time_to}
+                                            onChange={(e) => setScheduleData('time_to', e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-stone-700 dark:text-stone-300">Keterangan</label>
+                                    <textarea
+                                        value={scheduleData.description}
+                                        onChange={(e) => setScheduleData('description', e.target.value)}
+                                        className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                                        rows={3}
+                                    />
+                                </div>
+
+                                <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 dark:border-stone-800 dark:bg-stone-900 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:dark:bg-transparent">
+                                    <div>
+                                        {selectedSchedule && (
+                                            <button
+                                                type="button"
+                                                onClick={handleDeleteSchedule}
+                                                disabled={scheduleProcessing}
+                                                className="rounded bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                                            >
+                                                Hapus Jadwal
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedSchedule(null);
+                                                setShowScheduleModal(false);
+                                            }}
+                                            className="rounded bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200"
+                                        >
+                                            Batal
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={scheduleProcessing}
+                                            className="rounded bg-rose-400 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+                                        >
+                                            {selectedSchedule ? 'Update' : 'Simpan'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );
+}
+
+function parseScheduleDateTime(value: string): { date: string; time: string } {
+    const [datePart, timePart = ''] = value.replace('T', ' ').split(' ');
+    const [hour = '', minute = ''] = timePart.split(':');
+
+    return {
+        date: datePart,
+        time: hour && minute ? `${hour}:${minute}` : '',
+    };
 }
 
 function formatIndonesianDate(value?: string | null): string {
