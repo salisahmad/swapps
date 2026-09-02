@@ -15,6 +15,7 @@ class TelegramSetting extends Model
         'notify_event_deleted',
         'notify_schedule',
         'notify_daily_summary',
+        'notify_leave_request',
     ];
 
     protected $casts = [
@@ -24,6 +25,7 @@ class TelegramSetting extends Model
         'notify_event_deleted' => 'boolean',
         'notify_schedule' => 'boolean',
         'notify_daily_summary' => 'boolean',
+        'notify_leave_request' => 'boolean',
     ];
 
     public static function getInstance(): ?self

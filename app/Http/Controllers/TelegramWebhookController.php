@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ClientActivityLog;
+use App\Models\EmployeeLeaveRequest;
 use App\Models\Event;
 use App\Models\Payment;
 use App\Models\TelegramSetting;
@@ -37,13 +38,17 @@ class TelegramWebhookController extends Controller
         }
 
         [$entity, $action, $id] = array_pad(explode(':', $data), 3, null);
-        if (!in_array($entity, ['payment', 'event_delete'], true) || !in_array($action, ['confirm', 'reject'], true) || !$id) {
+        if (!in_array($entity, ['payment', 'event_delete', 'leave'], true) || !in_array($action, ['confirm', 'reject'], true) || !$id) {
             $telegram->answerCallbackQuery($callbackId, 'Aksi tidak dikenali.');
             return response()->json(['ok' => true]);
         }
 
         if ($entity === 'event_delete') {
             return $this->handleEventDeleteCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
+        }
+
+        if ($entity === 'leave') {
+            return $this->handleLeaveCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
         }
 
         return $this->handlePaymentCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
@@ -157,6 +162,58 @@ class TelegramWebhookController extends Controller
         if ($messageId) {
             $telegram->editMessageReplyMarkup($chatId, $messageId);
         }
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function handleLeaveCallback(
+        TelegramNotification $telegram,
+        string $callbackId,
+        string $chatId,
+        int $messageId,
+        string $action,
+        int $id,
+    ): JsonResponse {
+        $leave = EmployeeLeaveRequest::with('user')->find($id);
+        if (!$leave) {
+            $telegram->answerCallbackQuery($callbackId, 'Data pengajuan cuti tidak ditemukan.');
+            return response()->json(['ok' => true]);
+        }
+
+        if ($leave->status !== EmployeeLeaveRequest::STATUS_PENDING) {
+            $telegram->answerCallbackQuery($callbackId, 'Pengajuan cuti ini sudah diproses.');
+            if ($messageId) {
+                $telegram->editMessageReplyMarkup($chatId, $messageId);
+            }
+
+            return response()->json(['ok' => true]);
+        }
+
+        $newStatus = $action === 'confirm'
+            ? EmployeeLeaveRequest::STATUS_APPROVED
+            : EmployeeLeaveRequest::STATUS_REJECTED;
+
+        $leave->update([
+            'status' => $newStatus,
+            'review_notes' => $action === 'confirm'
+                ? 'Disetujui dari Telegram.'
+                : 'Ditolak dari Telegram.',
+            'reviewed_by' => null,
+            'reviewed_at' => now(),
+        ]);
+
+        if ($messageId) {
+            $telegram->editMessageReplyMarkup($chatId, $messageId);
+        }
+
+        $statusText = $action === 'confirm' ? 'disetujui' : 'ditolak';
+        $telegram->answerCallbackQuery($callbackId, "Cuti {$statusText}.");
+        $telegram->sendMessage(
+            "<b>Pengajuan cuti {$statusText} dari Telegram</b>\n\n" .
+            "<b>Pegawai:</b> " . e($leave->user?->name ?: '-') . "\n" .
+            "<b>Tanggal:</b> " . $leave->start_date?->translatedFormat('d F Y') . " s/d " . $leave->end_date?->translatedFormat('d F Y') . "\n" .
+            "<b>Total:</b> {$leave->days} hari",
+        );
 
         return response()->json(['ok' => true]);
     }

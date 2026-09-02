@@ -8,6 +8,7 @@ use App\Models\EmployeeLoan;
 use App\Models\EmployeeOwnerBonus;
 use App\Models\Event;
 use App\Models\User;
+use App\Services\TelegramNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -168,13 +169,14 @@ class StaffController extends Controller
         $start = Carbon::parse($validated['start_date'])->startOfDay();
         $end = Carbon::parse($validated['end_date'])->startOfDay();
 
-        EmployeeLeaveRequest::create([
+        $leave = EmployeeLeaveRequest::create([
             ...$validated,
             'user_id' => $canManageEmployees ? $validated['user_id'] : $request->user()->id,
             'days' => $start->diffInDays($end) + 1,
             'status' => EmployeeLeaveRequest::STATUS_PENDING,
             'created_by' => $request->user()->id,
         ]);
+        (new TelegramNotification())->notifyLeaveRequest($leave);
 
         return redirect()->back()->with('success', 'Pengajuan cuti berhasil dikirim.');
     }

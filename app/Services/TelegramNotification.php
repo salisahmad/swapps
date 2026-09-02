@@ -299,6 +299,33 @@ class TelegramNotification
         return $this->sendMessage($message);
     }
 
+    public function notifyLeaveRequest(EmployeeLeaveRequest $leave): bool
+    {
+        $settings = TelegramSetting::getInstance();
+        if (!$settings?->notify_leave_request) return false;
+
+        $leave->loadMissing('user');
+
+        $message = "<b>📝 Pengajuan Cuti Baru</b>\n\n" .
+            "<b>Pegawai:</b> " . $this->escape($leave->user?->name ?: '-') . "\n" .
+            "<b>Jenis:</b> " . $this->escape($leave->leave_type_name) . "\n" .
+            "<b>Tanggal:</b> " . $leave->start_date?->translatedFormat('d F Y') . " s/d " . $leave->end_date?->translatedFormat('d F Y') . "\n" .
+            "<b>Total:</b> {$leave->days} hari\n" .
+            "<b>Alasan:</b> " . $this->escape($leave->reason ?: '-') . "\n" .
+            "<b>Status:</b> " . $this->escape($leave->status_name);
+
+        return $this->sendMessage($message, [
+            'reply_markup' => [
+                'inline_keyboard' => [
+                    [
+                        ['text' => 'Setujui', 'callback_data' => "leave:confirm:{$leave->id}"],
+                        ['text' => 'Tolak', 'callback_data' => "leave:reject:{$leave->id}"],
+                    ],
+                ],
+            ],
+        ]);
+    }
+
     public function notifySchedule(\App\Models\Schedule $schedule): bool
     {
         $settings = TelegramSetting::getInstance();

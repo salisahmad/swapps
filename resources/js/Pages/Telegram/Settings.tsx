@@ -10,6 +10,7 @@ interface Settings {
     notify_event_deleted: boolean;
     notify_schedule: boolean;
     notify_daily_summary: boolean;
+    notify_leave_request: boolean;
 }
 
 interface PageProps {
@@ -27,6 +28,7 @@ export default function Settings({ settings, flash }: PageProps) {
         notify_event_deleted: settings.notify_event_deleted ?? true,
         notify_schedule: settings.notify_schedule,
         notify_daily_summary: settings.notify_daily_summary ?? true,
+        notify_leave_request: settings.notify_leave_request ?? true,
     });
 
     const submit = (e: React.FormEvent) => {
@@ -158,6 +160,15 @@ export default function Settings({ settings, flash }: PageProps) {
                                     className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
                                 />
                                 <span className="text-sm text-stone-700 text-stone-500">Rekapan Pagi 06:00</span>
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={data.notify_leave_request}
+                                    onChange={(e) => setData('notify_leave_request', e.target.checked)}
+                                    className="rounded border-stone-300 text-rose-400 focus:ring-rose-400"
+                                />
+                                <span className="text-sm text-stone-700 text-stone-500">Pengajuan Cuti</span>
                             </label>
                         </div>
 
