@@ -262,7 +262,7 @@ function compactPaginationLinks(links: PaginationLink[]): PaginationLink[] {
     const visibleIndexes = new Set<number>();
 
     pages.slice(0, 5).forEach((_, index) => visibleIndexes.add(index));
-    pages.slice(-2).forEach((_, index) => visibleIndexes.add(pages.length - 2 + index));
+    pages.slice(-1).forEach((_, index) => visibleIndexes.add(pages.length - 1 + index));
     pages.forEach((page, index) => {
         if (page.active) {
             visibleIndexes.add(index);
