@@ -102,12 +102,24 @@ export default function Index({ events, filters, authUser }: PageProps) {
                             onChange={(e) => setData('q', e.target.value)}
                             className="input-field flex-1 min-w-[140px]"
                         />
-                        <input
-                            type="date"
-                            value={data.date_from}
-                            onChange={(e) => setData('date_from', e.target.value)}
-                            className="input-field w-auto"
-                        />
+                        <label className="min-w-[150px] flex-1 sm:flex-none">
+                            <span className="mb-1 block text-xs font-semibold text-stone-500">Dari Tanggal</span>
+                            <input
+                                type="date"
+                                value={data.date_from}
+                                onChange={(e) => setData('date_from', e.target.value)}
+                                className="input-field w-full"
+                            />
+                        </label>
+                        <label className="min-w-[150px] flex-1 sm:flex-none">
+                            <span className="mb-1 block text-xs font-semibold text-stone-500">Sampai Tanggal</span>
+                            <input
+                                type="date"
+                                value={data.date_to}
+                                onChange={(e) => setData('date_to', e.target.value)}
+                                className="input-field w-full"
+                            />
+                        </label>
                         {!authUser.is_limited_staff && (
                             <select
                                 value={data.paid}
