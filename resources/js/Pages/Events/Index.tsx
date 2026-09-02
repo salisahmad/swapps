@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { formatShortDate } from '@/utils/date';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 interface EventItem {
     id: number;
@@ -43,6 +44,7 @@ interface PageProps {
 }
 
 export default function Index({ events, filters, authUser }: PageProps) {
+    const [showDateRange, setShowDateRange] = useState(false);
     const { data, setData, get } = useForm({
         q: filters.q || '',
         date_from: filters.date_from || '',
@@ -58,6 +60,9 @@ export default function Index({ events, filters, authUser }: PageProps) {
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
     const formatDate = (date?: string | null) => formatShortDate(date);
+    const dateRangeLabel = data.date_from || data.date_to
+        ? `${data.date_from ? formatDate(data.date_from) : 'Awal'} - ${data.date_to ? formatDate(data.date_to) : 'Akhir'}`
+        : 'Tanggal Acara';
     const orderTypeClass = (name: string) =>
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
@@ -102,24 +107,64 @@ export default function Index({ events, filters, authUser }: PageProps) {
                             onChange={(e) => setData('q', e.target.value)}
                             className="input-field flex-1 min-w-[140px]"
                         />
-                        <label className="min-w-[150px] flex-1 sm:flex-none">
-                            <span className="mb-1 block text-xs font-semibold text-stone-500">Dari Tanggal</span>
-                            <input
-                                type="date"
-                                value={data.date_from}
-                                onChange={(e) => setData('date_from', e.target.value)}
-                                className="input-field w-full"
-                            />
-                        </label>
-                        <label className="min-w-[150px] flex-1 sm:flex-none">
-                            <span className="mb-1 block text-xs font-semibold text-stone-500">Sampai Tanggal</span>
-                            <input
-                                type="date"
-                                value={data.date_to}
-                                onChange={(e) => setData('date_to', e.target.value)}
-                                className="input-field w-full"
-                            />
-                        </label>
+                        <div className="relative min-w-[240px] flex-1 sm:flex-none">
+                            <button
+                                type="button"
+                                onClick={() => setShowDateRange((value) => !value)}
+                                className="input-field flex w-full items-center justify-between gap-3 text-left"
+                            >
+                                <span className={data.date_from || data.date_to ? 'text-stone-800' : 'text-stone-400'}>
+                                    {dateRangeLabel}
+                                </span>
+                                <span className="text-stone-400">▾</span>
+                            </button>
+                            {showDateRange && (
+                                <div className="absolute left-0 top-full z-20 mt-2 w-full min-w-[280px] rounded-xl border border-stone-100 bg-white p-3 shadow-lg dark:border-stone-700 dark:bg-stone-900">
+                                    <div className="grid gap-3">
+                                        <label>
+                                            <span className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">Dari Tanggal</span>
+                                            <input
+                                                type="date"
+                                                value={data.date_from}
+                                                onChange={(e) => setData('date_from', e.target.value)}
+                                                className="input-field w-full"
+                                            />
+                                        </label>
+                                        <label>
+                                            <span className="mb-1 block text-xs font-semibold text-stone-500 dark:text-stone-400">Sampai Tanggal</span>
+                                            <input
+                                                type="date"
+                                                value={data.date_to}
+                                                onChange={(e) => setData('date_to', e.target.value)}
+                                                className="input-field w-full"
+                                            />
+                                        </label>
+                                    </div>
+                                    <div className="mt-3 flex justify-between gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setData({
+                                                    ...data,
+                                                    date_from: '',
+                                                    date_to: '',
+                                                });
+                                            }}
+                                            className="rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200"
+                                        >
+                                            Clear
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowDateRange(false)}
+                                            className="rounded-lg bg-rose-400 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+                                        >
+                                            Pilih
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         {!authUser.is_limited_staff && (
                             <select
                                 value={data.paid}
