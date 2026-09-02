@@ -41,11 +41,11 @@ interface AuthenticatedPageProps {
 const navItems = [
     { href: 'dashboard', label: 'Dashboard', icon: '📊', route: 'dashboard' },
     { href: 'events.index', label: 'Clients', icon: '👥', route: 'events.*' },
-    { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
-    { href: 'items.index', label: 'Katalog', icon: '👗', route: 'items.*' },
     { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
     { href: 'payments.index', label: 'Bayar', icon: '💰', route: 'payments.*' },
     { href: 'staff.index', label: 'Pegawai', icon: '🧑‍💼', route: 'staff.*' },
+    { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
+    { href: 'items.index', label: 'Katalog', icon: '👗', route: 'items.*' },
 ];
 
 const adminNavItems = [
@@ -76,8 +76,9 @@ export default function Authenticated({
         ? [
             { href: 'dashboard', label: 'Dashboard', icon: '📊', route: 'dashboard' },
             { href: 'events.index', label: 'Clients', icon: '👥', route: 'events.*' },
-            { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
+            { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
             { href: 'staff.index', label: 'Profil', icon: '🧑‍💼', route: 'staff.*' },
+            { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
         ]
         : (isOwner ? [...navItems, ...adminNavItems] : navItems);
     const notificationBadgeClass = (type: string) => {
@@ -295,12 +296,6 @@ export default function Authenticated({
                             <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
                                 👥 Clients
                             </ResponsiveNavLink>
-                            <ResponsiveNavLink href={route('calendar.index')} active={route().current('calendar.*')}>
-                                📅 Kalender
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink href={route('items.index')} active={route().current('items.*')}>
-                                👗 Katalog
-                            </ResponsiveNavLink>
                             <ResponsiveNavLink href={route('schedules.index')} active={route().current('schedules.*')}>
                                 ⏰ Jadwal
                             </ResponsiveNavLink>
@@ -313,6 +308,17 @@ export default function Authenticated({
                                         </span>
                                     )}
                                 </span>
+                            </ResponsiveNavLink>
+                            {canManageEmployees && (
+                                <ResponsiveNavLink href={route('staff.index')} active={route().current('staff.*')}>
+                                    👥 Pegawai
+                                </ResponsiveNavLink>
+                            )}
+                            <ResponsiveNavLink href={route('calendar.index')} active={route().current('calendar.*')}>
+                                📅 Kalender
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink href={route('items.index')} active={route().current('items.*')}>
+                                👗 Katalog
                             </ResponsiveNavLink>
                             {isOwner && (
                                 <>
@@ -327,9 +333,6 @@ export default function Authenticated({
                                         🔔 Notifikasi
                                         {notifications.count > 0 && ` (${notifications.count})`}
                                     </ResponsiveNavLink>
-                                    <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
-                                        📝 Clients
-                                    </ResponsiveNavLink>
                                     <ResponsiveNavLink href={route('telegram.settings')}>
                                         ⚙️ Telegram Settings
                                     </ResponsiveNavLink>
@@ -343,11 +346,6 @@ export default function Authenticated({
                                         🔁 Google Sync
                                     </ResponsiveNavLink>
                                 </>
-                            )}
-                            {canManageEmployees && (
-                                <ResponsiveNavLink href={route('staff.index')} active={route().current('staff.*')}>
-                                    👥 Pegawai
-                                </ResponsiveNavLink>
                             )}
                             <div className="border-t border-stone-100 pt-2 dark:border-stone-800">
                                 <ResponsiveNavLink href={route('profile.edit')}>
@@ -377,7 +375,7 @@ export default function Authenticated({
             )}
 
             {/* Main Content */}
-            <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+            <main className="mx-auto max-w-7xl px-4 pb-24 pt-4 sm:px-6 sm:pb-4 lg:px-8 lg:py-6">
                 {children}
             </main>
 

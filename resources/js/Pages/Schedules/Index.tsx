@@ -454,8 +454,8 @@ export default function Index({ schedules, filters, events, selected_event, open
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-stone-900">
+                <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
+                    <div className="max-h-[calc(100vh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-lg bg-white p-5 shadow-xl dark:bg-stone-900 sm:max-h-[calc(100vh-2rem)] sm:p-6">
                         <h3 className="mb-4 text-lg font-semibold text-stone-900 dark:text-white">
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
@@ -606,7 +606,7 @@ export default function Index({ schedules, filters, events, selected_event, open
                                 <label className="block text-sm font-medium text-stone-700 text-stone-500">Keterangan</label>
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)} className="mt-1 block w-full rounded-md border-stone-300 bg-white text-stone-800" rows={2} />
                             </div>
-                            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                            <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 bg-white px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 dark:border-stone-800 dark:bg-stone-900 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:pt-2 sm:dark:bg-transparent">
                                 <div>
                                     {editMode && data.schedule_id && (
                                         <button
