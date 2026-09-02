@@ -52,6 +52,19 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
     });
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const formatShortDate = (value?: string | null) => {
+        if (!value) return '-';
+
+        const [datePart] = value.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        if (!year || !month || !day) return value;
+
+        return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -72,7 +85,7 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
             '',
             `Client: ${payment.event?.name || 'Client tidak ditemukan'}`,
             `Metode: ${payment.payment_type_name}`,
-            `Tanggal: ${payment.payment_at || '-'}`,
+            `Tanggal: ${formatShortDate(payment.payment_at)}`,
             `Jumlah: ${formatRupiah(payment.amount)}`,
         ].join('\n');
 
@@ -182,14 +195,14 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                                         <p className="text-sm font-semibold text-stone-500">Client tidak ditemukan</p>
                                     )}
                                     <p className="text-xs text-stone-400">
-                                        Acara: {p.event?.date || '-'} {p.event?.deleted_at ? '· Terhapus' : ''}
+                                        Acara: {formatShortDate(p.event?.date)} {p.event?.deleted_at ? '· Terhapus' : ''}
                                     </p>
                                     <p className="text-xs text-stone-400">{p.description || '-'}</p>
                                     <div className="mt-2 flex flex-wrap gap-1">
                                         <span className="text-xs font-medium text-stone-600">{p.payment_type_name}</span>
                                         <span className={`badge ${p.status === 1 ? 'badge-blue' : p.status === 2 ? 'badge-red' : 'badge-yellow'}`}>{p.status_name}</span>
                                     </div>
-                                    <p className="mt-1 text-xs text-stone-400">{p.payment_at}</p>
+                                    <p className="mt-1 text-xs text-stone-400">{formatShortDate(p.payment_at)}</p>
                                     {p.operational_cut > 0 && (
                                         <p className="text-xs text-amber-600">Potongan: {formatRupiah(p.operational_cut)}</p>
                                     )}
@@ -244,7 +257,7 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                                 {payments.data.map((p) => (
                                     <tr key={p.id} className="transition hover:bg-stone-50">
                                         <td className="px-4 py-3 text-sm text-stone-600">
-                                            {p.payment_at || '-'}
+                                            {formatShortDate(p.payment_at)}
                                         </td>
                                         <td className="px-4 py-3">
                                             {p.event ? (
@@ -263,7 +276,7 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-stone-600">
-                                            {p.event?.date || '-'}
+                                            {formatShortDate(p.event?.date)}
                                         </td>
                                         <td className={`px-4 py-3 text-right font-semibold ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                                             {p.is_expense === 0 ? '+' : '-'}{formatRupiah(p.amount)}

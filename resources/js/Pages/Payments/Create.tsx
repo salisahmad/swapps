@@ -67,13 +67,14 @@ export default function Create({ events, event_id, selected_event, authUser }: P
     const formatDisplayDate = (value: string) => {
         if (!value) return '-';
 
-        const [year, month, day] = value.split('-');
-        const monthNames = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-        ];
+        const [year, month, day] = value.split('-').map(Number);
+        if (!year || !month || !day) return value;
 
-        return `${year} ${monthNames[Number(month) - 1] || month} ${day}`;
+        return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        });
     };
     const onlyDigits = (value: string) => value.replace(/\D/g, '');
     const formatNumberInput = (value: string) => onlyDigits(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
