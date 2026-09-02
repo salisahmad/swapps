@@ -156,6 +156,7 @@ export default function Create({ events, event_id, selected_event, authUser }: P
                                         <option value="2">🏦 BCA</option>
                                         <option value="3">🏦 Mandiri</option>
                                         <option value="4">🏦 BRI</option>
+                                        <option value="5">QRIS</option>
                                         <option value="0">📝 Lainnya</option>
                                     </select>
                                 </div>

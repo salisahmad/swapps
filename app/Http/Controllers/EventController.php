@@ -118,7 +118,7 @@ class EventController extends Controller
             'item_ids' => 'nullable|array',
             'item_ids.*' => 'exists:items,id',
             'down_payment' => 'required|numeric|min:0',
-            'down_payment_type' => 'required|integer|in:0,1,2,3,4',
+            'down_payment_type' => 'required|integer|in:0,1,2,3,4,5',
             'down_payment_receipt_image' => 'nullable|image|max:5120',
             'additional_costs' => 'nullable|array',
             'additional_costs.*.type' => 'required_with:additional_costs|string|in:'.implode(',', EventAdditionalCost::TYPES),

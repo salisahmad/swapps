@@ -428,6 +428,7 @@ export default function Create({ items }: PageProps) {
                                         <option value="2">BCA</option>
                                         <option value="3">Mandiri</option>
                                         <option value="4">BRI</option>
+                                        <option value="5">QRIS</option>
                                         <option value="0">Lainnya</option>
                                     </select>
                                     {errors.down_payment_type && <p className="mt-1 text-sm text-red-600">{errors.down_payment_type}</p>}

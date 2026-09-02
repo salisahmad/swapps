@@ -66,6 +66,7 @@ class Payment extends Model
     const PAYMENT_BCA = 2;
     const PAYMENT_MANDIRI = 3;
     const PAYMENT_BRI = 4;
+    const PAYMENT_QRIS = 5;
 
     const PAYMENT_TYPES = [
         self::PAYMENT_OTHER => 'Lainnya',
@@ -73,6 +74,7 @@ class Payment extends Model
         self::PAYMENT_BCA => 'BCA',
         self::PAYMENT_MANDIRI => 'Mandiri',
         self::PAYMENT_BRI => 'BRI',
+        self::PAYMENT_QRIS => 'QRIS',
     ];
 
     public function getTypeNameAttribute(): string

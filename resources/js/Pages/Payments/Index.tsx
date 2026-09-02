@@ -159,6 +159,7 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                             <option value="2">BCA</option>
                             <option value="3">Mandiri</option>
                             <option value="4">BRI</option>
+                            <option value="5">QRIS</option>
                         </select>
                         <input type="date" value={data.date_from} onChange={(e) => setData('date_from', e.target.value)} className="input-field w-40" placeholder="Dari" />
                         <input type="date" value={data.date_to} onChange={(e) => setData('date_to', e.target.value)} className="input-field w-40" placeholder="Sampai" />
