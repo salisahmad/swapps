@@ -112,6 +112,8 @@ export default function Show({ event, authUser }: PageProps) {
     const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
     const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const formatDate = (date?: string | null) => formatIndonesianDate(date);
+    const formatDateTime = (date?: string | null) => formatIndonesianDateTime(date);
     const canSeeFinancials = !authUser.is_limited_staff;
 
     const totalPaid = event.payments
@@ -267,9 +269,12 @@ export default function Show({ event, authUser }: PageProps) {
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex items-center justify-between">
-                    <h2 className="page-title">{event.name}</h2>
-                    <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                        <h2 className="page-title break-words">{event.name}</h2>
+                        <p className="mt-1 text-sm font-medium text-stone-500 dark:text-stone-400">{formatDate(event.date)}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
                         {!authUser.is_limited_staff && (
                             <>
                                 <button
@@ -286,7 +291,7 @@ export default function Show({ event, authUser }: PageProps) {
                                 <Link href={route('events.edit', event.uuid)} className="btn-secondary text-sm py-2 px-3">
                                     Edit
                                 </Link>
-                                <button onClick={handleDelete} disabled={deleteProcessing} className="btn-danger text-sm py-2 px-3">
+                                <button onClick={handleDelete} disabled={deleteProcessing} className="btn-danger hidden text-sm py-2 px-3 sm:inline-flex">
                                     Hapus
                                 </button>
                             </>
@@ -331,7 +336,7 @@ export default function Show({ event, authUser }: PageProps) {
                     <span className={`badge ${orderTheme.badge}`}>
                         {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
                     </span>
-                    <span className="badge-blue">{event.date}</span>
+                    <span className="badge-blue">{formatDate(event.date)}</span>
                 </div>
 
                 {/* Mobile Tabs */}
@@ -366,7 +371,7 @@ export default function Show({ event, authUser }: PageProps) {
                                 </div>
                                 <div>
                                     <p className="text-xs text-stone-400">📅 Tanggal & Waktu</p>
-                                    <p className="text-sm font-medium text-stone-800">{event.date} {event.time ? `· ${event.time}` : ''}</p>
+                                    <p className="text-sm font-medium text-stone-800">{formatDate(event.date)} {event.time ? `· ${event.time}` : ''}</p>
                                 </div>
                             </div>
                             {event.address && (
@@ -547,7 +552,7 @@ export default function Show({ event, authUser }: PageProps) {
                                                     </span>
                                                 </div>
                                                 <p className="mt-1 text-sm text-stone-700">{p.description || '-'}</p>
-                                                <p className="text-xs text-stone-400">{p.payment_at} · {p.payment_type_name}</p>
+                                                <p className="text-xs text-stone-400">{formatDate(p.payment_at)} · {p.payment_type_name}</p>
                                             </div>
                                             <div className="shrink-0 text-right">
                                                 <p className={`text-lg font-bold ${p.is_expense === 0 ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -581,7 +586,7 @@ export default function Show({ event, authUser }: PageProps) {
                                             <div className="min-w-0">
                                                 <span className="badge-purple">{s.type_name}</span>
                                                 <p className="mt-1 text-sm font-medium text-stone-800">
-                                                    {new Date(s.schedule_from).toLocaleString('id-ID')}
+                                                    {formatDateTime(s.schedule_from)}
                                                 </p>
                                                 {s.description && <p className="text-xs text-stone-400">{s.description}</p>}
                                             </div>
@@ -612,7 +617,7 @@ export default function Show({ event, authUser }: PageProps) {
                                                 </span>
                                                 <p className="text-sm font-medium text-stone-800">{log.message}</p>
                                             </div>
-                                            <p className="text-xs text-stone-400">{log.created_at}</p>
+                                            <p className="text-xs text-stone-400">{formatDateTime(log.created_at)}</p>
                                         </div>
                                         <p className="mt-1 text-xs text-stone-500">
                                             Oleh: {log.user?.name || 'System'}
@@ -661,7 +666,58 @@ export default function Show({ event, authUser }: PageProps) {
                         />
                     </div>
                 )}
+
+                {!authUser.is_limited_staff && (
+                    <div className="pb-2 sm:hidden">
+                        <button
+                            onClick={handleDelete}
+                            disabled={deleteProcessing}
+                            className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 disabled:opacity-50"
+                        >
+                            Hapus Client
+                        </button>
+                    </div>
+                )}
             </div>
         </AuthenticatedLayout>
     );
+}
+
+function formatIndonesianDate(value?: string | null): string {
+    if (!value) {
+        return '-';
+    }
+
+    const dateOnly = value.slice(0, 10);
+    const [year, month, day] = dateOnly.split('-').map(Number);
+
+    if (!year || !month || !day) {
+        return value;
+    }
+
+    return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    });
+}
+
+function formatIndonesianDateTime(value?: string | null): string {
+    if (!value) {
+        return '-';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }

@@ -56,6 +56,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const formatDate = (date?: string | null) => formatIndonesianDate(date);
     const orderTypeClass = (name: string) =>
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
@@ -131,7 +132,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                 <div className="min-w-0">
                                     <p className="text-base font-semibold text-stone-800">{event.name}</p>
                                     <p className="mt-1 text-sm text-stone-400">
-                                        📅 {event.date} {event.time ? `· ${event.time}` : ''}
+                                        📅 {formatDate(event.date)} {event.time ? `· ${event.time}` : ''}
                                     </p>
                                     <p className="mt-1 text-sm text-stone-400">📞 {event.mobile_phone}</p>
                                     {event.location && (
@@ -190,7 +191,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                         <td className="px-4 py-3">
                                             <p className="font-medium text-stone-800">{event.name}</p>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-stone-600">{event.date} {event.time ? `· ${event.time}` : ''}</td>
+                                        <td className="px-4 py-3 text-sm text-stone-600">{formatDate(event.date)} {event.time ? `· ${event.time}` : ''}</td>
                                         <td className="px-4 py-3 text-sm text-stone-600">{event.mobile_phone}</td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
@@ -285,4 +286,22 @@ function compactPaginationLinks(links: PaginationLink[]): PaginationLink[] {
     compact.push(next);
 
     return compact;
+}
+
+function formatIndonesianDate(value?: string | null): string {
+    if (!value) {
+        return '-';
+    }
+
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+
+    if (!year || !month || !day) {
+        return value;
+    }
+
+    return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    });
 }
