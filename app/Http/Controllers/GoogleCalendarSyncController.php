@@ -15,7 +15,7 @@ class GoogleCalendarSyncController extends Controller
 {
     public function index(Request $request): Response
     {
-        $this->authorizeOwner();
+        $this->authorizeSyncAccess();
 
         $status = $request->string('status')->toString() ?: 'failed';
         $allowedStatuses = [
@@ -59,7 +59,7 @@ class GoogleCalendarSyncController extends Controller
 
     public function retry(Request $request): RedirectResponse
     {
-        $this->authorizeOwner();
+        $this->authorizeSyncAccess();
         if (! GoogleCalendarSetting::getInstance()->isConfigured()) {
             return redirect()->back()->with('error', 'Hubungkan Google Calendar dulu sebelum menjalankan sync.');
         }
@@ -89,7 +89,7 @@ class GoogleCalendarSyncController extends Controller
 
     public function retryAll(Request $request): RedirectResponse
     {
-        $this->authorizeOwner();
+        $this->authorizeSyncAccess();
         if (! GoogleCalendarSetting::getInstance()->isConfigured()) {
             return redirect()->back()->with('error', 'Hubungkan Google Calendar dulu sebelum menjalankan sync.');
         }
@@ -142,8 +142,8 @@ class GoogleCalendarSyncController extends Controller
         GoogleCalendarSyncJob::dispatchAfterResponse($type, $model->id, GoogleCalendarSyncJob::ACTION_SYNC);
     }
 
-    private function authorizeOwner(): void
+    private function authorizeSyncAccess(): void
     {
-        abort_unless(request()->user()?->isOwner(), 403);
+        abort_unless(request()->user()?->isOwner() || request()->user()?->isManager(), 403);
     }
 }

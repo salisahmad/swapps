@@ -61,6 +61,7 @@ export default function Authenticated({
     const notifications = usePage<AuthenticatedPageProps>().props.notifications;
     const paymentBadges = usePage<AuthenticatedPageProps>().props.paymentBadges;
     const isOwner = user.role === 1;
+    const isManager = user.role === 2;
     const canManageEmployees = user.role === 1 || user.role === 2;
     const isLimitedStaff = user.role === 3 || user.role === 4;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
@@ -254,8 +255,10 @@ export default function Authenticated({
                                             <Dropdown.Link href={route('telegram.settings')}>⚙️ Telegram</Dropdown.Link>
                                             <Dropdown.Link href={route('whatsapp.settings')}>📱 WhatsApp</Dropdown.Link>
                                             <Dropdown.Link href={route('google-calendar.settings')}>📅 Google Calendar</Dropdown.Link>
-                                            <Dropdown.Link href={route('google-calendar.sync.index')}>🔁 Google Sync</Dropdown.Link>
                                         </>
+                                    )}
+                                    {(isOwner || isManager) && (
+                                        <Dropdown.Link href={route('google-calendar.sync.index')}>🔁 Google Sync</Dropdown.Link>
                                     )}
                                     <div className="border-t border-stone-100 my-1 dark:border-stone-700" />
                                     <Dropdown.Link href={route('logout')} method="post" as="button">🚪 Log Out</Dropdown.Link>
@@ -343,10 +346,12 @@ export default function Authenticated({
                                     <ResponsiveNavLink href={route('google-calendar.settings')}>
                                         📅 Google Calendar
                                     </ResponsiveNavLink>
-                                    <ResponsiveNavLink href={route('google-calendar.sync.index')}>
-                                        🔁 Google Sync
-                                    </ResponsiveNavLink>
                                 </>
+                            )}
+                            {(isOwner || isManager) && (
+                                <ResponsiveNavLink href={route('google-calendar.sync.index')}>
+                                    🔁 Google Sync
+                                </ResponsiveNavLink>
                             )}
                             <div className="border-t border-stone-100 pt-2 dark:border-stone-800">
                                 <ResponsiveNavLink href={route('profile.edit')}>
