@@ -33,6 +33,9 @@ interface AuthenticatedPageProps {
             user: { id: number; name: string } | null;
         }[];
     };
+    paymentBadges: {
+        pending: number;
+    };
 }
 
 const navItems = [
@@ -55,11 +58,15 @@ export default function Authenticated({
 }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage<AuthenticatedPageProps>().props.auth.user;
     const notifications = usePage<AuthenticatedPageProps>().props.notifications;
+    const paymentBadges = usePage<AuthenticatedPageProps>().props.paymentBadges;
     const isOwner = user.role === 1;
     const canManageEmployees = user.role === 1 || user.role === 2;
     const isLimitedStaff = user.role === 3 || user.role === 4;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const pendingPaymentCount = paymentBadges?.pending ?? 0;
+    const formatBadgeCount = (count: number) => count > 99 ? '99+' : String(count);
+    const navBadgeCount = (href: string) => href === 'payments.index' ? pendingPaymentCount : 0;
 
     useEffect(() => {
         setIsDarkMode(document.documentElement.classList.contains('dark'));
@@ -126,7 +133,14 @@ export default function Authenticated({
                                     active={route().current(item.route)}
                                     className="rounded-lg px-3 py-2 text-sm font-medium transition"
                                 >
-                                    {item.label}
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <span>{item.label}</span>
+                                        {navBadgeCount(item.href) > 0 && (
+                                            <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-rose-500/20">
+                                                {formatBadgeCount(navBadgeCount(item.href))}
+                                            </span>
+                                        )}
+                                    </span>
                                 </NavLink>
                             ))}
                         </div>
@@ -291,7 +305,14 @@ export default function Authenticated({
                                 ⏰ Jadwal
                             </ResponsiveNavLink>
                             <ResponsiveNavLink href={route('payments.index')} active={route().current('payments.*')}>
-                                💰 Bayar
+                                <span className="inline-flex items-center gap-2">
+                                    <span>💰 Bayar</span>
+                                    {pendingPaymentCount > 0 && (
+                                        <span className="rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white shadow-sm shadow-rose-500/20">
+                                            {formatBadgeCount(pendingPaymentCount)}
+                                        </span>
+                                    )}
+                                </span>
                             </ResponsiveNavLink>
                             {isOwner && (
                                 <>

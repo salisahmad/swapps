@@ -48,6 +48,25 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'notifications' => fn () => $this->notifications($request),
+            'paymentBadges' => fn () => $this->paymentBadges($request),
+        ];
+    }
+
+    private function paymentBadges(Request $request): array
+    {
+        $user = $request->user();
+
+        if (!$user || $user->isLimitedStaff()) {
+            return [
+                'pending' => 0,
+            ];
+        }
+
+        return [
+            'pending' => Payment::where('status', Payment::STATUS_PENDING)
+                ->where('is_expense', Payment::EARNING)
+                ->whereHas('event')
+                ->count(),
         ];
     }
 
