@@ -900,6 +900,32 @@ export default function Show({ event, authUser }: PageProps) {
 }
 
 function parseScheduleDateTime(value: string): { date: string; time: string } {
+    if (value.includes('T') || value.endsWith('Z')) {
+        const date = new Date(value);
+
+        if (!Number.isNaN(date.getTime())) {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            })
+                .formatToParts(date)
+                .reduce<Record<string, string>>((result, part) => {
+                    result[part.type] = part.value;
+                    return result;
+                }, {});
+
+            return {
+                date: `${parts.year}-${parts.month}-${parts.day}`,
+                time: `${parts.hour}:${parts.minute}`,
+            };
+        }
+    }
+
     const [datePart, timePart = ''] = value.replace('T', ' ').split(' ');
     const [hour = '', minute = ''] = timePart.split(':');
 
@@ -935,15 +961,22 @@ function formatIndonesianDateTime(value?: string | null): string {
 
     const date = new Date(value);
 
-    if (Number.isNaN(date.getTime())) {
+    if (!Number.isNaN(date.getTime()) && (value.includes('T') || value.endsWith('Z'))) {
+        return date.toLocaleString('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    const parsed = parseScheduleDateTime(value);
+
+    if (!parsed.date) {
         return value;
     }
 
-    return date.toLocaleString('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+    return `${formatIndonesianDate(parsed.date)}${parsed.time ? ` ${parsed.time}` : ''}`;
 }
