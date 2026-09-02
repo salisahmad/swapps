@@ -78,8 +78,10 @@ export default function Index({ schedules, filters, events, selected_event, sele
     const [takenTimes, setTakenTimes] = useState<TakenTime[]>([]);
     const [checkingSchedule, setCheckingSchedule] = useState(false);
     const [scheduleConflict, setScheduleConflict] = useState('');
+    const [modalEvent, setModalEvent] = useState<Event | null>(selected_event || null);
 
-    const selectedEvent = selected_event || events.find((event) => String(event.id) === data.event_id);
+    const selectedEvent = modalEvent || events.find((event) => String(event.id) === data.event_id);
+    const lockClientToSelectedEvent = Boolean(selected_event && !editMode);
     const filteredEvents = clientSearch.length > 0
         ? events.filter((event) => (
             event.name.toLowerCase().includes(clientSearch.toLowerCase())
@@ -110,13 +112,15 @@ export default function Index({ schedules, filters, events, selected_event, sele
             return_to_event: selected_event ? '1' : '',
         });
         setClientSearch(selected_event?.name || '');
+        setModalEvent(selected_event || null);
         setShowClientDropdown(false);
         setEditMode(false);
         setShowModal(true);
     };
 
     const openEdit = (schedule: ScheduleItem) => {
-        const fromDate = new Date(schedule.schedule_from);
+        const fromDate = parseDateTime(schedule.schedule_from);
+        const toDate = schedule.schedule_to ? parseDateTime(schedule.schedule_to) : null;
         const selectedScheduleEvent = schedule.event
             ? events.find((event) => event.id === schedule.event?.id)
             : null;
@@ -127,15 +131,16 @@ export default function Index({ schedules, filters, events, selected_event, sele
             prospect_name: schedule.prospect_name || '',
             prospect_mobile_phone: schedule.prospect_mobile_phone || '',
             schedule_type: schedule.type_name === 'Fitting' ? '1' : '2',
-            schedule_from: fromDate.toISOString().split('T')[0],
-            time_from: fromDate.toTimeString().slice(0, 5),
-            schedule_to: schedule.schedule_to ? new Date(schedule.schedule_to).toISOString().split('T')[0] : '',
-            time_to: schedule.schedule_to ? new Date(schedule.schedule_to).toTimeString().slice(0, 5) : '16:00',
+            schedule_from: fromDate.date,
+            time_from: fromDate.time,
+            schedule_to: toDate?.date || '',
+            time_to: toDate?.time || '16:00',
             description: schedule.description || '',
             schedule_id: String(schedule.id),
             return_to_event: selected_event && schedule.event?.id === selected_event.id ? '1' : '',
         });
         setClientSearch(selectedScheduleEvent?.name || schedule.event?.name || '');
+        setModalEvent(schedule.event || selectedScheduleEvent || null);
         setShowClientDropdown(false);
         setEditMode(true);
         setShowModal(true);
@@ -194,7 +199,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
         const [year, month, day] = datePart.split('-');
         const [hour = '', minute = ''] = timePart.split(':');
 
-        return { year, month, day, time: hour && minute ? `${hour}:${minute}` : '' };
+        return { year, month, day, date: `${year}-${month}-${day}`, time: hour && minute ? `${hour}:${minute}` : '' };
     };
     const formatScheduleDateTime = (value: string) => {
         const { year, month, day, time } = parseDateTime(value);
@@ -229,6 +234,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
     };
     const selectEvent = (event: Event) => {
         setData('event_id', String(event.id));
+        setModalEvent(event);
         setClientSearch(event.name);
         setShowClientDropdown(false);
     };
@@ -259,6 +265,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
             return_to_event: '1',
         });
         setClientSearch(selected_event.name);
+        setModalEvent(selected_event);
         setShowClientDropdown(false);
         setEditMode(false);
         setShowModal(true);
@@ -466,7 +473,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
                             {editMode ? 'Edit Jadwal' : 'Tambah Jadwal'}
                         </h3>
 	                        <form onSubmit={submitForm} className="space-y-4">
-	                            {!selected_event && (
+		                            {!lockClientToSelectedEvent && (
 	                                <div>
 	                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Status Client</label>
 	                                    <div className="mt-2 grid grid-cols-2 gap-2">
@@ -500,12 +507,30 @@ export default function Index({ schedules, filters, events, selected_event, sele
 	                            {data.client_source === 'booked' ? (
 	                                <div className="relative">
 	                                    <label className="block text-sm font-medium text-stone-700 text-stone-500">Client</label>
-	                                    {selected_event ? (
-	                                        <div className="mt-1 rounded-lg border border-rose-100 bg-rose-50 p-3">
-	                                            <p className="text-base font-semibold text-rose-700">{selected_event.name}</p>
-	                                            <p className="text-xs text-rose-600">{selected_event.mobile_phone || '-'} / {formatDisplayDate(selected_event.date)}</p>
-	                                        </div>
-	                                    ) : (
+		                                    {selectedEvent && data.event_id ? (
+		                                        <div className="mt-1 rounded-lg border border-rose-100 bg-rose-50 p-3">
+		                                            <div className="flex items-start justify-between gap-3">
+		                                                <div>
+		                                                    <p className="text-base font-semibold text-rose-700">{selectedEvent.name}</p>
+		                                                    <p className="text-xs text-rose-600">{selectedEvent.mobile_phone || '-'} / {formatDisplayDate(selectedEvent.date)}</p>
+		                                                </div>
+		                                                {!lockClientToSelectedEvent && (
+		                                                    <button
+		                                                        type="button"
+		                                                        onClick={() => {
+		                                                            setData('event_id', '');
+		                                                            setModalEvent(null);
+		                                                            setClientSearch('');
+		                                                            setShowClientDropdown(true);
+		                                                        }}
+		                                                        className="rounded bg-white px-2 py-1 text-xs font-semibold text-rose-600"
+		                                                    >
+		                                                        Ganti
+		                                                    </button>
+		                                                )}
+		                                            </div>
+		                                        </div>
+		                                    ) : (
 	                                        <input
 	                                            type="text"
 	                                            value={clientSearch}
@@ -520,7 +545,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
 	                                            required
 	                                        />
 	                                    )}
-	                                    {!selected_event && showClientDropdown && (
+		                                    {!lockClientToSelectedEvent && !selectedEvent && showClientDropdown && (
 	                                        <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-stone-200 bg-white shadow-lg">
 	                                            {filteredEvents.length === 0 ? (
                                                 <p className="px-4 py-3 text-sm text-stone-400">Tidak ditemukan</p>
@@ -539,10 +564,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
                                             )}
                                         </div>
                                     )}
-	                                    {!selected_event && selectedEvent && (
-	                                        <p className="mt-1 text-xs text-stone-500">Tanggal acara: {formatDisplayDate(selectedEvent.date)}</p>
-	                                    )}
-                                    <input type="hidden" value={data.event_id} name="event_id" />
+	                                    <input type="hidden" value={data.event_id} name="event_id" />
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
