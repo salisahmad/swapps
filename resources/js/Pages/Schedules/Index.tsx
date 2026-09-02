@@ -202,6 +202,35 @@ export default function Index({ schedules, filters, events, selected_event, sele
     };
 
     const parseDateTime = (value: string) => {
+        if (value.includes('T') || value.endsWith('Z')) {
+            const date = new Date(value);
+
+            if (!Number.isNaN(date.getTime())) {
+                const parts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Asia/Jakarta',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                })
+                    .formatToParts(date)
+                    .reduce<Record<string, string>>((result, part) => {
+                        result[part.type] = part.value;
+                        return result;
+                    }, {});
+
+                return {
+                    year: parts.year,
+                    month: parts.month,
+                    day: parts.day,
+                    date: `${parts.year}-${parts.month}-${parts.day}`,
+                    time: `${parts.hour}:${parts.minute}`,
+                };
+            }
+        }
+
         const [datePart, timePart = ''] = value.replace('T', ' ').split(' ');
         const [year, month, day] = datePart.split('-');
         const [hour = '', minute = ''] = timePart.split(':');
@@ -209,20 +238,20 @@ export default function Index({ schedules, filters, events, selected_event, sele
         return { year, month, day, date: `${year}-${month}-${day}`, time: hour && minute ? `${hour}:${minute}` : '' };
     };
     const formatScheduleDateTime = (value: string) => {
-        const { year, month, day, time } = parseDateTime(value);
+        const { date, time } = parseDateTime(value);
 
-        return `${year}-${month}-${day}${time ? ` ${time}` : ''}`;
+        return `${formatDisplayDate(date)}${time ? ` ${time}` : ''}`;
     };
     const formatDisplayDate = (value: string) => {
         if (!value) return '-';
 
-        const [year, month, day] = value.split('-');
+        const [year, month, day] = value.slice(0, 10).split('-');
         const monthNames = [
             'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
             'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
         ];
 
-        return `${year} ${monthNames[Number(month) - 1] || month} ${day}`;
+        return `${day} ${monthNames[Number(month) - 1] || month} ${year}`;
     };
     const addOneHour = (time: string) => {
         if (!time) return '';
