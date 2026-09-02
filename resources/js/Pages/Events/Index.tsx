@@ -16,10 +16,16 @@ interface EventItem {
     created_at: string;
 }
 
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
 interface PageProps {
     events: {
         data: EventItem[];
-        links: { url: string | null; label: string; active: boolean }[];
+        links: PaginationLink[];
     };
     filters: {
         q?: string;
@@ -54,6 +60,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
             : 'bg-violet-100 text-violet-700 border border-violet-200';
+    const compactLinks = compactPaginationLinks(events.links);
 
     return (
         <AuthenticatedLayout
@@ -216,7 +223,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
 
                 {/* Pagination */}
                 <div className="flex justify-center gap-1 pt-2">
-                    {events.links.map((link, i) =>
+                    {compactLinks.map((link, i) =>
                         link.url ? (
                             <Link
                                 key={i}
@@ -240,4 +247,42 @@ export default function Index({ events, filters, authUser }: PageProps) {
             </div>
         </AuthenticatedLayout>
     );
+}
+
+function compactPaginationLinks(links: PaginationLink[]): PaginationLink[] {
+    if (links.length <= 10) {
+        return links;
+    }
+
+    const previous = links[0];
+    const next = links[links.length - 1];
+    const pages = links.slice(1, -1);
+    const visibleIndexes = new Set<number>();
+
+    pages.slice(0, 5).forEach((_, index) => visibleIndexes.add(index));
+    pages.slice(-2).forEach((_, index) => visibleIndexes.add(pages.length - 2 + index));
+    pages.forEach((page, index) => {
+        if (page.active) {
+            visibleIndexes.add(index);
+        }
+    });
+
+    const compact: PaginationLink[] = [previous];
+    let addedEllipsis = false;
+
+    pages.forEach((page, index) => {
+        if (visibleIndexes.has(index)) {
+            compact.push(page);
+            return;
+        }
+
+        if (!addedEllipsis) {
+            compact.push({ url: null, label: '...', active: false });
+            addedEllipsis = true;
+        }
+    });
+
+    compact.push(next);
+
+    return compact;
 }
