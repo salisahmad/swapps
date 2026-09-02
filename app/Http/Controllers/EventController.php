@@ -611,7 +611,13 @@ class EventController extends Controller
         $filename = 'receipts/' . uniqid() . '.jpg';
 
         Storage::disk('public')->makeDirectory('receipts');
-        Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 80));
+        $stored = Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 80));
+
+        if (!$stored || !Storage::disk('public')->exists($filename)) {
+            throw ValidationException::withMessages([
+                'down_payment_receipt_image' => 'Bukti transfer DP gagal disimpan. Silakan upload ulang.',
+            ]);
+        }
 
         return $filename;
     }

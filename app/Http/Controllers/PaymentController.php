@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\ClientActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Intervention\Image\Laravel\Facades\Image;
@@ -191,11 +192,8 @@ class PaymentController extends Controller
         ]);
 
         $receiptPath = $payment->receipt_image;
+        $oldReceiptPath = $payment->receipt_image;
         if ($request->hasFile('receipt_image')) {
-            // Delete old
-            if ($receiptPath) {
-                Storage::disk('public')->delete($receiptPath);
-            }
             $receiptPath = $this->compressAndStoreImage($request->file('receipt_image'));
         }
 
@@ -206,6 +204,10 @@ class PaymentController extends Controller
             'receipt_image' => $receiptPath,
             'operational_cut' => $validated['operational_cut'] ?? 0,
         ]);
+
+        if ($request->hasFile('receipt_image') && $oldReceiptPath && $oldReceiptPath !== $receiptPath) {
+            Storage::disk('public')->delete($oldReceiptPath);
+        }
 
         $this->updateEventPaidStatus($validated['event_id']);
         $this->logPaymentChange(
@@ -272,7 +274,13 @@ class PaymentController extends Controller
         $filename = 'receipts/' . uniqid() . '.jpg';
         
         Storage::disk('public')->makeDirectory('receipts');
-        Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 80));
+        $stored = Storage::disk('public')->put($filename, $image->encodeUsingFileExtension('jpg', quality: 80));
+
+        if (!$stored || !Storage::disk('public')->exists($filename)) {
+            throw ValidationException::withMessages([
+                'receipt_image' => 'Bukti transfer gagal disimpan. Silakan upload ulang.',
+            ]);
+        }
         
         return $filename;
     }
