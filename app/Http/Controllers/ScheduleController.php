@@ -17,6 +17,9 @@ class ScheduleController extends Controller
         $selectedEvent = $request->filled('event_id')
             ? Event::find($request->event_id, ['id', 'uuid', 'name', 'mobile_phone', 'date', 'time', 'order_type'])
             : null;
+        $selectedSchedule = $request->filled('schedule_id')
+            ? Schedule::with('event:id,uuid,name,mobile_phone,date,time,order_type')->find($request->schedule_id)
+            : null;
 
         $query = Schedule::with('event:id,uuid,name,mobile_phone,date,time,order_type')
             ->orderBy('schedule_from');
@@ -54,6 +57,7 @@ class ScheduleController extends Controller
             'filters' => $request->only(['type', 'date_from', 'date_to', 'q']),
             'events' => $events,
             'selected_event' => $selectedEvent,
+            'selected_schedule' => $selectedSchedule,
             'open_modal' => $request->boolean('open'),
         ]);
     }
@@ -140,12 +144,24 @@ class ScheduleController extends Controller
 
         $schedule->update($validated);
 
+        if ($request->boolean('return_to_event') && $schedule->event) {
+            return redirect()->route('events.show', ['event' => $schedule->event, 'tab' => 'schedule'])
+                ->with('success', 'Jadwal berhasil diupdate.');
+        }
+
         return redirect()->back()->with('success', 'Jadwal berhasil diupdate.');
     }
 
-    public function destroy(Schedule $schedule)
+    public function destroy(Request $request, Schedule $schedule)
     {
+        $event = $schedule->event;
         $schedule->delete();
+
+        if ($request->boolean('return_to_event') && $event) {
+            return redirect()->route('events.show', ['event' => $event, 'tab' => 'schedule'])
+                ->with('success', 'Jadwal berhasil dihapus.');
+        }
+
         return redirect()->back()->with('success', 'Jadwal berhasil dihapus.');
     }
 

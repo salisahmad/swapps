@@ -582,7 +582,14 @@ export default function Show({ event, authUser }: PageProps) {
                             ) : (
                                 <div className="space-y-2">
                                     {event.schedules.map((s) => (
-                                        <div key={s.id} className="mobile-card-row border-l-4 border-violet-300">
+                                        <Link
+                                            key={s.id}
+                                            href={route('schedules.index', {
+                                                event_id: event.id,
+                                                schedule_id: s.id,
+                                            })}
+                                            className="mobile-card-row block border-l-4 border-violet-300 transition hover:bg-stone-50 active:scale-[0.99]"
+                                        >
                                             <div className="min-w-0">
                                                 <span className="badge-purple">{s.type_name}</span>
                                                 <p className="mt-1 text-sm font-medium text-stone-800">
@@ -590,7 +597,7 @@ export default function Show({ event, authUser }: PageProps) {
                                                 </p>
                                                 {s.description && <p className="text-xs text-stone-400">{s.description}</p>}
                                             </div>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             )}

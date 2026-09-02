@@ -41,6 +41,7 @@ interface PageProps {
     };
     events: Event[];
     selected_event?: Event | null;
+    selected_schedule?: ScheduleItem | null;
     open_modal?: boolean;
 }
 
@@ -49,7 +50,7 @@ interface TakenTime {
     to: string | null;
 }
 
-export default function Index({ schedules, filters, events, selected_event, open_modal }: PageProps) {
+export default function Index({ schedules, filters, events, selected_event, selected_schedule, open_modal }: PageProps) {
     const { data, setData, get, post, put, delete: destroy, processing, reset } = useForm({
         type: filters.type || '',
         date_from: filters.date_from || '',
@@ -132,7 +133,7 @@ export default function Index({ schedules, filters, events, selected_event, open
             time_to: schedule.schedule_to ? new Date(schedule.schedule_to).toTimeString().slice(0, 5) : '16:00',
             description: schedule.description || '',
             schedule_id: String(schedule.id),
-            return_to_event: '',
+            return_to_event: selected_event && schedule.event?.id === selected_event.id ? '1' : '',
         });
         setClientSearch(selectedScheduleEvent?.name || schedule.event?.name || '');
         setShowClientDropdown(false);
@@ -168,7 +169,7 @@ export default function Index({ schedules, filters, events, selected_event, open
 
     const handleDelete = (id: number) => {
         if (confirm('Yakin hapus jadwal ini?')) {
-            destroy(route('schedules.destroy', id));
+            destroy(route('schedules.destroy', { schedule: id, return_to_event: data.return_to_event }));
             setShowModal(false);
         }
     };
@@ -233,6 +234,11 @@ export default function Index({ schedules, filters, events, selected_event, open
     };
 
     useEffect(() => {
+        if (selected_schedule) {
+            openEdit(selected_schedule);
+            return;
+        }
+
         if (!open_modal || !selected_event) {
             return;
         }
