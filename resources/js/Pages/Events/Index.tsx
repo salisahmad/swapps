@@ -64,8 +64,17 @@ export default function Index({ events, filters, authUser }: PageProps) {
             : 'bg-violet-100 text-violet-700 border border-violet-200';
     const previousPage = events.links[0];
     const nextPage = events.links[events.links.length - 1];
-    const pageLinks = events.links.slice(1, -1);
-    const activePage = pageLinks.find((link) => link.active)?.label || '1';
+    const paginatorPageLinks = events.links.slice(1, -1);
+    const activePage = Number(paginatorPageLinks.find((link) => link.active)?.label || '1');
+    const lastPage = Number([...paginatorPageLinks].reverse().find((link) => /^\d+$/.test(link.label))?.label || activePage);
+    const pageLinks = Array.from({ length: lastPage }, (_, index) => {
+        const page = index + 1;
+
+        return {
+            label: String(page),
+            url: pageUrlFromPaginator(events.links, page),
+        };
+    });
 
     return (
         <AuthenticatedLayout
@@ -243,7 +252,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                         )}
 
                         <select
-                            value={activePage}
+                            value={String(activePage)}
                             onChange={(e) => {
                                 const selected = pageLinks.find((link) => link.label === e.target.value);
                                 if (selected?.url) {
@@ -277,4 +286,21 @@ export default function Index({ events, filters, authUser }: PageProps) {
             </div>
         </AuthenticatedLayout>
     );
+}
+
+function pageUrlFromPaginator(links: PaginationLink[], page: number): string | null {
+    const matchingLink = links.find((link) => link.label === String(page));
+    if (matchingLink?.url) {
+        return matchingLink.url;
+    }
+
+    const url = links.find((link) => link.url)?.url;
+    if (!url) {
+        return null;
+    }
+
+    const parsedUrl = new URL(url, window.location.origin);
+    parsedUrl.searchParams.set('page', String(page));
+
+    return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
 }
