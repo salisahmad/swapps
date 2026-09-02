@@ -48,7 +48,7 @@ class EventController extends Controller
             $query->where('order_type', $request->order_type);
         }
 
-        $events = $query->latest()->paginate(15)->withQueryString();
+        $events = $query->latest()->paginate(25)->withQueryString();
         if (auth()->user()->isLimitedStaff()) {
             $events->through(function (Event $event) {
                 $data = $event->toArray();
