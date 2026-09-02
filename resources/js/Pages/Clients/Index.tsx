@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link } from '@inertiajs/react';
 
 interface Client {
@@ -58,7 +59,7 @@ export default function Index({ clients }: PageProps) {
                                         <tr key={client.id}>
                                             <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.name}</td>
                                             <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.phone}</td>
-                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.event_date ?? '-'}</td>
+                                            <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{formatShortDate(client.event_date)}</td>
                                             <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100 capitalize">{client.event_type}</td>
                                             <td className="px-4 py-2 text-sm text-stone-900 dark:text-stone-100">{client.event_location ?? '-'}</td>
                                             <td className="px-4 py-2 text-sm">

@@ -2,6 +2,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import { formatShortDateTime } from '@/utils/date';
 import { Link, router, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode, useEffect, useState } from 'react';
 
@@ -213,7 +214,7 @@ export default function Authenticated({
                                                             <p className={`truncate text-sm font-semibold ${item.read ? 'text-stone-700 dark:text-stone-200' : 'text-stone-900 dark:text-white'}`}>{item.event.name}</p>
                                                             <p className="text-xs text-stone-500 dark:text-stone-400">{item.message}</p>
                                                             <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
-                                                                {item.user ? `Oleh: ${item.user.name} · ` : ''}{item.created_at || '-'}
+                                                                {item.user ? `Oleh: ${item.user.name} · ` : ''}{formatShortDateTime(item.created_at)}
                                                             </p>
                                                             </div>
                                                         </div>

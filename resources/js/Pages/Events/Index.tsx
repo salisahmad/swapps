@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 interface EventItem {
@@ -56,7 +57,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-    const formatDate = (date?: string | null) => formatIndonesianDate(date);
+    const formatDate = (date?: string | null) => formatShortDate(date);
     const orderTypeClass = (name: string) =>
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
@@ -286,22 +287,4 @@ function compactPaginationLinks(links: PaginationLink[]): PaginationLink[] {
     compact.push(next);
 
     return compact;
-}
-
-function formatIndonesianDate(value?: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-
-    if (!year || !month || !day) {
-        return value;
-    }
-
-    return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    });
 }

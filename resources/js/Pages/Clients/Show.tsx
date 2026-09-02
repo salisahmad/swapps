@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link } from '@inertiajs/react';
 
 interface Service {
@@ -106,7 +107,7 @@ export default function Show({ client }: PageProps) {
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Tanggal Event</p>
-                                <p className="text-stone-900 dark:text-stone-100">{client.event_date ?? '-'}</p>
+                                <p className="text-stone-900 dark:text-stone-100">{formatShortDate(client.event_date)}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-stone-500">Lokasi</p>
@@ -143,7 +144,7 @@ export default function Show({ client }: PageProps) {
                                                         {booking.service.name}
                                                     </p>
                                                     <p className="text-sm text-stone-500">
-                                                        {booking.booking_date} — {booking.location}
+                                                        {formatShortDate(booking.booking_date)} — {booking.location}
                                                     </p>
                                                 </div>
                                                 <span

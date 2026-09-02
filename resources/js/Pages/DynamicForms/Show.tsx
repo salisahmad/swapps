@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
+import { formatShortDate } from '@/utils/date';
 import { useState } from 'react';
 
 interface DynamicFormItem {
@@ -89,7 +90,7 @@ export default function Show({ event, dynamicForms }: PageProps) {
                     <p className="mt-2 text-lg text-stone-600 text-stone-500">Berita Acara</p>
                     <div className="mt-4 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900">
                         <p className="text-xl font-semibold text-stone-900 dark:text-white">{event.name}</p>
-                        <p className="text-stone-600 dark:text-stone-400">{event.date} {event.time ? `• ${event.time}` : ''}</p>
+                        <p className="text-stone-600 dark:text-stone-400">{formatShortDate(event.date)} {event.time ? `• ${event.time}` : ''}</p>
                         <p className="mt-2 text-sm text-stone-500">{event.package_description || 'Paket Wedding'}</p>
                         <p className="mt-2 font-semibold text-rose-400 text-rose-400">{formatRupiah(event.total_amount)}</p>
                         <span className={`mt-2 inline-block rounded px-2 py-1 text-xs font-semibold ${event.is_fully_paid ? 'bg-green-100 text-green-800 bg-green-900 text-green-300' : 'bg-yellow-100 text-yellow-800 bg-yellow-900 text-yellow-300'}`}>

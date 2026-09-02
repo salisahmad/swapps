@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link } from '@inertiajs/react';
 
 interface DailyData {
@@ -55,6 +56,7 @@ interface PageProps {
 
 export default function Index({ filters, summary, daily, payments, chartData, monthlyClientData, monthlyEventClientData }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const formatDate = (value?: string | null) => formatShortDate(value);
     const maxChart = Math.max(...chartData.map((d) => Math.max(d.earnings, d.expenses))) || 1;
     const clientChartWidth = 720;
     const clientChartHeight = 220;
@@ -251,7 +253,7 @@ export default function Index({ filters, summary, daily, payments, chartData, mo
                                 <tbody className="divide-y divide-stone-100">
                                     {daily.map((d) => (
                                         <tr key={d.date}>
-                                            <td className="px-3 py-2 text-sm text-stone-900 dark:text-stone-100">{d.date}</td>
+                                            <td className="px-3 py-2 text-sm text-stone-900 dark:text-stone-100">{formatDate(d.date)}</td>
                                             <td className="px-3 py-2 text-right text-sm font-medium text-green-600 dark:text-green-400">{formatRupiah(d.earnings)}</td>
                                             <td className="px-3 py-2 text-right text-sm font-medium text-red-600 dark:text-red-400">{formatRupiah(d.expenses)}</td>
                                             <td className="px-3 py-2 text-right text-sm font-medium text-blue-600 dark:text-blue-400">{formatRupiah(d.earnings - d.expenses)}</td>
@@ -291,7 +293,7 @@ export default function Index({ filters, summary, daily, payments, chartData, mo
                                                 <span className="text-stone-400">Client tidak ditemukan</span>
                                             )}
                                         </td>
-                                        <td className="px-3 py-2 text-sm text-stone-900 dark:text-stone-100">{p.payment_at || '-'}</td>
+                                        <td className="px-3 py-2 text-sm text-stone-900 dark:text-stone-100">{formatDate(p.payment_at)}</td>
                                         <td className="px-3 py-2 text-sm">
                                             <span className={`rounded px-2 py-1 text-xs font-semibold ${p.is_expense === 0 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'}`}>
                                                 {p.type_name}

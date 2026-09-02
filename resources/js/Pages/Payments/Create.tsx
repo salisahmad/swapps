@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -64,18 +65,7 @@ export default function Create({ events, event_id, selected_event, authUser }: P
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-    const formatDisplayDate = (value: string) => {
-        if (!value) return '-';
-
-        const [year, month, day] = value.split('-').map(Number);
-        if (!year || !month || !day) return value;
-
-        return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
-    };
+    const formatDisplayDate = (value: string) => formatShortDate(value);
     const onlyDigits = (value: string) => value.replace(/\D/g, '');
     const formatNumberInput = (value: string) => onlyDigits(value).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     const netAmount = data.amount ? parseFloat(data.amount) - (parseFloat(data.operational_cut || '0') || 0) : 0;

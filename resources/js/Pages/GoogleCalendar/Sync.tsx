@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate, formatShortDateTime } from '@/utils/date';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, type ReactNode } from 'react';
 
@@ -88,7 +89,7 @@ export default function Sync({ status, summary, events, schedules, flash }: Page
     };
 
     const showRetry = ['failed', 'pending', 'skipped'].includes(status);
-    const formatDateTime = (value: string | null) => value ? new Date(value).toLocaleString('id-ID') : '-';
+    const formatDateTime = (value: string | null) => formatShortDateTime(value);
 
     return (
         <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-stone-800">Google Sync</h2>}>
@@ -138,7 +139,7 @@ export default function Sync({ status, summary, events, schedules, flash }: Page
                                 {row.name}
                             </Link>
                         )}
-                        renderMeta={(row) => `${row.order_type_name} • ${row.date}${row.time ? ` ${row.time}` : ''}`}
+                        renderMeta={(row) => `${row.order_type_name} • ${formatShortDate(row.date)}${row.time ? ` ${row.time}` : ''}`}
                         renderError={(row) => row.google_sync_error}
                         renderAttempts={(row) => row.google_sync_attempts}
                         renderSyncedAt={(row) => formatDateTime(row.google_synced_at)}

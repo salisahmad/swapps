@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -513,7 +514,7 @@ export default function Index({
                                     >
                                         <td className="px-4 py-3">
                                             <p className="text-sm font-semibold text-stone-900">{employee.name}</p>
-                                            <p className="text-xs text-stone-500">{employee.employment_status_name || '-'} · Masuk {employee.join_date || '-'}</p>
+                                            <p className="text-xs text-stone-500">{employee.employment_status_name || '-'} · Masuk {formatShortDate(employee.join_date)}</p>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="rounded bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700">{employee.role_detail}</span>
@@ -863,7 +864,7 @@ function LoanDetail({ group, formatRupiah }: any) {
         <div key={loan.id} className="rounded-lg border border-stone-100 p-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p className="font-semibold text-stone-900">{loan.loan_date} · {loan.status_name}</p>
+                    <p className="font-semibold text-stone-900">{formatShortDate(loan.loan_date)} · {loan.status_name}</p>
                     <p className="mt-1 text-sm text-stone-500">
                         {loan.borrower_type_name}
                         {loan.vendor_phone ? ` · ${loan.vendor_phone}` : ''}
@@ -883,7 +884,7 @@ function LoanDetail({ group, formatRupiah }: any) {
                     <div className="divide-y divide-stone-100 rounded-lg bg-stone-50 px-3">
                         {loan.payments.map((payment) => (
                             <div key={payment.id} className="flex justify-between gap-3 py-2 text-xs text-stone-600">
-                                <span>{payment.payment_date} · {payment.payment_method || '-'}{payment.notes ? ` · ${payment.notes}` : ''}</span>
+                                <span>{formatShortDate(payment.payment_date)} · {payment.payment_method || '-'}{payment.notes ? ` · ${payment.notes}` : ''}</span>
                                 <span className="font-semibold">{formatRupiah(payment.amount)}</span>
                             </div>
                         ))}
@@ -1172,7 +1173,7 @@ function LeaveList({ leaveRequests, statusClass, approveLeave, canManage }: any)
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p className="font-semibold text-stone-900">{leave.user.name}</p>
-                            <p className="text-sm text-stone-600">{leave.leave_type_name} · {leave.start_date} s/d {leave.end_date} · {leave.days} hari</p>
+                            <p className="text-sm text-stone-600">{leave.leave_type_name} · {formatShortDate(leave.start_date)} s/d {formatShortDate(leave.end_date)} · {leave.days} hari</p>
                             {leave.reason && <p className="mt-1 text-sm text-stone-500">{leave.reason}</p>}
                         </div>
                         <span className={`w-fit rounded px-2 py-1 text-xs font-semibold ${statusClass(leave.status)}`}>{leave.status_name}</span>
@@ -1388,7 +1389,7 @@ function BonusClaimForm({ employees, events, existingClaims, form, inputClass, l
                                         />
                                         <span className="min-w-0">
                                             <span className="block font-semibold text-stone-800">{event.name}</span>
-                                            <span className="text-xs text-stone-500">{event.date || '-'}</span>
+                                            <span className="text-xs text-stone-500">{formatShortDate(event.date)}</span>
                                             {claimsByEvent[String(event.id)] && <span className="mt-1 block text-xs font-semibold text-green-600">Sudah tersimpan</span>}
                                         </span>
                                     </label>
@@ -1650,7 +1651,7 @@ function ProfileSummaryCard({ summary, formatRupiah }: any) {
                     {summary.active_loans.length === 0 && <p className="text-sm text-stone-500">Tidak ada pinjaman aktif.</p>}
                     {summary.active_loans.map((loan: Loan) => (
                         <div key={loan.id} className="rounded bg-stone-50 p-3 text-sm">
-                            <div className="flex justify-between"><span>{loan.loan_date}</span><span>{formatRupiah(loan.remaining_amount)}</span></div>
+                            <div className="flex justify-between"><span>{formatShortDate(loan.loan_date)}</span><span>{formatRupiah(loan.remaining_amount)}</span></div>
                             {loan.notes && <p className="mt-1 text-xs text-stone-500">{loan.notes}</p>}
                         </div>
                     ))}

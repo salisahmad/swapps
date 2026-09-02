@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -243,15 +244,7 @@ export default function Index({ schedules, filters, events, selected_event, sele
         return `${formatDisplayDate(date)}${time ? ` ${time}` : ''}`;
     };
     const formatDisplayDate = (value: string) => {
-        if (!value) return '-';
-
-        const [year, month, day] = value.slice(0, 10).split('-');
-        const monthNames = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-        ];
-
-        return `${day} ${monthNames[Number(month) - 1] || month} ${year}`;
+        return formatShortDate(value);
     };
     const addOneHour = (time: string) => {
         if (!time) return '';

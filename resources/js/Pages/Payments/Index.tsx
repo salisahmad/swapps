@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -52,20 +53,6 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
     });
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const formatShortDate = (value?: string | null) => {
-        if (!value) return '-';
-
-        const [datePart] = value.split(' ');
-        const [year, month, day] = datePart.split('-').map(Number);
-        if (!year || !month || !day) return value;
-
-        return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
-    };
-
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         get(route('payments.index'));

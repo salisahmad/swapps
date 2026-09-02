@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate } from '@/utils/date';
 import { Head, Link } from '@inertiajs/react';
 
 interface Event {
@@ -98,9 +99,7 @@ interface PageProps {
 
 export default function Dashboard({ stats, todayFittingSchedules, nextFittingSchedules, nextClients, overdueUnpaidClients, closingTodayList, closingYesterdayList, authUser }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-    const formatDate = (value: string | null) => value
-        ? new Date(value).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-        : '-';
+    const formatDate = (value: string | null) => formatShortDate(value);
 
     const StatCard = ({ title, value, sub, color, icon }: { title: string; value: string; sub?: string; color: string; icon: string }) => (
         <div className={`rounded-xl bg-white border border-stone-100 p-3 flex items-center gap-3 dark:border-stone-800 dark:bg-stone-900 ${color}`}>
@@ -142,7 +141,7 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                         {typeStyle.icon} {typeName}
                     </span>
                 </div>
-                <p className="text-xs text-stone-500 dark:text-stone-400">{client.date}</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400">{formatDate(client.date)}</p>
             </div>
             <div className="text-right shrink-0">
                 <p className="text-sm font-bold text-rose-500">{formatRupiah(client.grand_total ?? client.total_amount)}</p>
@@ -209,7 +208,7 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
             <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{client.name}</p>
                 <p className="text-xs text-stone-500 dark:text-stone-400">
-                    {client.date} {client.time ? `· ${client.time}` : ''} · {client.location || 'Lokasi belum diisi'}
+                    {formatDate(client.date)} {client.time ? `· ${client.time}` : ''} · {client.location || 'Lokasi belum diisi'}
                 </p>
             </div>
             <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${client.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -226,7 +225,7 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
             <Link href={route('events.show', client.uuid)} className="flex items-center justify-between rounded-xl bg-stone-50 p-3 transition active:scale-[0.98] hover:bg-stone-100 dark:bg-stone-900 dark:hover:bg-stone-800">
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-stone-800 dark:text-stone-100">{client.name}</p>
-                    <p className="text-xs text-stone-500 dark:text-stone-400">{client.date}</p>
+                    <p className="text-xs text-stone-500 dark:text-stone-400">{formatDate(client.date)}</p>
                 </div>
                 <div className="text-right shrink-0">
                     <p className="text-xs text-stone-500 dark:text-stone-400">Sisa</p>

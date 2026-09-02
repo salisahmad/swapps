@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { formatShortDate, formatShortDateTime } from '@/utils/date';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -114,8 +115,8 @@ export default function Show({ event, authUser }: PageProps) {
     const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
-    const formatDate = (date?: string | null) => formatIndonesianDate(date);
-    const formatDateTime = (date?: string | null) => formatIndonesianDateTime(date);
+    const formatDate = (date?: string | null) => formatShortDate(date);
+    const formatDateTime = (date?: string | null) => formatShortDateTime(date);
     const canSeeFinancials = !authUser.is_limited_staff;
 
     const totalPaid = event.payments
@@ -933,50 +934,4 @@ function parseScheduleDateTime(value: string): { date: string; time: string } {
         date: datePart,
         time: hour && minute ? `${hour}:${minute}` : '',
     };
-}
-
-function formatIndonesianDate(value?: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    const dateOnly = value.slice(0, 10);
-    const [year, month, day] = dateOnly.split('-').map(Number);
-
-    if (!year || !month || !day) {
-        return value;
-    }
-
-    return new Date(year, month - 1, day).toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    });
-}
-
-function formatIndonesianDateTime(value?: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    const date = new Date(value);
-
-    if (!Number.isNaN(date.getTime()) && (value.includes('T') || value.endsWith('Z'))) {
-        return date.toLocaleString('id-ID', {
-            timeZone: 'Asia/Jakarta',
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    }
-
-    const parsed = parseScheduleDateTime(value);
-
-    if (!parsed.date) {
-        return value;
-    }
-
-    return `${formatIndonesianDate(parsed.date)}${parsed.time ? ` ${parsed.time}` : ''}`;
 }
