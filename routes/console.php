@@ -16,3 +16,7 @@ Schedule::command('db:backup')
 Schedule::command('telegram:daily-summary')
     ->dailyAt('06:00')
     ->withoutOverlapping();
+
+Schedule::command('queue:work --queue=google-calendar --stop-when-empty --tries=5 --timeout=120')
+    ->everyMinute()
+    ->withoutOverlapping();

@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class GoogleCalendarSyncJob implements ShouldQueue
@@ -44,6 +45,13 @@ class GoogleCalendarSyncJob implements ShouldQueue
 
     public function handle(GoogleCalendarService $calendar): void
     {
+        Cache::lock($this->lockKey(), 60)->block(10, function () use ($calendar) {
+            $this->handleLocked($calendar);
+        });
+    }
+
+    private function handleLocked(GoogleCalendarService $calendar): void
+    {
         $model = $this->model();
 
         if (! $model) {
@@ -52,7 +60,7 @@ class GoogleCalendarSyncJob implements ShouldQueue
 
         $model->forceFill([
             'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
-            'google_sync_attempts' => $this->attempts(),
+            'google_sync_attempts' => max((int) $model->google_sync_attempts, $this->attempts()),
         ])->saveQuietly();
 
         try {
@@ -62,14 +70,14 @@ class GoogleCalendarSyncJob implements ShouldQueue
 
             $model->forceFill([
                 'google_sync_status' => $status,
-                'google_sync_attempts' => $this->attempts(),
+                'google_sync_attempts' => max((int) $model->google_sync_attempts, $this->attempts()),
                 'google_synced_at' => now(),
                 'google_sync_error' => null,
             ])->saveQuietly();
         } catch (Throwable $exception) {
             $model->forceFill([
                 'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
-                'google_sync_attempts' => $this->attempts(),
+                'google_sync_attempts' => max((int) $model->google_sync_attempts, $this->attempts()),
                 'google_sync_error' => $this->shortError($exception),
             ])->saveQuietly();
 
@@ -118,5 +126,10 @@ class GoogleCalendarSyncJob implements ShouldQueue
     private function shortError(Throwable $exception): string
     {
         return substr($exception->getMessage(), 0, 2000);
+    }
+
+    private function lockKey(): string
+    {
+        return "google-calendar-sync:{$this->type}:{$this->modelId}";
     }
 }

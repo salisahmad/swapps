@@ -2,8 +2,8 @@
 
 namespace App\Observers;
 
-use App\Jobs\GoogleCalendarSyncJob;
 use App\Models\Event;
+use App\Services\GoogleCalendarSyncDispatcher;
 use App\Services\TelegramNotification;
 
 class EventObserver
@@ -13,7 +13,7 @@ class EventObserver
         $telegram = new TelegramNotification;
         $telegram->notifyNewEvent($event);
 
-        $this->queueGoogleSync($event);
+        app(GoogleCalendarSyncDispatcher::class)->syncEvent($event);
     }
 
     public function updated(Event $event): void
@@ -36,7 +36,7 @@ class EventObserver
             'package_description',
             'order_type',
         ])) {
-            $this->queueGoogleSync($event);
+            app(GoogleCalendarSyncDispatcher::class)->syncEvent($event);
         }
     }
 
@@ -45,29 +45,6 @@ class EventObserver
         $telegram = new TelegramNotification;
         $telegram->notifyEventDeleted($event);
 
-        $event->forceFill([
-            'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
-            'google_sync_error' => null,
-        ])->saveQuietly();
-
-        GoogleCalendarSyncJob::dispatch(
-            GoogleCalendarSyncJob::TYPE_EVENT,
-            $event->id,
-            GoogleCalendarSyncJob::ACTION_DELETE,
-        )->afterCommit();
-    }
-
-    private function queueGoogleSync(Event $event): void
-    {
-        $event->forceFill([
-            'google_sync_status' => Event::GOOGLE_SYNC_PENDING,
-            'google_sync_error' => null,
-        ])->saveQuietly();
-
-        GoogleCalendarSyncJob::dispatch(
-            GoogleCalendarSyncJob::TYPE_EVENT,
-            $event->id,
-            GoogleCalendarSyncJob::ACTION_SYNC,
-        )->afterCommit();
+        app(GoogleCalendarSyncDispatcher::class)->deleteEvent($event);
     }
 }
