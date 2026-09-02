@@ -106,7 +106,7 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
             <span className="text-2xl">{icon}</span>
             <div className="min-w-0">
                 <p className="text-xs text-stone-500 truncate dark:text-stone-400">{title}</p>
-                <p className="text-lg font-bold text-stone-800 truncate dark:text-stone-100">{value}</p>
+                <p className="truncate text-sm font-bold text-stone-800 dark:text-stone-100 sm:text-lg">{value}</p>
                 {sub && <p className="text-xs text-stone-500 dark:text-stone-400">{sub}</p>}
             </div>
         </div>
