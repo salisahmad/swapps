@@ -269,7 +269,7 @@ class ImportLegacyDatabase extends Command
             ->orderBy('id')
             ->get()
             ->groupBy('uploadable_id')
-            ->map(fn ($files) => 'receipts/'.$files->first()->filename);
+            ->map(fn ($files) => 'receipts/'.$this->legacyUploadedFilename($files->first()));
 
         DB::table("{$legacyDb}.payments")
             ->orderBy('id')
