@@ -30,10 +30,9 @@ class EventController extends Controller
                 ->orWhere('mobile_phone', 'like', '%'.$request->q.'%');
         }
 
-        // Date range
-        if ($request->filled('date_from')) {
-            $query->whereDate('date', '>=', $request->date_from);
-        }
+        // Date range. Default list starts from today; past clients stay available via range filter.
+        $query->whereDate('date', '>=', $request->filled('date_from') ? $request->date_from : now()->toDateString());
+
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->date_to);
         }
@@ -48,7 +47,12 @@ class EventController extends Controller
             $query->where('order_type', $request->order_type);
         }
 
-        $events = $query->latest()->paginate(25)->withQueryString();
+        $events = $query
+            ->orderBy('date')
+            ->orderBy('time')
+            ->orderBy('name')
+            ->paginate(25)
+            ->withQueryString();
         if (auth()->user()->isLimitedStaff()) {
             $events->through(function (Event $event) {
                 $data = $event->toArray();
