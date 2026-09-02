@@ -127,6 +127,7 @@ class PaymentController extends Controller
             'status' => 'required|integer|in:0,1,2',
             'receipt_image' => 'nullable|image|max:5120', // 5MB max
         ]);
+        unset($validated['receipt_image']);
 
         // Staff can only create pending payments
         if (auth()->user()->isStaff()) {
@@ -190,6 +191,7 @@ class PaymentController extends Controller
             'status' => 'required|integer|in:0,1,2',
             'receipt_image' => 'nullable|image|max:5120',
         ]);
+        unset($validated['receipt_image']);
 
         $receiptPath = $payment->receipt_image;
         $oldReceiptPath = $payment->receipt_image;
@@ -204,6 +206,15 @@ class PaymentController extends Controller
             'receipt_image' => $receiptPath,
             'operational_cut' => $validated['operational_cut'] ?? 0,
         ]);
+
+        if (
+            $request->hasFile('receipt_image')
+            && (!$payment->fresh()->receipt_image || !Storage::disk('public')->exists($payment->fresh()->receipt_image))
+        ) {
+            throw ValidationException::withMessages([
+                'receipt_image' => 'Bukti transfer gagal tersimpan di data transaksi. Silakan upload ulang.',
+            ]);
+        }
 
         if ($request->hasFile('receipt_image') && $oldReceiptPath && $oldReceiptPath !== $receiptPath) {
             Storage::disk('public')->delete($oldReceiptPath);

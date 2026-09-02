@@ -54,6 +54,7 @@ export default function Edit({ payment, events, authUser }: PageProps) {
         payment.receipt_image ? `/storage/${payment.receipt_image}` : null
     );
     const [receiptChanged, setReceiptChanged] = useState(false);
+    const [fileInputKey, setFileInputKey] = useState(0);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,6 +68,13 @@ export default function Edit({ payment, events, authUser }: PageProps) {
         if (file) {
             setPreviewUrl(URL.createObjectURL(file));
         }
+    };
+
+    const clearSelectedReceipt = () => {
+        setPreviewUrl(null);
+        setData('receipt_image', null);
+        setReceiptChanged(true);
+        setFileInputKey((key) => key + 1);
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
@@ -213,24 +221,36 @@ export default function Edit({ payment, events, authUser }: PageProps) {
 
                             <div>
                                 <label className="block text-sm font-medium text-stone-600">Bukti Pembayaran</label>
-                                <div className="mt-2">
+                                <div className="mt-2 space-y-3">
                                     {previewUrl ? (
                                         <div className="relative inline-block">
                                             <img src={previewUrl} alt="Receipt" className="h-40 rounded-lg object-cover" />
                                             <button
                                                 type="button"
-                                                onClick={() => { setPreviewUrl(null); setData('receipt_image', null); setReceiptChanged(true); }}
+                                                onClick={clearSelectedReceipt}
                                                 className="absolute -right-2 -top-2 rounded-full bg-red-500 px-2 py-1 text-xs text-white"
                                             >
                                                 ✕
                                             </button>
                                         </div>
-                                    ) : (
-                                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 transition hover:bg-stone-100">
-                                            <span className="text-3xl">📷</span>
-                                            <span className="mt-2 text-sm text-stone-500">Tap untuk upload foto</span>
-                                            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                                        </label>
+                                    ) : null}
+                                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-stone-200 bg-stone-50 p-6 transition hover:bg-stone-100 dark:border-stone-700 dark:bg-stone-900 dark:hover:bg-stone-800">
+                                        <span className="text-3xl">📷</span>
+                                        <span className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+                                            {previewUrl ? 'Tap untuk ganti bukti pembayaran' : 'Tap untuk upload foto'}
+                                        </span>
+                                        <input
+                                            key={fileInputKey}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    {receiptChanged && data.receipt_image && (
+                                        <p className="text-xs font-medium text-emerald-600">
+                                            Foto baru siap disimpan.
+                                        </p>
                                     )}
                                 </div>
                                 {errors.receipt_image && <p className="mt-1 text-sm text-red-500">{errors.receipt_image}</p>}
