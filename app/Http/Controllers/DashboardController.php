@@ -19,6 +19,8 @@ class DashboardController extends Controller
         $endOfMonth = $businessNow->copy()->endOfMonth();
         $startOfYear = $businessNow->copy()->startOfYear();
         $endOfYear = $businessNow->copy()->endOfYear();
+        $startOfNextYear = $businessNow->copy()->addYear()->startOfYear();
+        $endOfNextYear = $businessNow->copy()->addYear()->endOfYear();
         $startOfLastYear = $businessNow->copy()->subYear()->startOfYear();
         $endOfLastYear = $businessNow->copy()->subYear()->endOfYear();
         $todayDate = $today->toDateString();
@@ -37,6 +39,7 @@ class DashboardController extends Controller
         $yesterdayInputRange = $toAppTimezoneRange($yesterday->copy()->startOfDay(), $yesterday->copy()->endOfDay());
         $lastYearDateRange = [$startOfLastYear->toDateString(), $endOfLastYear->toDateString()];
         $thisYearDateRange = [$startOfYear->toDateString(), $endOfYear->toDateString()];
+        $nextYearDateRange = [$startOfNextYear->toDateString(), $endOfNextYear->toDateString()];
         $thisMonthDateRange = [$startOfMonth->toDateString(), $endOfMonth->toDateString()];
         $revenueDisplayStatuses = [Payment::STATUS_PENDING, Payment::STATUS_CONFIRMED];
 
@@ -70,6 +73,9 @@ class DashboardController extends Controller
 
         // ===== 6. Total Client Bulan Ini =====
         $thisMonthTotalEvents = Event::whereBetween('date', $thisMonthDateRange)->count();
+        $thisMonthCompletedEvents = Event::whereBetween('date', $thisMonthDateRange)
+            ->whereDate('date', '<', $todayDate)
+            ->count();
         $thisMonthMuaEvents = Event::whereBetween('date', $thisMonthDateRange)
             ->where('order_type', Event::ORDER_TYPE_MUA)
             ->count();
@@ -88,6 +94,14 @@ class DashboardController extends Controller
             ->where('order_type', Event::ORDER_TYPE_MUA)
             ->count();
         $remainingThisYearGownEvents = Event::whereBetween('date', [$todayDate, $endOfYear->toDateString()])
+            ->where('order_type', Event::ORDER_TYPE_GOWN)
+            ->count();
+        $nextYearEvents = Event::whereBetween('date', $nextYearDateRange)
+            ->count();
+        $nextYearMuaEvents = Event::whereBetween('date', $nextYearDateRange)
+            ->where('order_type', Event::ORDER_TYPE_MUA)
+            ->count();
+        $nextYearGownEvents = Event::whereBetween('date', $nextYearDateRange)
             ->where('order_type', Event::ORDER_TYPE_GOWN)
             ->count();
         $futurePaidThisYearEvents = Event::whereBetween('date', [$todayDate, $endOfYear->toDateString()])
@@ -185,6 +199,7 @@ class DashboardController extends Controller
                 'this_month_summary' => [
                     'earnings' => (float) $thisMonthEarnings,
                     'clients' => $thisMonthTotalEvents,
+                    'completed_clients' => $thisMonthCompletedEvents,
                     'mua_clients' => $thisMonthMuaEvents,
                     'gown_clients' => $thisMonthGownEvents,
                 ],
@@ -197,6 +212,11 @@ class DashboardController extends Controller
                     'total' => $remainingThisYearEvents,
                     'mua_clients' => $remainingThisYearMuaEvents,
                     'gown_clients' => $remainingThisYearGownEvents,
+                ],
+                'next_year_client_summary' => [
+                    'total' => $nextYearEvents,
+                    'mua_clients' => $nextYearMuaEvents,
+                    'gown_clients' => $nextYearGownEvents,
                 ],
                 'future_paid_summary' => [
                     'this_year_total' => (float) $futurePaidThisYearTotal,

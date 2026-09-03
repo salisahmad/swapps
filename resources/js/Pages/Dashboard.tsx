@@ -59,6 +59,7 @@ interface Stats {
     this_month_summary: {
         earnings: number;
         clients: number;
+        completed_clients: number;
         mua_clients: number;
         gown_clients: number;
     };
@@ -68,6 +69,11 @@ interface Stats {
         gown_clients: number;
     };
     remaining_this_year_client_summary: {
+        total: number;
+        mua_clients: number;
+        gown_clients: number;
+    };
+    next_year_client_summary: {
         total: number;
         mua_clients: number;
         gown_clients: number;
@@ -100,6 +106,27 @@ interface PageProps {
 export default function Dashboard({ stats, todayFittingSchedules, nextFittingSchedules, nextClients, overdueUnpaidClients, closingTodayList, closingYesterdayList, authUser }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
     const formatDate = (value: string | null) => formatShortDate(value);
+    const formatTime = (value: string | null) => {
+        if (!value) return '-';
+
+        if (value.includes('T') || value.endsWith('Z')) {
+            const date = new Date(value);
+
+            if (!Number.isNaN(date.getTime())) {
+                return new Intl.DateTimeFormat('id-ID', {
+                    timeZone: 'Asia/Jakarta',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                }).format(date).replace('.', ':');
+            }
+        }
+
+        const [, timePart = ''] = value.replace('T', ' ').split(' ');
+        const [hour, minute] = timePart.split(':');
+
+        return hour && minute ? `${hour}:${minute}` : '-';
+    };
 
     const getClientTypeName = (client: { order_type?: number | string; order_type_name?: string }) => {
         if (client.order_type_name === 'MUA' || client.order_type_name === 'Sewa Gaun') {
@@ -181,7 +208,7 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                     )}
                 </div>
                 <p className="text-xs text-stone-500 dark:text-stone-400">
-                    {formatDate(schedule.schedule_from)} / {schedule.event?.time || schedule.client_phone || '-'}
+                    {formatDate(schedule.schedule_from)} / {formatTime(schedule.schedule_from)}
                 </p>
             </div>
         </div>
@@ -273,10 +300,18 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                                 <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.remaining_this_year_client_summary.gown_clients}</span>
                             </div>
                         </div>
+                        <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-purple-300 dark:border-stone-800 dark:bg-stone-900">
+                            <p className="text-xs text-stone-500 dark:text-stone-400">Client Tahun Depan</p>
+                            <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{stats.next_year_client_summary.total}</p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                                <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.next_year_client_summary.mua_clients}</span>
+                                <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.next_year_client_summary.gown_clients}</span>
+                            </div>
+                        </div>
                         <div className="rounded-xl bg-white border border-stone-100 p-3 flex flex-col justify-center border-l-4 border-emerald-300 dark:border-stone-800 dark:bg-stone-900">
                             <p className="text-xs text-stone-500 dark:text-stone-400">Client Bln. Ini</p>
                             <p className="text-sm font-bold text-stone-800 dark:text-stone-100">{formatRupiah(stats.this_month_summary.earnings)}</p>
-                            <p className="text-xs text-stone-500 dark:text-stone-400">{stats.this_month_summary.clients} client</p>
+                            <p className="text-xs text-stone-500 dark:text-stone-400">{stats.this_month_summary.completed_clients} / {stats.this_month_summary.clients} Client</p>
                             <div className="mt-1 flex flex-wrap gap-1">
                                 <span className="rounded bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">MUA {stats.this_month_summary.mua_clients}</span>
                                 <span className="rounded bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Gaun {stats.this_month_summary.gown_clients}</span>
