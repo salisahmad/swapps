@@ -14,6 +14,8 @@ interface EventItem {
     total_amount: number | null;
     grand_total: number | null;
     is_fully_paid: boolean | null;
+    paid_status_name: string | null;
+    paid_status_tone: string | null;
     order_type_name: string;
     created_at: string;
 }
@@ -101,6 +103,11 @@ export default function Index({ events, filters, authUser }: PageProps) {
         name === 'MUA'
             ? 'bg-rose-100 text-rose-700 border border-rose-200'
             : 'bg-violet-100 text-violet-700 border border-violet-200';
+    const paidStatusClass = (tone?: string | null) => {
+        if (tone === 'pending_paid') return 'bg-orange-50 text-orange-700 border border-orange-200';
+        if (tone === 'paid') return 'badge-green';
+        return 'badge-yellow';
+    };
     const previousPage = events.links[0];
     const nextPage = events.links[events.links.length - 1];
     const paginatorPageLinks = events.links.slice(1, -1);
@@ -251,8 +258,8 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                     )}
                                 </div>
                                 {!authUser.is_limited_staff && (
-                                    <span className={`badge shrink-0 ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
-                                        {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                                    <span className={`badge shrink-0 ${paidStatusClass(event.paid_status_tone)}`}>
+                                        {event.paid_status_name === 'BELUM LUNAS' ? 'BELUM' : event.paid_status_name}
                                     </span>
                                 )}
                             </div>
@@ -313,8 +320,8 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                             <>
                                                 <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
-                                                        {event.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                                                    <span className={`badge ${paidStatusClass(event.paid_status_tone)}`}>
+                                                        {event.paid_status_name === 'BELUM LUNAS' ? 'BELUM' : event.paid_status_name}
                                                     </span>
                                                 </td>
                                             </>

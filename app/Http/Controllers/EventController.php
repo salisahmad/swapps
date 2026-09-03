@@ -59,6 +59,8 @@ class EventController extends Controller
                 $data['total_amount'] = null;
                 $data['grand_total'] = null;
                 $data['is_fully_paid'] = null;
+                $data['paid_status_name'] = null;
+                $data['paid_status_tone'] = null;
                 unset($data['additional_costs'], $data['additional_cost_total']);
 
                 return $data;
@@ -247,6 +249,8 @@ class EventController extends Controller
             $eventData['additional_cost_total'] = null;
             $eventData['grand_total'] = null;
             $eventData['is_fully_paid'] = null;
+            $eventData['paid_status_name'] = null;
+            $eventData['paid_status_tone'] = null;
             $eventData['payments'] = [];
             $eventData['additional_costs'] = [];
         } else {

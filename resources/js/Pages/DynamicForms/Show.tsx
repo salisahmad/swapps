@@ -23,6 +23,8 @@ interface EventData {
     package_description: string | null;
     total_amount: number;
     is_fully_paid: boolean;
+    paid_status_name: string;
+    paid_status_tone: string;
     order_type_name: string;
 }
 
@@ -67,6 +69,11 @@ export default function Show({ event, dynamicForms }: PageProps) {
     };
 
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
+    const paidStatusClass = (tone?: string | null) => {
+        if (tone === 'pending_paid') return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200';
+        if (tone === 'paid') return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200';
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200';
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 py-8 px-4 from-stone-900 to-stone-800">
@@ -93,8 +100,8 @@ export default function Show({ event, dynamicForms }: PageProps) {
                         <p className="text-stone-600 dark:text-stone-400">{formatShortDate(event.date)} {event.time ? `• ${event.time}` : ''}</p>
                         <p className="mt-2 text-sm text-stone-500">{event.package_description || 'Paket Wedding'}</p>
                         <p className="mt-2 font-semibold text-rose-400 text-rose-400">{formatRupiah(event.total_amount)}</p>
-                        <span className={`mt-2 inline-block rounded px-2 py-1 text-xs font-semibold ${event.is_fully_paid ? 'bg-green-100 text-green-800 bg-green-900 text-green-300' : 'bg-yellow-100 text-yellow-800 bg-yellow-900 text-yellow-300'}`}>
-                            {event.is_fully_paid ? 'LUNAS' : 'BELUM LUNAS'}
+                        <span className={`mt-2 inline-block rounded px-2 py-1 text-xs font-semibold ${paidStatusClass(event.paid_status_tone)}`}>
+                            {event.paid_status_name}
                         </span>
                     </div>
                 </div>

@@ -48,6 +48,8 @@ class Event extends Model
         'order_type_name',
         'additional_cost_total',
         'grand_total',
+        'paid_status_name',
+        'paid_status_tone',
     ];
 
     public const ORDER_TYPE_MUA = 1;
@@ -128,5 +130,51 @@ class Event extends Model
     public function getGrandTotalAttribute(): float
     {
         return max(0, (float) $this->total_amount + $this->additional_cost_total - (float) $this->discount_amount);
+    }
+
+    public function getPaidStatusNameAttribute(): string
+    {
+        if ($this->hasPendingPaidOffAmount()) {
+            return 'LUNAS [Pending]';
+        }
+
+        return $this->is_fully_paid ? 'LUNAS' : 'BELUM LUNAS';
+    }
+
+    public function getPaidStatusToneAttribute(): string
+    {
+        if ($this->hasPendingPaidOffAmount()) {
+            return 'pending_paid';
+        }
+
+        return $this->is_fully_paid ? 'paid' : 'unpaid';
+    }
+
+    private function hasPendingPaidOffAmount(): bool
+    {
+        $pending = $this->earningPaymentTotal([Payment::STATUS_PENDING]);
+
+        if ($pending <= 0) {
+            return false;
+        }
+
+        $confirmed = $this->earningPaymentTotal([Payment::STATUS_CONFIRMED]);
+
+        return ($confirmed + $pending) >= $this->grand_total;
+    }
+
+    private function earningPaymentTotal(array $statuses): float
+    {
+        if ($this->relationLoaded('payments')) {
+            return (float) $this->payments
+                ->where('is_expense', Payment::EARNING)
+                ->whereIn('status', $statuses)
+                ->sum('amount');
+        }
+
+        return (float) $this->payments()
+            ->where('is_expense', Payment::EARNING)
+            ->whereIn('status', $statuses)
+            ->sum('amount');
     }
 }

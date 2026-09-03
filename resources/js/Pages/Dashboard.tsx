@@ -12,6 +12,8 @@ interface Event {
     total_amount: number;
     grand_total: number;
     is_fully_paid: boolean;
+    paid_status_name?: string | null;
+    paid_status_tone?: string | null;
     order_type_name: string;
 }
 
@@ -36,6 +38,8 @@ interface ClientList {
     total_amount: number;
     grand_total: number;
     is_fully_paid: boolean;
+    paid_status_name?: string | null;
+    paid_status_tone?: string | null;
     order_type?: number | string;
     order_type_name?: string;
 }
@@ -143,6 +147,18 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
             ? { icon: '💄', className: 'bg-rose-50 text-rose-700 border border-rose-100' }
             : { icon: '👗', className: 'bg-violet-50 text-violet-700 border border-violet-100' };
     };
+    const paidStatusClass = (tone?: string | null) => {
+        if (tone === 'pending_paid') return 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-200';
+        if (tone === 'paid') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-200';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-200';
+    };
+    const paidStatusLabel = (client: { is_fully_paid?: boolean | null; paid_status_name?: string | null }) => {
+        if (client.paid_status_name) {
+            return client.paid_status_name === 'BELUM LUNAS' ? 'BELUM' : client.paid_status_name;
+        }
+
+        return client.is_fully_paid ? 'LUNAS' : 'BELUM';
+    };
 
     const ClientRow = ({ client }: { client: ClientList }) => {
         const typeName = getClientTypeName(client);
@@ -161,8 +177,8 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
             </div>
             <div className="text-right shrink-0">
                 <p className="text-sm font-bold text-rose-500">{formatRupiah(client.grand_total ?? client.total_amount)}</p>
-                <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${client.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {client.is_fully_paid ? 'LUNAS' : 'BELUM'}
+                <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${paidStatusClass(client.paid_status_tone)}`}>
+                    {paidStatusLabel(client)}
                 </span>
             </div>
         </Link>
@@ -227,8 +243,8 @@ export default function Dashboard({ stats, todayFittingSchedules, nextFittingSch
                     {formatDate(client.date)} {client.time ? `· ${client.time}` : ''} · {client.location || 'Lokasi belum diisi'}
                 </p>
             </div>
-            <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${client.is_fully_paid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                {client.is_fully_paid ? 'LUNAS' : 'BELUM'}
+            <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-semibold ${paidStatusClass(client.paid_status_tone)}`}>
+                {paidStatusLabel(client)}
             </span>
         </Link>
     );

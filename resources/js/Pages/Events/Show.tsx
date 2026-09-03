@@ -88,6 +88,8 @@ interface Event {
     additional_cost_total: number | null;
     grand_total: number | null;
     is_fully_paid: boolean | null;
+    paid_status_name: string | null;
+    paid_status_tone: string | null;
     order_type_name: string;
     items: Item[];
     schedules: Schedule[];
@@ -137,6 +139,11 @@ export default function Show({ event, authUser }: PageProps) {
     const formatRupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
     const formatDate = (date?: string | null) => formatShortDate(date);
     const formatDateTime = (date?: string | null) => formatShortDateTime(date);
+    const paidStatusClass = (tone?: string | null) => {
+        if (tone === 'pending_paid') return 'bg-orange-50 text-orange-700 border border-orange-200';
+        if (tone === 'paid') return 'badge-green';
+        return 'badge-yellow';
+    };
     const canSeeFinancials = !authUser.is_limited_staff;
 
     const totalPaid = event.payments
@@ -526,8 +533,12 @@ export default function Show({ event, authUser }: PageProps) {
                 {/* Status Badge */}
                 <div className="flex items-center gap-2">
                     {canSeeFinancials && (
-                        <span className={`badge ${event.is_fully_paid ? 'badge-green' : 'badge-yellow'}`}>
-                            {event.is_fully_paid ? '✅ LUNAS' : '⏳ BELUM LUNAS'}
+                        <span className={`badge ${paidStatusClass(event.paid_status_tone)}`}>
+                            {event.paid_status_name === 'LUNAS'
+                                ? '✅ LUNAS'
+                                : event.paid_status_name === 'LUNAS [Pending]'
+                                    ? 'LUNAS [Pending]'
+                                    : '⏳ BELUM LUNAS'}
                         </span>
                     )}
                     <span className={`badge ${orderTheme.badge}`}>
