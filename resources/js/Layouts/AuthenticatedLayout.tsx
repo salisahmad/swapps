@@ -42,6 +42,7 @@ interface AuthenticatedPageProps {
 const navItems = [
     { href: 'dashboard', label: 'Dashboard', icon: '📊', route: 'dashboard' },
     { href: 'events.index', label: 'Clients', icon: '👥', route: 'events.*' },
+    { href: 'client-history.index', label: 'Riwayat', icon: '🗂️', route: 'client-history.*' },
     { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
     { href: 'payments.index', label: 'Bayar', icon: '💰', route: 'payments.*' },
     { href: 'staff.index', label: 'Pegawai', icon: '🧑‍💼', route: 'staff.*' },
@@ -300,6 +301,11 @@ export default function Authenticated({
                             <ResponsiveNavLink href={route('events.index')} active={route().current('events.*')}>
                                 👥 Clients
                             </ResponsiveNavLink>
+                            {!isLimitedStaff && (
+                                <ResponsiveNavLink href={route('client-history.index')} active={route().current('client-history.*')}>
+                                    🗂️ Riwayat Client
+                                </ResponsiveNavLink>
+                            )}
                             <ResponsiveNavLink href={route('schedules.index')} active={route().current('schedules.*')}>
                                 ⏰ Jadwal
                             </ResponsiveNavLink>
@@ -388,7 +394,7 @@ export default function Authenticated({
             {/* Bottom Navigation - iPhone Style */}
             <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-stone-100 bg-white/95 backdrop-blur-lg safe-bottom dark:border-stone-800 dark:bg-stone-950/95 sm:hidden">
                 <div className="flex items-center justify-around px-2 pb-2 pt-1">
-                    {allNavItems.slice(0, 5).map((item) => {
+                    {allNavItems.filter((item) => item.href !== 'client-history.index').slice(0, 5).map((item) => {
                         const isActive = route().current(item.route);
                         return (
                             <Link

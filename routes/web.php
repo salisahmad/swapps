@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\ClientHistoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DynamicFormController;
 use App\Http\Controllers\EventController;
@@ -74,6 +75,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('operational')->group(function () {
         Route::get('/clients/by-date', [EventController::class, 'byDate'])->name('events.by-date');
+        Route::get('/client-history', [ClientHistoryController::class, 'index'])->name('client-history.index');
         Route::post('/clients/{event}/photos', [EventPhotoController::class, 'store'])->name('events.photos.store');
         Route::delete('/clients/{event}/photos/{photo}', [EventPhotoController::class, 'destroy'])->name('events.photos.destroy');
         Route::resource('clients', EventController::class)
