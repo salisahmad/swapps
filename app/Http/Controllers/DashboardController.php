@@ -69,11 +69,11 @@ class DashboardController extends Controller
             ->sum('amount');
 
         // ===== 6. Total Client Bulan Ini =====
-        $thisMonthTotalEvents = Event::whereBetween('created_at', $thisMonthInputRange)->count();
-        $thisMonthMuaEvents = Event::whereBetween('created_at', $thisMonthInputRange)
+        $thisMonthTotalEvents = Event::whereBetween('date', $thisMonthDateRange)->count();
+        $thisMonthMuaEvents = Event::whereBetween('date', $thisMonthDateRange)
             ->where('order_type', Event::ORDER_TYPE_MUA)
             ->count();
-        $thisMonthGownEvents = Event::whereBetween('created_at', $thisMonthInputRange)
+        $thisMonthGownEvents = Event::whereBetween('date', $thisMonthDateRange)
             ->where('order_type', Event::ORDER_TYPE_GOWN)
             ->count();
         $thisYearMuaEvents = Event::whereBetween('date', $thisYearDateRange)
