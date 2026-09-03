@@ -26,12 +26,15 @@ class EventController extends Controller
 
         // Search
         if ($request->filled('q')) {
-            $query->where('name', 'like', '%'.$request->q.'%')
-                ->orWhere('mobile_phone', 'like', '%'.$request->q.'%');
+            $search = $request->q;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('mobile_phone', 'like', '%'.$search.'%');
+            });
         }
 
-        // Date range. Default list starts from today; past clients stay available via range filter.
-        $query->whereDate('date', '>=', $request->filled('date_from') ? $request->date_from : now()->toDateString());
+        // Date range. Default list starts after today; past clients stay available via range filter.
+        $query->whereDate('date', '>=', $request->filled('date_from') ? $request->date_from : now()->addDay()->toDateString());
 
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->date_to);
