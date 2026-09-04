@@ -27,6 +27,13 @@ class CalendarController extends Controller
         }
 
         $current = Carbon::create($year, $month, 1, 0, 0, 0, config('app.timezone'));
+        if ($mode === 'hijriah' && $request->filled('anchor')) {
+            try {
+                $current = Carbon::parse($request->string('anchor')->toString(), config('app.timezone'))->startOfDay();
+            } catch (\Throwable) {
+                $current = Carbon::create($year, $month, 1, 0, 0, 0, config('app.timezone'));
+            }
+        }
         $visibleStart = $mode === 'hijriah'
             ? $current->copy()->subDays(45)->startOfWeek(Carbon::MONDAY)
             : $current->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY);

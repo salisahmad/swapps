@@ -30,6 +30,7 @@ interface PageProps {
 }
 
 type CalendarMode = 'masehi' | 'hijriah';
+type CalendarDay = string | null;
 
 const weekDays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
 const orderFilters = [
@@ -40,11 +41,19 @@ const orderFilters = [
 export default function Index({ calendar, events }: PageProps) {
     const [mode, setMode] = useState<CalendarMode>(calendar.mode);
     const [enabledTypes, setEnabledTypes] = useState<number[]>(calendar.types);
+    const selectedHijriMonthStart = useMemo(
+        () => findHijriMonthStart(calendar.month_start),
+        [calendar.month_start],
+    );
+    const selectedHijriMonthEnd = useMemo(
+        () => findHijriMonthEnd(selectedHijriMonthStart),
+        [selectedHijriMonthStart],
+    );
     const days = useMemo(
         () => mode === 'masehi'
             ? calendarDays(calendar.visible_start, calendar.visible_end)
-            : hijriCalendarDays(calendar.month_start),
-        [calendar.visible_start, calendar.visible_end, calendar.month_start, mode],
+            : hijriCalendarDays(selectedHijriMonthStart, selectedHijriMonthEnd),
+        [calendar.visible_start, calendar.visible_end, selectedHijriMonthStart, selectedHijriMonthEnd, mode],
     );
     const filteredEvents = useMemo(
         () => events.filter((event) => enabledTypes.includes(Number(event.order_type))),
@@ -60,7 +69,7 @@ export default function Index({ calendar, events }: PageProps) {
     }, [filteredEvents]);
 
     const currentMonth = calendar.month_start.slice(0, 7);
-    const currentHijriMonth = hijriMonthKey(calendar.month_start);
+    const currentHijriMonth = hijriMonthKey(localDateKey(selectedHijriMonthStart));
     const today = localDateKey(new Date());
     const monthlyEventCount = useMemo(() => {
         return filteredEvents.filter((event) => (
@@ -70,8 +79,29 @@ export default function Index({ calendar, events }: PageProps) {
         )).length;
     }, [filteredEvents, mode, currentMonth, currentHijriMonth]);
 
-    const goToMonth = (year: number, month: number) => {
-        visitCalendar({ year, month, nextMode: mode, nextTypes: enabledTypes });
+    const goToMonth = (year: number, month: number, anchor?: string) => {
+        visitCalendar({ year, month, anchor, nextMode: mode, nextTypes: enabledTypes });
+    };
+
+    const goToPreviousMonth = () => {
+        if (mode === 'masehi') {
+            goToMonth(calendar.prev.year, calendar.prev.month);
+            return;
+        }
+
+        const previousMonthEnd = addDays(selectedHijriMonthStart, -1);
+        const previousMonthStart = findHijriMonthStart(localDateKey(previousMonthEnd));
+        goToMonth(previousMonthStart.getFullYear(), previousMonthStart.getMonth() + 1, localDateKey(previousMonthStart));
+    };
+
+    const goToNextMonth = () => {
+        if (mode === 'masehi') {
+            goToMonth(calendar.next.year, calendar.next.month);
+            return;
+        }
+
+        const nextMonthStart = addDays(selectedHijriMonthEnd, 1);
+        goToMonth(nextMonthStart.getFullYear(), nextMonthStart.getMonth() + 1, localDateKey(nextMonthStart));
     };
 
     const toggleType = (type: number) => {
@@ -92,25 +122,33 @@ export default function Index({ calendar, events }: PageProps) {
 
     const changeMode = (nextMode: CalendarMode) => {
         setMode(nextMode);
-        visitCalendar({ nextMode });
+        visitCalendar({
+            nextMode,
+            anchor: nextMode === 'hijriah' ? localDateKey(selectedHijriMonthStart) : undefined,
+        });
     };
 
     const visitCalendar = ({
         year = calendar.year,
         month = calendar.month,
+        anchor,
         nextMode = mode,
         nextTypes = enabledTypes,
     }: {
         year?: number;
         month?: number;
+        anchor?: string;
         nextMode?: CalendarMode;
         nextTypes?: number[];
     }) => {
+        const requestAnchor = anchor ?? (nextMode === 'hijriah' ? localDateKey(selectedHijriMonthStart) : undefined);
+
         router.get(route('calendar.index'), {
             year,
             month,
             mode: nextMode,
             types: nextTypes.join(','),
+            ...(requestAnchor ? { anchor: requestAnchor } : {}),
         }, {
             preserveScroll: true,
             preserveState: true,
@@ -158,7 +196,7 @@ export default function Index({ calendar, events }: PageProps) {
 
     const monthTitle = mode === 'masehi'
         ? gregorianMonthTitle(calendar.month_start)
-        : hijriMonthTitle(calendar.month_start);
+        : hijriMonthTitle(localDateKey(selectedHijriMonthStart));
 
     return (
         <AuthenticatedLayout
@@ -179,7 +217,7 @@ export default function Index({ calendar, events }: PageProps) {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => goToMonth(calendar.prev.year, calendar.prev.month)}
+                                onClick={goToPreviousMonth}
                                 className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
                             >
                                 Prev
@@ -190,7 +228,7 @@ export default function Index({ calendar, events }: PageProps) {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => goToMonth(calendar.next.year, calendar.next.month)}
+                                onClick={goToNextMonth}
                                 className="rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
                             >
                                 Next
@@ -245,7 +283,16 @@ export default function Index({ calendar, events }: PageProps) {
                             </div>
 
                             <div className="grid grid-cols-7">
-                                {days.map((day) => {
+                                {days.map((day, index) => {
+                                    if (!day) {
+                                        return (
+                                            <div
+                                                key={`empty-${index}`}
+                                                className="min-h-[132px] border-b border-r border-stone-100 bg-stone-50/70 p-2 dark:border-stone-800 dark:bg-stone-900/50"
+                                            />
+                                        );
+                                    }
+
                                     const dayEvents = eventsByDate[day] || [];
                                     const isCurrentMonth = mode === 'masehi'
                                         ? day.startsWith(currentMonth)
@@ -329,11 +376,25 @@ function calendarDays(start: string, end: string): string[] {
     return days;
 }
 
-function hijriCalendarDays(anchor: string): string[] {
-    const monthStart = findHijriMonthStart(anchor);
-    const monthEnd = findHijriMonthEnd(monthStart);
+function hijriCalendarDays(monthStart: Date, monthEnd: Date): CalendarDay[] {
+    const days: CalendarDay[] = [];
+    const leadingBlanks = (monthStart.getDay() + 6) % 7;
 
-    return calendarDays(localDateKey(startOfWeek(monthStart)), localDateKey(endOfWeek(monthEnd)));
+    for (let index = 0; index < leadingBlanks; index += 1) {
+        days.push(null);
+    }
+
+    const cursor = new Date(monthStart);
+    while (cursor <= monthEnd) {
+        days.push(localDateKey(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    while (days.length % 7 !== 0) {
+        days.push(null);
+    }
+
+    return days;
 }
 
 function findHijriMonthStart(anchor: string): Date {
@@ -377,6 +438,13 @@ function endOfWeek(date: Date): Date {
     return result;
 }
 
+function addDays(date: Date, days: number): Date {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+
+    return result;
+}
+
 function parseDate(value: string): Date {
     return new Date(`${value}T00:00:00`);
 }
@@ -402,15 +470,15 @@ function gregorianShort(date: string): string {
 }
 
 function hijriDay(date: string): string {
-    return new Intl.DateTimeFormat('id-ID-u-ca-islamic', { day: 'numeric' }).format(parseDate(date));
+    return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', { day: 'numeric' }).format(parseDate(date));
 }
 
 function hijriCompact(date: string): string {
-    return new Intl.DateTimeFormat('id-ID-u-ca-islamic', { day: 'numeric', month: 'short' }).format(parseDate(date));
+    return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', { day: 'numeric', month: 'short' }).format(parseDate(date));
 }
 
 function hijriMonthTitle(date: string): string {
-    return new Intl.DateTimeFormat('id-ID-u-ca-islamic', { month: 'long', year: 'numeric' }).format(parseDate(date));
+    return new Intl.DateTimeFormat('id-ID-u-ca-islamic-umalqura', { month: 'long', year: 'numeric' }).format(parseDate(date));
 }
 
 function hijriMonthKey(date: string): string {
@@ -420,7 +488,7 @@ function hijriMonthKey(date: string): string {
 }
 
 function hijriParts(date: string): { day: number; month: number; year: number } {
-    const parts = new Intl.DateTimeFormat('en-u-ca-islamic', {
+    const parts = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', {
         day: 'numeric',
         month: 'numeric',
         year: 'numeric',
