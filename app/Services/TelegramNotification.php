@@ -253,6 +253,7 @@ class TelegramNotification
 
         $today = Carbon::today();
         $yesterday = Carbon::yesterday();
+        $tomorrow = Carbon::tomorrow();
 
         $newClients = Event::whereBetween('created_at', [
             $yesterday->copy()->startOfDay(),
@@ -272,13 +273,24 @@ class TelegramNotification
             ->orderBy('schedule_from')
             ->get();
 
+        $pendingPayments = Payment::where('status', Payment::STATUS_PENDING)
+            ->where('is_expense', Payment::EARNING)
+            ->whereHas('event')
+            ->get();
+
         $events = Event::whereDate('date', $today)
+            ->orderBy('time')
+            ->orderBy('name')
+            ->get();
+
+        $tomorrowEvents = Event::whereDate('date', $tomorrow)
             ->orderBy('time')
             ->orderBy('name')
             ->get();
 
         $message = "<b>☀️ Rekapan Pagi Shofi Wedding</b>\n" .
             "<b>Tanggal:</b> " . $today->translatedFormat('d F Y') . "\n\n" .
+            "<b>Payment Belum Dikonfirmasi:</b> {$pendingPayments->count()} transaksi - Rp " . number_format($pendingPayments->sum('amount'), 0, ',', '.') . "\n\n" .
             "<b>Client Baru Kemarin:</b> {$newClients->count()}\n" .
             $this->formatList($newClients->map(
                 fn (Event $event) => $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
@@ -293,6 +305,10 @@ class TelegramNotification
             )->all()) . "\n\n" .
             "<b>Manten Hari Ini:</b>\n" .
             $this->formatList($events->map(
+                fn (Event $event) => ($event->time?->format('H:i') ?: '-') . ' - ' . $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
+            )->all()) . "\n\n" .
+            "<b>Manten Besok:</b>\n" .
+            $this->formatList($tomorrowEvents->map(
                 fn (Event $event) => ($event->time?->format('H:i') ?: '-') . ' - ' . $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
             )->all());
 
