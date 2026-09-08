@@ -425,6 +425,80 @@ export default function Index({ schedules, filters, events, selected_event, sele
                         </form>
                     </div>
 
+                    {/* Mobile List */}
+                    <div className="space-y-3 sm:hidden">
+                        {schedules.data.length === 0 ? (
+                            <div className="card py-12 text-center">
+                                <p className="text-stone-400">Tidak ada jadwal</p>
+                            </div>
+                        ) : schedules.data.map((s) => {
+                            const typeName = getScheduleTypeName(s);
+                            const style = getScheduleStyle(s);
+
+                            return (
+                                <div
+                                    key={s.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => openEdit(s)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            openEdit(s);
+                                        }
+                                    }}
+                                    className={`card block w-full p-4 text-left transition active:scale-[0.98] ${s.event ? '' : 'border-orange-200 bg-orange-50 dark:border-orange-900/60 dark:bg-orange-950/20'}`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${style.iconClass}`}>
+                                            {style.icon}
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {s.event ? (
+                                                    <Link
+                                                        href={route('events.show', s.event.uuid)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="min-w-0 truncate text-base font-semibold text-rose-500 hover:underline"
+                                                    >
+                                                        {s.client_name}
+                                                    </Link>
+                                                ) : (
+                                                    <p className="min-w-0 truncate text-base font-semibold text-orange-800 dark:text-orange-200">{s.client_name}</p>
+                                                )}
+                                                <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${style.badgeClass}`}>
+                                                    {typeName}
+                                                </span>
+                                                <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${getClientStatusStyle(s)}`}>
+                                                    {s.client_status_name}
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-sm font-medium text-stone-700 dark:text-stone-200">
+                                                {formatScheduleDateTime(s.schedule_from)}
+                                            </p>
+                                            <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">{s.client_phone || '-'}</p>
+                                            {s.description && (
+                                                <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-sm text-stone-600 dark:bg-stone-900/70 dark:text-stone-300">
+                                                    {s.description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {schedules.links.length > 3 && (
+                            <div className="flex flex-wrap justify-center gap-1 pt-2">
+                                {schedules.links.map((link, i) => link.url ? (
+                                    <Link key={i} href={link.url} className={`rounded px-3 py-1 text-sm ${link.active ? 'bg-rose-400 text-white' : 'bg-white text-stone-600 dark:bg-stone-800 dark:text-stone-300'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
+                                ) : (
+                                    <span key={i} className="rounded px-3 py-1 text-sm bg-stone-100 text-stone-400 dark:bg-stone-900" dangerouslySetInnerHTML={{ __html: link.label }} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     {/* Table */}
                     <div className="hidden card overflow-hidden sm:block">
                         <div className="p-6">
