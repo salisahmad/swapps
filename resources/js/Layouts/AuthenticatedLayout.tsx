@@ -66,6 +66,7 @@ export default function Authenticated({
     const canManageEmployees = user.role === 1 || user.role === 2;
     const isLimitedStaff = user.role === 3 || user.role === 4;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+    const [showingMobileNotifications, setShowingMobileNotifications] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const pendingPaymentCount = paymentBadges?.pending ?? 0;
     const formatBadgeCount = (count: number) => count > 99 ? '99+' : String(count);
@@ -110,6 +111,14 @@ export default function Authenticated({
         document.documentElement.classList.toggle('dark', nextIsDark);
         localStorage.setItem('theme', nextIsDark ? 'dark' : 'light');
         setIsDarkMode(nextIsDark);
+    };
+    const toggleMobileNotifications = () => {
+        setShowingMobileNotifications((value) => !value);
+        setShowingNavigationDropdown(false);
+    };
+    const toggleMobileMenu = () => {
+        setShowingNavigationDropdown((value) => !value);
+        setShowingMobileNotifications(false);
     };
 
     return (
@@ -267,21 +276,95 @@ export default function Authenticated({
                             </Dropdown>
                         </div>
 
-                        {/* Mobile Hamburger */}
-                        <button
-                            onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
-                            className="rounded-lg p-2 text-stone-600 transition hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800 sm:hidden"
-                        >
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                {showingNavigationDropdown ? (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                                ) : (
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
+                        <div className="flex items-center gap-1 sm:hidden">
+                            <button
+                                type="button"
+                                onClick={toggleMobileNotifications}
+                                className="relative rounded-lg p-2 text-stone-600 transition hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800"
+                                title="Notifikasi"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+                                {notifications.count > 0 && (
+                                    <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                        {formatBadgeCount(notifications.count)}
+                                    </span>
                                 )}
-                            </svg>
-                        </button>
+                            </button>
+                            <button
+                                onClick={toggleMobileMenu}
+                                className="rounded-lg p-2 text-stone-600 transition hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-stone-800"
+                            >
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    {showingNavigationDropdown ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
+                                    )}
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                {showingMobileNotifications && (
+                    <div className="border-t border-stone-100 bg-white dark:border-stone-800 dark:bg-stone-950 sm:hidden">
+                        <div className="border-b border-stone-100 px-4 py-3 dark:border-stone-800">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Notifikasi</p>
+                                    <p className="text-xs text-stone-500 dark:text-stone-400">{notifications.count} belum dibaca</p>
+                                </div>
+                                {notifications.count > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={markAllNotificationsRead}
+                                        className="rounded px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                    >
+                                        Tandai dibaca
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        {notifications.items.length === 0 ? (
+                            <div className="px-4 py-5 text-center text-sm text-stone-500 dark:text-stone-400">
+                                Belum ada notifikasi.
+                            </div>
+                        ) : (
+                            <div className="max-h-[70vh] overflow-y-auto py-1">
+                                {notifications.items.map((item) => (
+                                    <Link
+                                        key={item.id}
+                                        href={route('events.show', item.event.uuid)}
+                                        onClick={(e) => {
+                                            setShowingMobileNotifications(false);
+                                            if (!item.read) {
+                                                e.preventDefault();
+                                                markNotificationRead(item.key, route('events.show', item.event.uuid));
+                                            }
+                                        }}
+                                        className={`block border-b border-stone-50 px-4 py-3 transition hover:bg-stone-50 dark:border-stone-800 dark:hover:bg-stone-800 ${item.read ? 'bg-white dark:bg-stone-950' : 'bg-rose-50/60 dark:bg-rose-950/20'}`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex min-w-0 gap-2">
+                                                {!item.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-rose-500" />}
+                                                <div className="min-w-0">
+                                                    <p className={`truncate text-sm font-semibold ${item.read ? 'text-stone-700 dark:text-stone-200' : 'text-stone-900 dark:text-white'}`}>{item.event.name}</p>
+                                                    <p className="text-xs text-stone-500 dark:text-stone-400">{item.message}</p>
+                                                    <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
+                                                        {item.user ? `Oleh: ${item.user.name} · ` : ''}{formatShortDateTime(item.created_at)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className={`shrink-0 rounded px-2 py-1 text-[10px] font-semibold ${notificationBadgeClass(item.type)}`}>
+                                                {item.label}
+                                            </span>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Mobile Menu Drawer */}
                 {showingNavigationDropdown && (
@@ -334,14 +417,6 @@ export default function Authenticated({
                                 <>
                                     <ResponsiveNavLink href={route('reports.index')} active={route().current('reports.*')}>
                                         📈 Laporan
-                                    </ResponsiveNavLink>
-                                    <ResponsiveNavLink href={
-                                        notifications.items[0]
-                                            ? route('events.show', notifications.items[0].event.uuid)
-                                            : route('events.index')
-                                    }>
-                                        🔔 Notifikasi
-                                        {notifications.count > 0 && ` (${notifications.count})`}
                                     </ResponsiveNavLink>
                                     <ResponsiveNavLink href={route('telegram.settings')}>
                                         ⚙️ Telegram Settings
