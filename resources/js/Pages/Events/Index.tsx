@@ -17,6 +17,7 @@ interface EventItem {
     paid_status_name: string | null;
     paid_status_tone: string | null;
     order_type_name: string;
+    has_berita_acara: boolean | number;
     created_at: string;
 }
 
@@ -108,6 +109,14 @@ export default function Index({ events, filters, authUser }: PageProps) {
         if (tone === 'paid') return 'badge-green';
         return 'badge-yellow';
     };
+    const beritaAcaraStatusClass = (hasBeritaAcara: boolean | number) => (
+        Number(hasBeritaAcara) === 1
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200'
+            : 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200'
+    );
+    const beritaAcaraStatusLabel = (hasBeritaAcara: boolean | number) => (
+        Number(hasBeritaAcara) === 1 ? '✓ BA' : '× BA'
+    );
     const previousPage = events.links[0];
     const nextPage = events.links[events.links.length - 1];
     const paginatorPageLinks = events.links.slice(1, -1);
@@ -264,9 +273,14 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                 )}
                             </div>
                             <div className="mt-3 flex items-center justify-between">
-                                <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
-                                    {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
-                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
+                                        {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
+                                    </span>
+                                    <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${beritaAcaraStatusClass(event.has_berita_acara)}`}>
+                                        {beritaAcaraStatusLabel(event.has_berita_acara)}
+                                    </span>
+                                </div>
                                 {!authUser.is_limited_staff && (
                                     <p className="text-lg font-bold text-rose-500">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</p>
                                 )}
@@ -292,11 +306,9 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Telepon</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-stone-400">Jenis</th>
                                     {!authUser.is_limited_staff && (
-                                        <>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Total</th>
-                                            <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
-                                        </>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-stone-400">Total</th>
                                     )}
+                                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-stone-400">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-stone-100">
@@ -317,20 +329,25 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                             </span>
                                         </td>
                                         {!authUser.is_limited_staff && (
-                                            <>
-                                                <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</td>
-                                                <td className="px-4 py-3 text-center">
+                                            <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</td>
+                                        )}
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-wrap justify-center gap-1.5">
+                                                {!authUser.is_limited_staff && (
                                                     <span className={`badge ${paidStatusClass(event.paid_status_tone)}`}>
                                                         {event.paid_status_name === 'BELUM LUNAS' ? 'BELUM' : event.paid_status_name}
                                                     </span>
-                                                </td>
-                                            </>
-                                        )}
+                                                )}
+                                                <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${beritaAcaraStatusClass(event.has_berita_acara)}`}>
+                                                    {beritaAcaraStatusLabel(event.has_berita_acara)}
+                                                </span>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                                 {events.data.length === 0 && (
                                     <tr>
-                                        <td colSpan={authUser.is_limited_staff ? 4 : 6} className="px-4 py-12 text-center text-stone-400">
+                                        <td colSpan={authUser.is_limited_staff ? 5 : 6} className="px-4 py-12 text-center text-stone-400">
                                             📭 Tidak ada client
                                         </td>
                                     </tr>

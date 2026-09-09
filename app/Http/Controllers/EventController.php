@@ -22,7 +22,12 @@ class EventController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Event::with('additionalCosts');
+        $query = Event::with('additionalCosts')
+            ->withExists([
+                'dynamicForms as has_berita_acara' => fn ($q) => $q
+                    ->whereNotNull('field_value')
+                    ->where('field_value', '!=', ''),
+            ]);
 
         // Search
         if ($request->filled('q')) {
