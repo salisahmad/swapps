@@ -492,6 +492,9 @@ export default function Show({ event, authUser }: PageProps) {
                                 <Link href={route('dynamic-forms.show', event.uuid)} className="btn-primary text-sm py-2 px-3">
                                     📝 Berita Acara
                                 </Link>
+                                <Link href={route('public.clients.show', event.uuid)} className="btn-secondary text-sm py-2 px-3">
+                                    Link Client
+                                </Link>
                                 <Link href={route('events.edit', event.uuid)} className="btn-secondary text-sm py-2 px-3">
                                     Edit
                                 </Link>

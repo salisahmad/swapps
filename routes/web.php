@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ClientHistoryController;
+use App\Http\Controllers\ClientPortalController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DynamicFormController;
 use App\Http\Controllers\EventController;
@@ -60,6 +61,10 @@ Route::get('/', function () {
 
 Route::get('/sw-admin/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::get('/client/{event}', [ClientPortalController::class, 'show'])
+    ->whereUuid('event')
+    ->name('public.clients.show');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
