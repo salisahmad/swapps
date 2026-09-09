@@ -283,8 +283,8 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                         {beritaAcaraStatusLabel(event.has_berita_acara)}
                                     </span>
                                     {hasPhotos(event.has_photos) && (
-                                        <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200">
-                                            📷 Foto
+                                        <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200" title="Sudah ada foto" aria-label="Sudah ada foto">
+                                            📷
                                         </span>
                                     )}
                                 </div>
@@ -349,8 +349,8 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                                     {beritaAcaraStatusLabel(event.has_berita_acara)}
                                                 </span>
                                                 {hasPhotos(event.has_photos) && (
-                                                    <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200">
-                                                        📷 Foto
+                                                    <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200" title="Sudah ada foto" aria-label="Sudah ada foto">
+                                                        📷
                                                     </span>
                                                 )}
                                             </div>
