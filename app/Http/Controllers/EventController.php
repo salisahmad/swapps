@@ -27,6 +27,7 @@ class EventController extends Controller
                 'dynamicForms as has_berita_acara' => fn ($q) => $q
                     ->whereNotNull('field_value')
                     ->where('field_value', '!=', ''),
+                'photos as has_photos',
             ]);
 
         // Search

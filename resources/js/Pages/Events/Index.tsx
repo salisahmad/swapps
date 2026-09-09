@@ -18,6 +18,7 @@ interface EventItem {
     paid_status_tone: string | null;
     order_type_name: string;
     has_berita_acara: boolean | number;
+    has_photos: boolean | number;
     created_at: string;
 }
 
@@ -117,6 +118,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
     const beritaAcaraStatusLabel = (hasBeritaAcara: boolean | number) => (
         Number(hasBeritaAcara) === 1 ? '✓ BA' : '× BA'
     );
+    const hasPhotos = (value: boolean | number) => Number(value) === 1;
     const previousPage = events.links[0];
     const nextPage = events.links[events.links.length - 1];
     const paginatorPageLinks = events.links.slice(1, -1);
@@ -280,6 +282,11 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                     <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${beritaAcaraStatusClass(event.has_berita_acara)}`}>
                                         {beritaAcaraStatusLabel(event.has_berita_acara)}
                                     </span>
+                                    {hasPhotos(event.has_photos) && (
+                                        <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200">
+                                            📷 Foto
+                                        </span>
+                                    )}
                                 </div>
                                 {!authUser.is_limited_staff && (
                                     <p className="text-lg font-bold text-rose-500">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</p>
@@ -341,6 +348,11 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                                 <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${beritaAcaraStatusClass(event.has_berita_acara)}`}>
                                                     {beritaAcaraStatusLabel(event.has_berita_acara)}
                                                 </span>
+                                                {hasPhotos(event.has_photos) && (
+                                                    <span className="inline-flex items-center rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200">
+                                                        📷 Foto
+                                                    </span>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
