@@ -54,6 +54,7 @@ export default function Show({ client }: PageProps) {
     }, 0);
 
     const totalPrice = client.bookings.reduce((sum, b) => sum + parseFloat(b.total_price), 0);
+    const remaining = Math.max(0, totalPrice - paidTotal);
 
     return (
         <AuthenticatedLayout
@@ -75,7 +76,7 @@ export default function Show({ client }: PageProps) {
 
             <div className="py-12">
                 <div className="mx-auto max-w-4xl sm:px-6 lg:px-8">
-                    <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
+                    <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-4">
                         <div className="bg-white p-4 shadow-sm dark:bg-stone-900 sm:rounded-lg">
                             <p className="text-sm text-stone-500">Total Booking</p>
                             <p className="text-2xl font-bold text-stone-900 dark:text-white">{client.bookings.length}</p>
@@ -90,6 +91,12 @@ export default function Show({ client }: PageProps) {
                             <p className="text-sm text-stone-500">Total Dibayar</p>
                             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                                 Rp {paidTotal.toLocaleString('id-ID')}
+                            </p>
+                        </div>
+                        <div className="bg-white p-4 shadow-sm dark:bg-stone-900 sm:rounded-lg">
+                            <p className="text-sm text-stone-500">Sisa Kekurangan</p>
+                            <p className={`text-2xl font-bold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                Rp {remaining.toLocaleString('id-ID')}
                             </p>
                         </div>
                     </div>
