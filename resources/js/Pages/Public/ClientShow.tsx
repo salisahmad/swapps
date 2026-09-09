@@ -268,7 +268,6 @@ export default function ClientShow({ event }: PageProps) {
                                                     <div>
                                                         <p className="text-sm font-semibold text-stone-900">{formatShortDate(payment.payment_at)}</p>
                                                         <p className="text-xs text-stone-500">{payment.payment_type_name}</p>
-                                                        {payment.description && <p className="mt-1 text-xs text-stone-500">{payment.description}</p>}
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="font-bold text-emerald-600">{formatRupiah(payment.amount)}</p>
