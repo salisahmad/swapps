@@ -522,9 +522,9 @@ export default function Show({ event, authUser }: PageProps) {
                         <p className="text-xs text-stone-400">Dibayar</p>
                         <p className="text-lg font-bold text-emerald-600">{formatRupiah(totalPaid)}</p>
                     </div>
-                    <div className="stat-card border-l-4 border-amber-300">
+                    <div className={`stat-card border-l-4 ${remaining > 0 ? 'border-red-300' : 'border-emerald-300'}`}>
                         <p className="text-xs text-stone-400">Sisa</p>
-                        <p className="text-lg font-bold text-amber-600">{formatRupiah(remaining)}</p>
+                        <p className={`text-lg font-bold ${remaining > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatRupiah(remaining)}</p>
                     </div>
                     <div className="stat-card border-l-4 border-red-300">
                         <p className="text-xs text-stone-400">Biaya</p>

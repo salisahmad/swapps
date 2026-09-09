@@ -249,7 +249,7 @@ export default function ClientShow({ event }: PageProps) {
                                 <div className="my-3 border-t border-stone-100" />
                                 <PriceRow label="Grand Total" value={formatRupiah(event.grand_total)} strong />
                                 <PriceRow label="Sudah Dibayar" value={formatRupiah(paidTotal)} valueClassName="text-emerald-600" />
-                                <PriceRow label="Sisa" value={formatRupiah(remaining)} valueClassName={remaining > 0 ? 'text-amber-600' : 'text-emerald-600'} strong />
+                                <PriceRow label="Sisa" value={formatRupiah(remaining)} valueClassName={remaining > 0 ? 'text-red-600' : 'text-emerald-600'} strong />
                                 {pendingPayments.length > 0 && (
                                     <p className="mt-3 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-700">
                                         Ada {pendingPayments.length} pembayaran yang masih menunggu konfirmasi.
