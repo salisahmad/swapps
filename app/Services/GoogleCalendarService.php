@@ -215,6 +215,15 @@ class GoogleCalendarService
         ]);
 
         if (! $response->successful()) {
+            if ($response->json('error') === 'invalid_grant') {
+                $settings->update([
+                    'access_token' => null,
+                    'refresh_token' => null,
+                    'token_expires_at' => null,
+                    'connected_email' => null,
+                ]);
+            }
+
             return null;
         }
 
