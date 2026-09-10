@@ -185,7 +185,8 @@ export default function ClientShow({ event }: PageProps) {
                                         {filledForms.map((field) => (
                                             <div key={field.id} className="grid gap-1 py-3 print:py-1 sm:grid-cols-[180px_1fr] print:sm:grid-cols-[130px_1fr]">
                                                 <p className="text-xs font-semibold uppercase text-stone-400 print:text-[10px]">{field.field_label}</p>
-                                                <p className="whitespace-pre-wrap text-sm leading-6 text-stone-800 print:text-[11px] print:leading-tight">{field.field_value}</p>
+                                                <p className="whitespace-pre-wrap text-sm leading-6 text-stone-800 print:hidden">{field.field_value}</p>
+                                                <p className="hidden whitespace-pre-wrap text-stone-800 print:block print:text-[11px] print:leading-tight">{compactBlankLines(field.field_value)}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -387,4 +388,11 @@ function normalizeWhatsapp(phone: string): string {
     }
 
     return digits;
+}
+
+function compactBlankLines(value?: string | null): string {
+    return (value || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
 }
