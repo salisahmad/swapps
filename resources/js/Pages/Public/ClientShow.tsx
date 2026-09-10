@@ -175,7 +175,7 @@ export default function ClientShow({ event }: PageProps) {
                                 {event.package_description && <TextBlock label="Deskripsi Paket" value={event.package_description} />}
                             </InfoSection>
 
-                            <InfoSection title="Berita Acara">
+                            <InfoSection title="Berita Acara" allowPrintBreak>
                                 {filledForms.length === 0 ? (
                                     <p className="rounded-xl bg-stone-50 px-4 py-5 text-center text-sm text-stone-500">
                                         Belum ada data berita acara yang diisi.
@@ -303,9 +303,19 @@ export default function ClientShow({ event }: PageProps) {
     );
 }
 
-function InfoSection({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+function InfoSection({
+    title,
+    children,
+    className = '',
+    allowPrintBreak = false,
+}: {
+    title: string;
+    children: React.ReactNode;
+    className?: string;
+    allowPrintBreak?: boolean;
+}) {
     return (
-        <section className={`rounded-2xl border border-stone-100 bg-white p-4 shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:p-1 print:shadow-none ${className}`}>
+        <section className={`rounded-2xl border border-stone-100 bg-white p-4 shadow-sm print:rounded-none print:border-0 print:p-1 print:shadow-none ${allowPrintBreak ? '' : 'print:break-inside-avoid'} ${className}`}>
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-stone-500 print:mb-1 print:text-[11px]">{title}</h2>
             {children}
         </section>
