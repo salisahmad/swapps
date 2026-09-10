@@ -113,7 +113,7 @@ export default function ClientShow({ event }: PageProps) {
             : 'border-amber-200 bg-amber-50 text-amber-700';
 
     return (
-        <div className="min-h-screen bg-[#faf9f7] text-stone-800 print:bg-white">
+        <div className="min-h-screen bg-[#faf9f7] text-stone-800 print:bg-white print:text-[11px] print:leading-tight">
             <Head title={`Detail Client - ${event.name}`} />
 
             <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8 print:max-w-none print:px-0 print:py-0">
@@ -129,7 +129,7 @@ export default function ClientShow({ event }: PageProps) {
                 </div>
 
                 <section className="overflow-hidden rounded-2xl border border-stone-100 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-                    <div className="border-b border-stone-100 bg-gradient-to-r from-rose-50 to-violet-50 px-5 py-6 print:bg-white">
+                    <div className="border-b border-stone-100 bg-gradient-to-r from-rose-50 to-violet-50 px-5 py-6 print:hidden">
                         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <p className="text-sm font-semibold uppercase tracking-wide text-rose-500">Shofi Wedding</p>
@@ -154,8 +154,8 @@ export default function ClientShow({ event }: PageProps) {
                         </div>
                     </div>
 
-                    <div className="grid gap-4 p-5 lg:grid-cols-[1.25fr_0.75fr] print:block">
-                        <div className="space-y-4">
+                    <div className="grid gap-4 p-5 lg:grid-cols-[1.25fr_0.75fr] print:block print:p-0">
+                        <div className="space-y-4 print:space-y-2">
                             <InfoSection title="Detail Client">
                                 <InfoGrid>
                                     <InfoItem label="Nama" value={event.name} />
@@ -183,9 +183,9 @@ export default function ClientShow({ event }: PageProps) {
                                 ) : (
                                     <div className="divide-y divide-stone-100">
                                         {filledForms.map((field) => (
-                                            <div key={field.id} className="grid gap-1 py-3 sm:grid-cols-[180px_1fr]">
-                                                <p className="text-xs font-semibold uppercase text-stone-400">{field.field_label}</p>
-                                                <p className="whitespace-pre-wrap text-sm leading-6 text-stone-800">{field.field_value}</p>
+                                            <div key={field.id} className="grid gap-1 py-3 print:py-1 sm:grid-cols-[180px_1fr] print:sm:grid-cols-[130px_1fr]">
+                                                <p className="text-xs font-semibold uppercase text-stone-400 print:text-[10px]">{field.field_label}</p>
+                                                <p className="whitespace-pre-wrap text-sm leading-6 text-stone-800 print:text-[11px] print:leading-tight">{field.field_value}</p>
                                             </div>
                                         ))}
                                     </div>
@@ -193,7 +193,7 @@ export default function ClientShow({ event }: PageProps) {
                             </InfoSection>
 
                             {event.items.length > 0 && (
-                                <InfoSection title="Item / Gaun">
+                                <InfoSection title="Item / Gaun" className="print:hidden">
                                     <div className="grid gap-3 sm:grid-cols-2">
                                         {event.items.map((item) => (
                                             <div key={item.id} className="flex gap-3 rounded-xl border border-stone-100 bg-stone-50 p-3">
@@ -213,7 +213,7 @@ export default function ClientShow({ event }: PageProps) {
                             )}
 
                             {event.schedules.length > 0 && (
-                                <InfoSection title="Jadwal Fitting / Konsultasi">
+                                <InfoSection title="Jadwal Fitting / Konsultasi" className="print:hidden">
                                     <div className="space-y-2">
                                         {event.schedules.map((schedule) => (
                                             <div key={schedule.id} className="rounded-xl border border-stone-100 bg-stone-50 p-3">
@@ -229,8 +229,8 @@ export default function ClientShow({ event }: PageProps) {
                             )}
                         </div>
 
-                        <aside className="space-y-4 print:mt-4">
-                            <InfoSection title="Ringkasan Harga">
+                        <aside className="space-y-4 print:mt-2 print:space-y-2">
+                            <InfoSection title="Ringkasan Harga" className="print:hidden">
                                 <PriceRow label="Total Harga" value={formatRupiah(event.total_amount)} />
                                 <PriceRow label="Biaya Tambahan" value={formatRupiah(event.additional_cost_total)} />
                                 {event.additional_costs.length > 0 && (
@@ -263,7 +263,7 @@ export default function ClientShow({ event }: PageProps) {
                                 )}
                             </InfoSection>
 
-                            <InfoSection title="Riwayat Pembayaran">
+                            <InfoSection title="Riwayat Pembayaran" className="print:hidden">
                                 {event.payments.filter((payment) => payment.is_expense === 0).length === 0 ? (
                                     <p className="text-sm text-stone-500">Belum ada pembayaran tercatat.</p>
                                 ) : (
@@ -288,9 +288,9 @@ export default function ClientShow({ event }: PageProps) {
 
                             {event.photos.length > 0 && (
                                 <InfoSection title="Foto">
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-2 gap-2 print:grid-cols-3 print:gap-1.5">
                                         {event.photos.slice(0, 6).map((photo) => (
-                                            <img key={photo.id} src={photo.url} alt={photo.original_name || event.name} className="aspect-[4/5] rounded-xl object-cover" />
+                                            <img key={photo.id} src={photo.url} alt={photo.original_name || event.name} className="aspect-[4/5] rounded-xl object-cover print:rounded-md" />
                                         ))}
                                     </div>
                                 </InfoSection>
@@ -303,33 +303,33 @@ export default function ClientShow({ event }: PageProps) {
     );
 }
 
-function InfoSection({ title, children }: { title: string; children: React.ReactNode }) {
+function InfoSection({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
     return (
-        <section className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm print:break-inside-avoid print:rounded-none print:shadow-none">
-            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-stone-500">{title}</h2>
+        <section className={`rounded-2xl border border-stone-100 bg-white p-4 shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:p-1 print:shadow-none ${className}`}>
+            <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-stone-500 print:mb-1 print:text-[11px]">{title}</h2>
             {children}
         </section>
     );
 }
 
 function InfoGrid({ children }: { children: React.ReactNode }) {
-    return <div className="grid gap-3 sm:grid-cols-2">{children}</div>;
+    return <div className="grid gap-3 print:gap-1 sm:grid-cols-2">{children}</div>;
 }
 
 function InfoItem({ label, value }: { label: string; value: string | null }) {
     return (
         <div>
-            <p className="text-xs font-semibold uppercase text-stone-400">{label}</p>
-            <p className="mt-1 text-sm font-semibold text-stone-800">{value || '-'}</p>
+            <p className="text-xs font-semibold uppercase text-stone-400 print:text-[10px]">{label}</p>
+            <p className="mt-1 text-sm font-semibold text-stone-800 print:mt-0 print:text-[11px] print:leading-tight">{value || '-'}</p>
         </div>
     );
 }
 
 function TextBlock({ label, value }: { label: string; value: string }) {
     return (
-        <div className="mt-4">
-            <p className="text-xs font-semibold uppercase text-stone-400">{label}</p>
-            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-700">{value}</p>
+        <div className="mt-4 print:mt-1">
+            <p className="text-xs font-semibold uppercase text-stone-400 print:text-[10px]">{label}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-stone-700 print:mt-0 print:text-[11px] print:leading-tight">{value}</p>
         </div>
     );
 }
