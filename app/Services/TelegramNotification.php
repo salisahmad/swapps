@@ -278,6 +278,26 @@ class TelegramNotification
             ->whereHas('event')
             ->get();
 
+        $pendingCalendarSync = Event::query()
+            ->whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
+            ->whereNull('deleted_at')
+            ->where('google_sync_status', Event::GOOGLE_SYNC_PENDING)
+            ->count()
+            + Schedule::query()
+                ->whereNull('deleted_at')
+                ->where('google_sync_status', Schedule::GOOGLE_SYNC_PENDING)
+                ->count();
+
+        $failedCalendarSync = Event::query()
+            ->whereIn('order_type', [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN])
+            ->whereNull('deleted_at')
+            ->where('google_sync_status', Event::GOOGLE_SYNC_FAILED)
+            ->count()
+            + Schedule::query()
+                ->whereNull('deleted_at')
+                ->where('google_sync_status', Schedule::GOOGLE_SYNC_FAILED)
+                ->count();
+
         $events = Event::whereDate('date', $today)
             ->orderBy('time')
             ->orderBy('name')
@@ -291,6 +311,7 @@ class TelegramNotification
         $message = "<b>☀️ Rekapan Pagi Shofi Wedding</b>\n" .
             "<b>Tanggal:</b> " . $today->translatedFormat('d F Y') . "\n\n" .
             "<b>Payment Belum Dikonfirmasi:</b> {$pendingPayments->count()} transaksi - Rp " . number_format($pendingPayments->sum('amount'), 0, ',', '.') . "\n\n" .
+            "<b>Google Calendar Sync:</b> {$pendingCalendarSync} pending, {$failedCalendarSync} gagal\n\n" .
             "<b>Client Baru Kemarin:</b> {$newClients->count()}\n" .
             $this->formatList($newClients->map(
                 fn (Event $event) => $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
@@ -311,6 +332,20 @@ class TelegramNotification
             $this->formatList($tomorrowEvents->map(
                 fn (Event $event) => ($event->time?->format('H:i') ?: '-') . ' - ' . $this->escape($event->name) . ' - ' . $this->escape($event->order_type_name)
             )->all());
+
+        return $this->sendMessage($message);
+    }
+
+    public function notifyGoogleCalendarSyncFailed(Event $event, string $action = 'sync'): bool
+    {
+        $message = "<b>⚠️ Google Calendar Sync Gagal</b>\n\n" .
+            "<b>Client:</b> " . $this->escape($event->name) . "\n" .
+            "<b>Jenis:</b> " . $this->escape($event->order_type_name) . "\n" .
+            "<b>Tanggal:</b> " . ($event->date?->translatedFormat('d M Y') ?: '-') . "\n" .
+            "<b>Aksi:</b> " . $this->escape($action) . "\n" .
+            "<b>Percobaan:</b> {$event->google_sync_attempts}x\n" .
+            "<b>Error:</b> " . $this->escape($event->google_sync_error ?: '-') . "\n\n" .
+            "🔗 <a href=\"" . route('google-calendar.sync.index', ['status' => Event::GOOGLE_SYNC_FAILED]) . "\">Buka Halaman Sync</a>";
 
         return $this->sendMessage($message);
     }

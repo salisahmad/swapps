@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Event;
 use App\Models\Schedule;
 use App\Services\GoogleCalendarService;
+use App\Services\TelegramNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -98,6 +99,10 @@ class GoogleCalendarSyncJob implements ShouldQueue
             'google_sync_attempts' => max($model->google_sync_attempts, $this->attempts()),
             'google_sync_error' => $exception ? $this->shortError($exception) : 'Google Calendar sync gagal.',
         ])->saveQuietly();
+
+        if ($model instanceof Event) {
+            app(TelegramNotification::class)->notifyGoogleCalendarSyncFailed($model, $this->action);
+        }
     }
 
     private function model(): Event|Schedule|null
