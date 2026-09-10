@@ -391,21 +391,19 @@ function normalizeWhatsapp(phone: string): string {
 }
 
 function compactBlankLines(value?: string | null): string {
-    return (value || '')
+    const lines = (value || '')
         .replace(/\r\n?/g, '\n')
         .split('\n')
-        .map((line) => line.trimEnd())
-        .filter((line, index, lines) => {
-            if (line.trim() !== '') {
-                return true;
-            }
+        .map((line) => line.trim());
+    const compacted: string[] = [];
 
-            const previous = lines[index - 1]?.trim() || '';
-            const next = lines[index + 1]?.trim() || '';
+    for (const line of lines) {
+        if (line === '' && compacted[compacted.length - 1] === '') {
+            continue;
+        }
 
-            return previous !== '' && next !== '';
-        })
-        .join('\n')
-        .replace(/\n{2,}/g, '\n')
-        .trim();
+        compacted.push(line);
+    }
+
+    return compacted.join('\n').trim();
 }
