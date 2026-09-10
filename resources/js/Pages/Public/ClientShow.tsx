@@ -158,10 +158,10 @@ export default function ClientShow({ event }: PageProps) {
                         <div className="space-y-4 print:space-y-2">
                             <InfoSection title="Detail Client">
                                 <InfoGrid>
-                                    <InfoItem label="Nama" value={event.name} />
+                                    <InfoItem label="Nama" value={event.name} prominentPrint />
                                     <InfoItem label="Nomor WhatsApp" value={event.mobile_phone} />
                                     <InfoItem label="Jenis" value={event.order_type_name} />
-                                    <InfoItem label="Tanggal Acara" value={`${formatShortDate(event.date)}${event.time ? ` / ${event.time}` : ''}`} />
+                                    <InfoItem label="Tanggal Acara" value={`${formatShortDate(event.date)}${event.time ? ` / ${event.time}` : ''}`} prominentPrint />
                                 </InfoGrid>
                                 {event.address && <TextBlock label="Alamat" value={event.address} />}
                                 {event.location && (
@@ -327,11 +327,11 @@ function InfoGrid({ children }: { children: React.ReactNode }) {
     return <div className="grid gap-3 print:gap-1 sm:grid-cols-2">{children}</div>;
 }
 
-function InfoItem({ label, value }: { label: string; value: string | null }) {
+function InfoItem({ label, value, prominentPrint = false }: { label: string; value: string | null; prominentPrint?: boolean }) {
     return (
         <div>
-            <p className="text-xs font-semibold uppercase text-stone-400 print:text-[10px]">{label}</p>
-            <p className="mt-1 text-sm font-semibold text-stone-800 print:mt-0 print:text-[11px] print:leading-tight">{value || '-'}</p>
+            <p className={`text-xs font-semibold uppercase text-stone-400 ${prominentPrint ? 'print:text-[11px]' : 'print:text-[10px]'}`}>{label}</p>
+            <p className={`mt-1 font-semibold text-stone-800 print:mt-0 print:leading-tight ${prominentPrint ? 'text-sm print:text-[15px] print:font-bold' : 'text-sm print:text-[11px]'}`}>{value || '-'}</p>
         </div>
     );
 }
@@ -392,7 +392,20 @@ function normalizeWhatsapp(phone: string): string {
 
 function compactBlankLines(value?: string | null): string {
     return (value || '')
-        .replace(/\r\n/g, '\n')
-        .replace(/\n{3,}/g, '\n\n')
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line, index, lines) => {
+            if (line.trim() !== '') {
+                return true;
+            }
+
+            const previous = lines[index - 1]?.trim() || '';
+            const next = lines[index + 1]?.trim() || '';
+
+            return previous !== '' && next !== '';
+        })
+        .join('\n')
+        .replace(/\n{2,}/g, '\n')
         .trim();
 }
