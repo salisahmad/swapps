@@ -24,9 +24,18 @@ interface EventItem {
     order_type_name: string;
 }
 
+interface HolidayItem {
+    id: number;
+    name: string;
+    start_date: string;
+    end_date: string;
+    description: string | null;
+}
+
 interface PageProps {
     calendar: CalendarMeta;
     events: EventItem[];
+    holidays: HolidayItem[];
 }
 
 type CalendarMode = 'masehi' | 'hijriah';
@@ -38,7 +47,7 @@ const orderFilters = [
     { id: 2, label: 'Sewa Gaun', className: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-200' },
 ];
 
-export default function Index({ calendar, events }: PageProps) {
+export default function Index({ calendar, events, holidays }: PageProps) {
     const [mode, setMode] = useState<CalendarMode>(calendar.mode);
     const [enabledTypes, setEnabledTypes] = useState<number[]>(calendar.types);
     const selectedHijriMonthStart = useMemo(
@@ -67,6 +76,22 @@ export default function Index({ calendar, events }: PageProps) {
             return carry;
         }, {});
     }, [filteredEvents]);
+    const holidaysByDate = useMemo(() => {
+        return holidays.reduce<Record<string, HolidayItem[]>>((carry, holiday) => {
+            const start = parseDate(holiday.start_date);
+            const end = parseDate(holiday.end_date);
+            const cursor = new Date(start);
+
+            while (cursor <= end) {
+                const key = localDateKey(cursor);
+                carry[key] = carry[key] || [];
+                carry[key].push(holiday);
+                cursor.setDate(cursor.getDate() + 1);
+            }
+
+            return carry;
+        }, {});
+    }, [holidays]);
 
     const currentMonth = calendar.month_start.slice(0, 7);
     const currentHijriMonth = hijriMonthKey(localDateKey(selectedHijriMonthStart));
@@ -294,6 +319,7 @@ export default function Index({ calendar, events }: PageProps) {
                                     }
 
                                     const dayEvents = eventsByDate[day] || [];
+                                    const dayHolidays = holidaysByDate[day] || [];
                                     const isCurrentMonth = mode === 'masehi'
                                         ? day.startsWith(currentMonth)
                                         : hijriMonthKey(day) === currentHijriMonth;
@@ -331,6 +357,16 @@ export default function Index({ calendar, events }: PageProps) {
                                             </div>
 
                                             <div className="mt-2 space-y-1.5">
+                                                {dayHolidays.map((holiday) => (
+                                                    <div
+                                                        key={`holiday-${holiday.id}`}
+                                                        title={holiday.description || holiday.name}
+                                                        className="block rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-xs font-bold leading-4 text-red-800 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-100"
+                                                    >
+                                                        <span className="block truncate">{holiday.name}</span>
+                                                        <span className="text-[10px] font-semibold opacity-75">Libur Manten</span>
+                                                    </div>
+                                                ))}
                                                 {dayEvents.slice(0, 4).map((event) => (
                                                     <Link
                                                         key={event.id}

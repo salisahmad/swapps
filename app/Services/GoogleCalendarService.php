@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Event;
 use App\Models\GoogleCalendarSetting;
+use App\Models\Holiday;
 use App\Models\Schedule;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -30,6 +31,8 @@ class GoogleCalendarService
     private const COLOR_MANGO = '5';
 
     private const COLOR_AVOCADO = '2';
+
+    private const COLOR_TOMATO = '11';
 
     public function authUrl(GoogleCalendarSetting $settings): string
     {
@@ -146,6 +149,35 @@ class GoogleCalendarService
         return Schedule::GOOGLE_SYNC_SYNCED;
     }
 
+    public function syncHoliday(Holiday $holiday): string
+    {
+        $settings = GoogleCalendarSetting::getInstance();
+
+        if (! $settings->isConfigured()) {
+            return Holiday::GOOGLE_SYNC_SKIPPED;
+        }
+
+        $accessToken = $this->accessToken($settings);
+        if (! $accessToken) {
+            throw new RuntimeException('Google Calendar token tidak valid. Coba connect ulang.');
+        }
+
+        $googleEventId = $this->upsertGoogleEvent(
+            $accessToken,
+            $settings,
+            $this->holidayPayload($holiday),
+            $holiday->google_event_id,
+            'holiday',
+            $holiday->id,
+        );
+
+        if ($googleEventId && $googleEventId !== $holiday->google_event_id) {
+            $holiday->forceFill(['google_event_id' => $googleEventId])->saveQuietly();
+        }
+
+        return Holiday::GOOGLE_SYNC_SYNCED;
+    }
+
     public function deleteEvent(Event $event): string
     {
         return $this->deleteGoogleEvent($event, 'client');
@@ -156,7 +188,12 @@ class GoogleCalendarService
         return $this->deleteGoogleEvent($schedule, 'schedule');
     }
 
-    private function deleteGoogleEvent(Event|Schedule $model, string $type): string
+    public function deleteHoliday(Holiday $holiday): string
+    {
+        return $this->deleteGoogleEvent($holiday, 'holiday');
+    }
+
+    private function deleteGoogleEvent(Event|Schedule|Holiday $model, string $type): string
     {
         $settings = GoogleCalendarSetting::getInstance();
 
@@ -389,6 +426,27 @@ class GoogleCalendarService
         }
 
         return $payload;
+    }
+
+    private function holidayPayload(Holiday $holiday): array
+    {
+        $start = Carbon::parse($holiday->start_date->format('Y-m-d').' 01:00:00', config('app.timezone'));
+        $end = Carbon::parse($holiday->end_date->format('Y-m-d').' 06:00:00', config('app.timezone'));
+        $endExclusive = $end->addDay();
+
+        return [
+            'summary' => $holiday->name,
+            'description' => $holiday->description ?: 'Hari libur manten.',
+            'colorId' => (int) self::COLOR_TOMATO,
+            'start' => [
+                'dateTime' => $start->toRfc3339String(),
+                'timeZone' => config('app.timezone'),
+            ],
+            'end' => [
+                'dateTime' => $endExclusive->toRfc3339String(),
+                'timeZone' => config('app.timezone'),
+            ],
+        ];
     }
 
     private function publicRoute(string $name, mixed $parameters = []): string

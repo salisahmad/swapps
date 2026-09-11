@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ClientActivityLog;
 use App\Models\Event;
 use App\Models\EventAdditionalCost;
+use App\Models\Holiday;
 use App\Models\Item;
 use App\Models\Payment;
 use App\Services\TelegramNotification;
@@ -154,6 +155,7 @@ class EventController extends Controller
 
         try {
             $this->ensureNoDuplicateClient($validated);
+            $this->ensureDateIsBookable($validated['date']);
 
             $itemIds = $this->itemIdsForOrder($validated);
             $eventData = collect($validated)->except(['item_ids', 'down_payment', 'down_payment_type', 'additional_costs'])->all();
@@ -337,6 +339,7 @@ class EventController extends Controller
         ]);
 
         $this->ensureNoDuplicateClient($validated, $event);
+        $this->ensureDateIsBookable($validated['date']);
 
         $oldTotal = $event->total_amount;
         $oldDiscount = $event->discount_amount;
@@ -567,6 +570,20 @@ class EventController extends Controller
         throw ValidationException::withMessages([
             'name' => "Client dengan nama, nomor telepon, dan tanggal acara yang sama sudah ada: {$duplicate->name}. Buka data lama tersebut, jangan simpan ulang.",
         ]);
+    }
+
+    private function ensureDateIsBookable(string $date): void
+    {
+        $holiday = Holiday::query()
+            ->whereDate('start_date', '<=', $date)
+            ->whereDate('end_date', '>=', $date)
+            ->first();
+
+        if ($holiday) {
+            throw ValidationException::withMessages([
+                'date' => "Tanggal ini berada dalam periode libur: {$holiday->name}.",
+            ]);
+        }
     }
 
     private function duplicateClientKey(array $validated): string

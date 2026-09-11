@@ -47,6 +47,7 @@ const navItems = [
     { href: 'payments.index', label: 'Bayar', icon: '💰', route: 'payments.*' },
     { href: 'staff.index', label: 'Pegawai', icon: '🧑‍💼', route: 'staff.*' },
     { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
+    { href: 'holidays.index', label: 'Libur', icon: '🚫', route: 'holidays.*' },
     { href: 'items.index', label: 'Katalog', icon: '👗', route: 'items.*' },
 ];
 
@@ -83,6 +84,7 @@ export default function Authenticated({
             { href: 'schedules.index', label: 'Jadwal', icon: '⏰', route: 'schedules.*' },
             { href: 'staff.index', label: 'Profil', icon: '🧑‍💼', route: 'staff.*' },
             { href: 'calendar.index', label: 'Kalender', icon: '📅', route: 'calendar.*' },
+            { href: 'holidays.index', label: 'Libur', icon: '🚫', route: 'holidays.*' },
         ]
         : (isOwner ? [...navItems, ...adminNavItems] : navItems);
     const notificationBadgeClass = (type: string) => {

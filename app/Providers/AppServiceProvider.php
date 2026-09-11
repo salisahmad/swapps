@@ -26,5 +26,6 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Event::observe(\App\Observers\EventObserver::class);
         \App\Models\Payment::observe(\App\Observers\PaymentObserver::class);
         \App\Models\Schedule::observe(\App\Observers\ScheduleObserver::class);
+        \App\Models\Holiday::observe(\App\Observers\HolidayObserver::class);
     }
 }

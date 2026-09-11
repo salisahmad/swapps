@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Event;
 use App\Models\Schedule;
+use App\Models\Holiday;
 use App\Services\GoogleCalendarService;
 use App\Services\TelegramNotification;
 use Illuminate\Bus\Queueable;
@@ -24,6 +25,8 @@ class GoogleCalendarSyncJob implements ShouldQueue
     public const TYPE_EVENT = 'event';
 
     public const TYPE_SCHEDULE = 'schedule';
+
+    public const TYPE_HOLIDAY = 'holiday';
 
     public const ACTION_SYNC = 'sync';
 
@@ -105,27 +108,28 @@ class GoogleCalendarSyncJob implements ShouldQueue
         }
     }
 
-    private function model(): Event|Schedule|null
+    private function model(): Event|Schedule|Holiday|null
     {
         return match ($this->type) {
             self::TYPE_EVENT => Event::withTrashed()->find($this->modelId),
             self::TYPE_SCHEDULE => Schedule::withTrashed()->find($this->modelId),
+            self::TYPE_HOLIDAY => Holiday::withTrashed()->find($this->modelId),
             default => null,
         };
     }
 
-    private function sync(GoogleCalendarService $calendar, Event|Schedule $model): string
+    private function sync(GoogleCalendarService $calendar, Event|Schedule|Holiday $model): string
     {
         return $model instanceof Event
             ? $calendar->syncEvent($model)
-            : $calendar->syncSchedule($model);
+            : ($model instanceof Schedule ? $calendar->syncSchedule($model) : $calendar->syncHoliday($model));
     }
 
-    private function delete(GoogleCalendarService $calendar, Event|Schedule $model): string
+    private function delete(GoogleCalendarService $calendar, Event|Schedule|Holiday $model): string
     {
         return $model instanceof Event
             ? $calendar->deleteEvent($model)
-            : $calendar->deleteSchedule($model);
+            : ($model instanceof Schedule ? $calendar->deleteSchedule($model) : $calendar->deleteHoliday($model));
     }
 
     private function shortError(Throwable $exception): string

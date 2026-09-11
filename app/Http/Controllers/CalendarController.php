@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Event;
+use App\Models\Holiday;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -49,6 +50,12 @@ class CalendarController extends Controller
             ->orderBy('name')
             ->get(['id', 'uuid', 'name', 'date', 'time', 'order_type']);
 
+        $holidays = Holiday::query()
+            ->whereDate('start_date', '<=', $visibleEnd->toDateString())
+            ->whereDate('end_date', '>=', $visibleStart->toDateString())
+            ->orderBy('start_date')
+            ->get(['id', 'name', 'start_date', 'end_date', 'description']);
+
         return Inertia::render('Calendar/Index', [
             'calendar' => [
                 'year' => $year,
@@ -68,6 +75,7 @@ class CalendarController extends Controller
                 ],
             ],
             'events' => $events,
+            'holidays' => $holidays,
         ]);
     }
 }

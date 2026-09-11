@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\GoogleCalendarSyncJob;
 use App\Models\Event;
 use App\Models\Schedule;
+use App\Models\Holiday;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,16 @@ class GoogleCalendarSyncDispatcher
     public function deleteSchedule(Schedule $schedule): void
     {
         $this->queueImmediateAttempt(GoogleCalendarSyncJob::TYPE_SCHEDULE, $schedule->id, GoogleCalendarSyncJob::ACTION_DELETE);
+    }
+
+    public function syncHoliday(Holiday $holiday): void
+    {
+        $this->queueImmediateAttempt('holiday', $holiday->id, GoogleCalendarSyncJob::ACTION_SYNC);
+    }
+
+    public function deleteHoliday(Holiday $holiday): void
+    {
+        $this->queueImmediateAttempt('holiday', $holiday->id, GoogleCalendarSyncJob::ACTION_DELETE);
     }
 
     private function queueImmediateAttempt(string $type, int $modelId, string $action): void
@@ -106,31 +117,32 @@ class GoogleCalendarSyncDispatcher
         ]);
     }
 
-    private function model(string $type, int $modelId): Event|Schedule|null
+    private function model(string $type, int $modelId): Event|Schedule|Holiday|null
     {
         return match ($type) {
             GoogleCalendarSyncJob::TYPE_EVENT => Event::withTrashed()->find($modelId),
             GoogleCalendarSyncJob::TYPE_SCHEDULE => Schedule::withTrashed()->find($modelId),
+            GoogleCalendarSyncJob::TYPE_HOLIDAY => Holiday::withTrashed()->find($modelId),
             default => null,
         };
     }
 
-    private function sync(Event|Schedule $model): string
+    private function sync(Event|Schedule|Holiday $model): string
     {
         $calendar = app(GoogleCalendarService::class);
 
         return $model instanceof Event
             ? $calendar->syncEvent($model)
-            : $calendar->syncSchedule($model);
+            : ($model instanceof Schedule ? $calendar->syncSchedule($model) : $calendar->syncHoliday($model));
     }
 
-    private function delete(Event|Schedule $model): string
+    private function delete(Event|Schedule|Holiday $model): string
     {
         $calendar = app(GoogleCalendarService::class);
 
         return $model instanceof Event
             ? $calendar->deleteEvent($model)
-            : $calendar->deleteSchedule($model);
+            : ($model instanceof Schedule ? $calendar->deleteSchedule($model) : $calendar->deleteHoliday($model));
     }
 
     private function lockKey(string $type, int $modelId): string

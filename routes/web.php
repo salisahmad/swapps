@@ -9,6 +9,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventPhotoController;
 use App\Http\Controllers\GoogleCalendarSettingController;
 use App\Http\Controllers\GoogleCalendarSyncController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentController;
@@ -77,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/events', '/clients')->name('clients.index');
     Route::get('/clients', [EventController::class, 'index'])->name('events.index');
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::resource('holidays', HolidayController::class)->only(['index', 'store', 'update', 'destroy']);
 
     Route::middleware('operational')->group(function () {
         Route::get('/clients/by-date', [EventController::class, 'byDate'])->name('events.by-date');
