@@ -13,13 +13,11 @@ Dokumen ini berisi catatan deployment Synology NAS untuk Shofi Wedding / SW Apps
 - Repo: `https://github.com/salisahmad/swapps.git`
 - Local development path: `/Users/elvano/Sites/shofi-wedding`
 - NAS project path: `/volume1/web/shofi-wedding`
-- NAS IP lokal: `192.168.100.100`
-- Mac IP pernah terbaca:
-  - `192.168.100.241`
-  - `192.168.100.242`
+- NAS IP lokal disimpan di konfigurasi jaringan/password manager, bukan di repository.
+- IP Mac/NAS dapat berubah karena DHCP.
 - HTTP port NAS: `88`
 - HTTPS port NAS: `888`
-- Public URL sementara pernah dipakai: `http://158.140.191.212:88/`
+- Public URL dan port disimpan di konfigurasi NAS/reverse proxy, bukan di repository.
 
 ## Recommended Workflow
 
@@ -149,7 +147,7 @@ Catatan:
 
 ## Database
 
-Konfigurasi aplikasi di `.env` NAS pernah terbaca:
+Konfigurasi aplikasi berada di `.env` pada NAS dan tidak boleh disalin ke GitHub:
 
 ```env
 DB_CONNECTION=mysql
@@ -166,24 +164,7 @@ MariaDB listen di:
 0.0.0.0:3306
 ```
 
-Remote DB untuk Mac/LAN sudah dibuat:
-
-```text
-Host: 192.168.100.100
-Port: 3306
-Database: shofi_wedding
-Username: shofi_remote
-Password: SWremote2026_241
-Allowed host: 192.168.100.%
-```
-
-Grant dibatasi ke database `shofi_wedding` saja.
-
-Test dari Mac pernah berhasil:
-
-```bash
-MYSQL_PWD='SWremote2026_241' mysql -h 192.168.100.100 -P 3306 -u shofi_remote -D shofi_wedding -e 'SELECT DATABASE() AS db, COUNT(*) AS user_count FROM users;'
-```
+Jika remote DB diperlukan, simpan host, username, password, dan grant MariaDB hanya di NAS/password manager. Jangan tulis nilainya di dokumentasi repository atau command yang masuk shell history.
 
 ## Initial Users
 
@@ -191,21 +172,7 @@ Database NAS sempat kosong pada tabel `users`.
 
 User awal sudah dibuat:
 
-Owner:
-
-```text
-Email: shofi@wedding.com
-Password: password
-Role: Owner
-```
-
-Manager:
-
-```text
-Email: admin@wedding.com
-Password: password
-Role: Manager
-```
+Email dan password user aplikasi disimpan di database NAS/password manager. Jangan simpan password default di GitHub.
 
 Jika perlu reset password dari NAS:
 
@@ -215,36 +182,16 @@ php artisan tinker
 ```
 
 ```php
-App\Models\User::where('email', 'shofi@wedding.com')->update(['password' => bcrypt('password')]);
+App\Models\User::where('email', '<email-owner-di-nas>')->update(['password' => bcrypt('<password-baru>')]);
 ```
 
 Jika command mengembalikan `0`, berarti email tersebut tidak ada di tabel `users`.
 
 ## SSH Access Notes
 
-User NAS:
+Username NAS, IP, SSH key, dan public key deploy disimpan hanya di perangkat/NAS atau password manager. Repository hanya menyimpan pola deployment tanpa nilai akses.
 
-```text
-xplay@192.168.100.100
-```
-
-Temporary SSH key pernah dibuat oleh Codex:
-
-```text
-/private/tmp/shofi_synology_codex_key
-```
-
-Public key label:
-
-```text
-codex-shofi-temp
-```
-
-Jika akses Codex ke NAS sudah tidak dibutuhkan, hapus key dari NAS:
-
-```bash
-sed -i '/codex-shofi-temp/d' ~/.ssh/authorized_keys
-```
+Jika akses Codex ke NAS sudah tidak dibutuhkan, hapus public key deploy dari `~/.ssh/authorized_keys` pada NAS.
 
 ## Known Deploy Pitfalls
 
@@ -254,4 +201,3 @@ sed -i '/codex-shofi-temp/d' ~/.ssh/authorized_keys
 - Jika `php artisan` error versi PHP, pastikan alias `php` mengarah ke PHP 8.4.
 - Jika remote DB ditolak dengan `Host ... is not allowed`, cek grant MariaDB `User` dan `Host`.
 - Jika `users` kosong, login default tidak akan bekerja walaupun password benar.
-

@@ -196,9 +196,7 @@ UI diarahkan memakai istilah `Clients`, bukan `Events`.
 
 Integrasi Google Calendar dibuat dengan halaman setting dan `GoogleCalendarService`.
 
-Public URL sementara untuk link client pernah diset:
-
-- `http://158.140.191.212:88/`
+Public URL untuk link client disimpan di konfigurasi environment/NAS, bukan di repository.
 
 Aturan event:
 
@@ -219,6 +217,22 @@ Aturan event:
   - Warna fitting mango, konsultasi avocado.
 
 Event Google Calendar berubah jika nama/data di sistem berubah.
+
+## Hari Libur Manten
+
+Menu `Libur` tersedia untuk semua role yang bisa masuk aplikasi.
+
+- Owner dapat CRUD hari libur.
+- Manager dan staff hanya dapat melihat daftar hari libur.
+- Input memakai date-range picker dua bulan seperti filter Clients.
+- Keterangan memakai textarea.
+- Hari libur memblokir pembuatan dan perubahan tanggal Client.
+- Jadwal Fitting/Konsultasi tetap boleh dibuat pada tanggal tersebut.
+- Hari libur tampil sebagai blok merah di kalender internal.
+- Google Calendar membuat event merah dengan nama sesuai input.
+- Event Google memakai jam 01.00 sampai 06.00 setelah tanggal akhir periode.
+- Sync mengikuti mekanisme retry Google Calendar yang sudah dipakai client/jadwal.
+- Tabel `holidays` memakai soft delete agar event Google dapat dihapus ketika record dihapus.
 
 ## Kepegawaian
 
@@ -350,6 +364,9 @@ Lokasi:
 Logo sudah dioptimasi agar ringan.
 
 ## Git Commit Penting
+
+- `0c15f1b Use date range picker for holidays`
+- `a3f36e6 Add holiday booking blackout management`
 
 - `77a5666 Finalize client, catalog, schedule, and branding updates`
 - `d1f70eb Add staff management and catalog gallery updates`
