@@ -294,7 +294,13 @@ export default function ClientShow({ event }: PageProps) {
                                 <InfoSection title="Foto">
                                     <div className="grid grid-cols-2 gap-2 print:grid-cols-3 print:gap-1.5">
                                         {event.photos.slice(0, 6).map((photo) => (
-                                            <img key={photo.id} src={photo.url} alt={photo.original_name || event.name} className="aspect-[4/5] rounded-xl object-cover print:rounded-md" />
+                                            <div key={photo.id} className="flex min-h-32 items-center justify-center rounded-xl bg-stone-50 p-1 print:min-h-0 print:break-inside-avoid print:rounded-md">
+                                                <img
+                                                    src={photo.url}
+                                                    alt={photo.original_name || event.name}
+                                                    className="h-auto max-h-[520px] w-full rounded-lg object-contain print:max-h-[240px] print:rounded-md"
+                                                />
+                                            </div>
                                         ))}
                                     </div>
                                 </InfoSection>
