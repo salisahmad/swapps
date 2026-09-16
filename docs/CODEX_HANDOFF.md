@@ -6,7 +6,7 @@ Dokumen ini adalah titik masuk singkat jika project dibuka dari komputer atau ta
 
 - GitHub: `https://github.com/salisahmad/swapps.git`
 - Branch aktif: `main`
-- Commit terakhir saat dokumen ini dibuat: `0c15f1b`
+- Commit terakhir saat dokumen ini dibuat: `3ee1c30`
 - Stack: Laravel + Inertia React + TypeScript + Tailwind CSS
 
 ## Baca Dulu
