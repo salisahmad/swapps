@@ -18,6 +18,16 @@ Dokumen ini berisi catatan deployment Synology NAS untuk Shofi Wedding / SW Apps
 - HTTP port NAS: `88`
 - HTTPS port NAS: `888`
 - Public URL dan port disimpan di konfigurasi NAS/reverse proxy, bukan di repository.
+- Landing page dan halaman client publik: `https://shofiwedding.com`.
+- Dashboard dan login: `https://app.shofiwedding.com`.
+- Kedua hostname harus diarahkan oleh DNS dan reverse proxy ke aplikasi Laravel di NAS.
+- Atur nilai non-secret berikut hanya pada `.env` di NAS:
+
+```env
+APP_URL=https://app.shofiwedding.com
+APP_DASHBOARD_URL=https://app.shofiwedding.com
+APP_PUBLIC_URL=https://shofiwedding.com
+```
 
 ## Recommended Workflow
 
@@ -68,6 +78,13 @@ Problem yang pernah terjadi:
 - Landing page `/` bisa terbuka.
 - Route seperti `/login` atau `/index.php/login` 404.
 - Setelah dicek, `.htaccess` tidak dibaca karena service berjalan di Nginx.
+
+Untuk dua domain, buat dua reverse proxy host rules di DSM menuju web app yang sama:
+
+- `shofiwedding.com` dan `www.shofiwedding.com` ke aplikasi landing/client portal.
+- `app.shofiwedding.com` ke aplikasi dashboard.
+
+Pastikan DNS apex dan subdomain `app` mengarah ke public IP/router yang sama, port forwarding HTTPS menuju reverse proxy NAS, dan sertifikat TLS valid untuk kedua hostname. Jangan mengubah DNS apex sebelum memastikan website lama yang saat ini memakai domain utama memang siap dipindahkan.
 
 Service config yang ditemukan:
 

@@ -23,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'operational' => \App\Http\Middleware\EnsureOperationalAccess::class,
+            'dashboard.host' => \App\Http\Middleware\EnsureDashboardHost::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

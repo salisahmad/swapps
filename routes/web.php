@@ -27,6 +27,12 @@ use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    $dashboardHost = parse_url((string) config('app.dashboard_url'), PHP_URL_HOST);
+
+    if ($dashboardHost && strcasecmp(request()->getHost(), $dashboardHost) === 0) {
+        return redirect()->route('login');
+    }
+
     $featuredItems = collect();
 
     if (Schema::hasTable('items')) {
@@ -61,13 +67,13 @@ Route::get('/', function () {
 });
 
 Route::get('/sw-admin/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])->name('dashboard');
+    ->middleware(['dashboard.host', 'auth', 'verified'])->name('dashboard');
 
 Route::get('/client/{event}', [ClientPortalController::class, 'show'])
     ->whereUuid('event')
     ->name('public.clients.show');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['dashboard.host', 'auth'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

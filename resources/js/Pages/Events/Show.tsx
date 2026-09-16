@@ -117,6 +117,7 @@ const SCHEDULE_TIME_SLOTS = [
 
 interface PageProps {
     event: Event;
+    publicClientUrl: string;
     authUser: {
         id: number;
         role: number;
@@ -127,7 +128,7 @@ interface PageProps {
 
 type ClientTab = 'info' | 'payment' | 'schedule';
 
-export default function Show({ event, authUser }: PageProps) {
+export default function Show({ event, publicClientUrl, authUser }: PageProps) {
     const initialTab = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'schedule'
         ? 'schedule'
         : 'info';
@@ -492,7 +493,7 @@ export default function Show({ event, authUser }: PageProps) {
                                 <Link href={route('dynamic-forms.show', event.uuid)} className="btn-primary text-sm py-2 px-3">
                                     📝 Berita Acara
                                 </Link>
-                                <Link href={route('public.clients.show', event.uuid)} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm py-2 px-3">
+                                <Link href={publicClientUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary text-sm py-2 px-3">
                                     Link Client
                                 </Link>
                                 <Link href={route('events.edit', event.uuid)} className="btn-secondary text-sm py-2 px-3">

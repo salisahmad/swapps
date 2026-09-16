@@ -270,6 +270,7 @@ class EventController extends Controller
 
         return Inertia::render('Events/Show', [
             'event' => $eventData,
+            'publicClientUrl' => rtrim((string) config('app.public_url'), '/').'/client/'.$event->uuid,
             'authUser' => [
                 'id' => auth()->id(),
                 'role' => auth()->user()->role,

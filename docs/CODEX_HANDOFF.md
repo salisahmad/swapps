@@ -43,6 +43,14 @@ Fitur Hari Libur Manten sudah selesai:
 - Fitting/Konsultasi tetap dapat dibuat.
 - Tampil merah pada kalender internal dan tersinkron ke Google Calendar.
 
+## Domain
+
+- Landing page dan portal client publik: `https://shofiwedding.com`.
+- Login dan dashboard: `https://app.shofiwedding.com`.
+- Public client URL: `https://shofiwedding.com/client/{uuid}`.
+- Production `.env` NAS perlu `APP_URL` dan `APP_DASHBOARD_URL` untuk app host, serta `APP_PUBLIC_URL` untuk domain utama. Jangan commit file `.env`.
+- Kedua domain tetap harus di-point melalui DNS/DSM reverse proxy ke NAS; perubahan aplikasi saja tidak memindahkan DNS.
+
 ## Melanjutkan Dari Windows
 
 GitHub menyimpan source code, migration, dan dokumen konteks; GitHub tidak menyimpan percakapan Codex secara otomatis.

@@ -347,7 +347,7 @@ class GoogleCalendarService
 
     private function eventPayload(Event $event, GoogleCalendarSetting $settings): array
     {
-        $clientUrl = $this->publicRoute('events.show', $event);
+        $clientUrl = $this->clientPortalUrl($event);
         $date = $event->date instanceof Carbon
             ? $event->date->format('Y-m-d')
             : Carbon::parse($event->date)->format('Y-m-d');
@@ -396,7 +396,7 @@ class GoogleCalendarService
             : $start->copy()->addHour();
         $typeName = (int) $schedule->type === Schedule::TYPE_CONSULT ? '[K]' : '[F]';
         $prospectMarker = $schedule->event ? '' : ' [TW]';
-        $clientUrl = $schedule->event ? $this->publicRoute('events.show', $schedule->event) : null;
+        $clientUrl = $schedule->event ? $this->clientPortalUrl($schedule->event) : null;
 
         $payload = [
             'summary' => "{$typeName}{$prospectMarker} {$schedule->client_name}",
@@ -452,6 +452,11 @@ class GoogleCalendarService
     private function publicRoute(string $name, mixed $parameters = []): string
     {
         return rtrim((string) config('app.url'), '/').route($name, $parameters, false);
+    }
+
+    private function clientPortalUrl(Event $event): string
+    {
+        return rtrim((string) config('app.public_url'), '/').'/client/'.$event->uuid;
     }
 
     private function linkedText(?string $url, string $label): string
