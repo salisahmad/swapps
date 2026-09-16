@@ -1,6 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { PageProps } from '@/types';
 import { Head } from '@inertiajs/react';
+import { useLightTheme } from '@/utils/theme';
 
 interface FeaturedItem {
     id: number;
@@ -23,6 +24,8 @@ export default function Welcome({
     featuredItems = [],
     whatsappNumber,
 }: WelcomeProps) {
+    useLightTheme();
+
     const heroImage = featuredItems.find((item) => item.image_url)?.image_url;
     const waMessage = encodeURIComponent(
         'Halo Shofi Wedding, saya ingin konsultasi untuk acara saya.'

@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { formatShortDate, formatShortDateTime } from '@/utils/date';
+import { useLightTheme } from '@/utils/theme';
 import { Head } from '@inertiajs/react';
 
 interface ItemType {
@@ -99,6 +100,8 @@ interface PageProps {
 }
 
 export default function ClientShow({ event }: PageProps) {
+    useLightTheme();
+
     const formatRupiah = (value: number) => `Rp ${Number(value || 0).toLocaleString('id-ID')}`;
     const confirmedPayments = event.payments.filter((payment) => payment.is_expense === 0 && payment.status === 1);
     const pendingPayments = event.payments.filter((payment) => payment.is_expense === 0 && payment.status === 0);

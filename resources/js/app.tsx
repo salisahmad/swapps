@@ -9,7 +9,8 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 const storedTheme = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const shouldUseDark = storedTheme ? storedTheme === 'dark' : prefersDark;
+const isPublicLightPage = window.location.pathname === '/' || window.location.pathname.startsWith('/client/');
+const shouldUseDark = !isPublicLightPage && (storedTheme ? storedTheme === 'dark' : prefersDark);
 
 document.documentElement.classList.toggle('dark', shouldUseDark);
 
