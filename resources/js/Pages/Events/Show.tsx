@@ -603,7 +603,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
                             {event.package_description && (
                                 <div>
                                     <p className="text-xs text-stone-400">📦 Paket</p>
-                                    <p className="text-sm text-stone-700">{event.package_description}</p>
+                                    <p className="text-sm text-stone-700">{compactInlineText(event.package_description)}</p>
                                 </div>
                             )}
                             {dynamicFormSummary}
@@ -1034,6 +1034,10 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
             </div>
         </AuthenticatedLayout>
     );
+}
+
+function compactInlineText(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
 }
 
 function parseScheduleDateTime(value: string): { date: string; time: string } {
