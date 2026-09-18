@@ -96,7 +96,19 @@ export default function Edit({ payment, events, authUser }: PageProps) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="page-title">Edit Transaksi</h2>
+                <div className="flex items-center justify-between gap-3">
+                    <h2 className="page-title">Edit Transaksi</h2>
+                    {canDelete && (
+                        <button
+                            type="button"
+                            onClick={handleDelete}
+                            disabled={processing}
+                            className="btn-danger shrink-0 px-3 py-2 text-xs sm:px-4 sm:text-sm"
+                        >
+                            ⚠️ Hapus
+                        </button>
+                    )}
+                </div>
             }
         >
             <Head title="Edit Transaksi" />
@@ -271,16 +283,6 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                                     {processing ? 'Menyimpan...' : 'Update Transaksi'}
                                 </button>
                                 <Link href={route('payments.index')} className="btn-secondary">Batal</Link>
-                                {canDelete && (
-                                    <button
-                                        type="button"
-                                        onClick={handleDelete}
-                                        disabled={processing}
-                                        className="btn-danger"
-                                    >
-                                        {processing ? 'Menghapus...' : 'Hapus'}
-                                    </button>
-                                )}
                             </div>
                         </form>
                     </div>
