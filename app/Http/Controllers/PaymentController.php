@@ -193,6 +193,11 @@ class PaymentController extends Controller
         ]);
         unset($validated['receipt_image']);
 
+        // Only the owner can change the confirmation status during an edit.
+        if (! auth()->user()->isOwner()) {
+            $validated['status'] = $payment->status;
+        }
+
         $receiptPath = $payment->receipt_image;
         $oldReceiptPath = $payment->receipt_image;
         if ($request->hasFile('receipt_image')) {
@@ -233,8 +238,25 @@ class PaymentController extends Controller
 
     public function destroy(Payment $payment)
     {
+        $canDelete = auth()->user()->isOwner()
+            || (auth()->user()->isManager() && $payment->status === Payment::STATUS_PENDING);
+
+        if (! $canDelete) {
+            abort(403, 'Payment ini hanya dapat dihapus oleh owner.');
+        }
+
         $eventId = $payment->event_id;
-        $before = $payment->only(['event_id', 'is_expense', 'payment_at', 'payment_type', 'amount', 'operational_cut', 'description', 'status']);
+        $before = [
+            'payment_id' => $payment->id,
+            'event_id' => $payment->event_id,
+            'is_expense' => $payment->is_expense,
+            'payment_at' => $payment->payment_at?->format('Y-m-d'),
+            'payment_type' => $payment->payment_type_name,
+            'amount' => $payment->amount,
+            'operational_cut' => $payment->operational_cut,
+            'description' => $payment->description,
+            'status' => $payment->status_name,
+        ];
         
         if ($payment->receipt_image) {
             Storage::disk('public')->delete($payment->receipt_image);

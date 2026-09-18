@@ -37,7 +37,7 @@ interface PageProps {
 }
 
 export default function Edit({ payment, events, authUser }: PageProps) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, delete: destroy, processing, errors } = useForm({
         event_id: String(payment.event_id),
         is_expense: String(payment.is_expense),
         type: payment.type ? String(payment.type) : '',
@@ -60,6 +60,15 @@ export default function Edit({ payment, events, authUser }: PageProps) {
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('payments.update', payment.id), { forceFormData: true });
+    };
+
+    const canDelete = authUser.role === 1 || (authUser.role === 2 && payment.status === 0);
+    const handleDelete = () => {
+        if (!confirm('Hapus transaksi pembayaran ini? Penghapusan akan tercatat di log client.')) {
+            return;
+        }
+
+        destroy(route('payments.destroy', payment.id));
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,11 +266,21 @@ export default function Edit({ payment, events, authUser }: PageProps) {
                                 {errors.receipt_image && <p className="mt-1 text-sm text-red-500">{errors.receipt_image}</p>}
                             </div>
 
-                            <div className="flex items-center gap-4 pt-4">
+                            <div className="flex flex-wrap items-center gap-3 pt-4">
                                 <button type="submit" disabled={processing} className="btn-primary flex-1">
                                     {processing ? 'Menyimpan...' : 'Update Transaksi'}
                                 </button>
                                 <Link href={route('payments.index')} className="btn-secondary">Batal</Link>
+                                {canDelete && (
+                                    <button
+                                        type="button"
+                                        onClick={handleDelete}
+                                        disabled={processing}
+                                        className="btn-danger"
+                                    >
+                                        {processing ? 'Menghapus...' : 'Hapus'}
+                                    </button>
+                                )}
                             </div>
                         </form>
                     </div>
