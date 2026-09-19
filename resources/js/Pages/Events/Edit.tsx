@@ -128,11 +128,8 @@ export default function Edit({ event, items }: PageProps) {
 
     const handleStatusChange = (status: string) => {
         if (status === 'postponed') {
-            setData({
-                ...data,
-                status,
-                date: '',
-            });
+            setData('status', status);
+            setData('date', '');
             setDateClients([]);
             setCheckingDate(false);
             return;
@@ -148,7 +145,7 @@ export default function Edit({ event, items }: PageProps) {
     const formatClientTime = (time: string | null) => time || 'Jam belum diisi';
     const formatRupiah = (n?: number) => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
     const additionalCostTypes = ['Transport', 'Foto/Video', 'Melati', 'MC', 'Hairdo', 'Hena', 'Dekor', 'Tambahan'];
-    const additionalCostTotal = data.additional_costs.reduce((sum, cost) => sum + Number(cost.total || 0), 0);
+    const additionalCostTotal = (data.additional_costs || []).reduce((sum, cost) => sum + Number(cost.total || 0), 0);
     const grandTotal = Math.max(0, Number(data.total_amount || 0) + additionalCostTotal - Number(data.discount_amount || 0));
     const isCatalogOrder = data.order_type === '1' || data.order_type === '2';
     const isGownOrder = data.order_type === '2';
@@ -420,11 +417,11 @@ export default function Edit({ event, items }: PageProps) {
                                         + Biaya
                                     </button>
                                 </div>
-                                {data.additional_costs.length === 0 ? (
+                                {(data.additional_costs || []).length === 0 ? (
                                     <p className="text-sm text-stone-400">Belum ada biaya tambahan.</p>
                                 ) : (
                                     <div className="space-y-3">
-                                        {data.additional_costs.map((cost, index) => (
+                                        {(data.additional_costs || []).map((cost, index) => (
                                             <div key={index} className="grid grid-cols-1 gap-2 rounded-lg bg-white p-3 sm:grid-cols-[150px_1fr_auto]">
                                                 <select value={cost.type} onChange={(e) => updateAdditionalCost(index, 'type', e.target.value)} className="rounded-md border-stone-300 bg-white text-stone-800">
                                                     {additionalCostTypes.map((type) => <option key={type} value={type}>{type}</option>)}
