@@ -159,6 +159,8 @@ class PaymentController extends Controller
 
     public function edit(Payment $payment): Response
     {
+        $this->authorizeEdit($payment);
+
         $events = Event::where(function ($q) {
             $q->where('is_fully_paid', false)
               ->orWhere('date', '>=', now()->toDateString());
@@ -179,6 +181,8 @@ class PaymentController extends Controller
 
     public function update(Request $request, Payment $payment)
     {
+        $this->authorizeEdit($payment);
+
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
             'is_expense' => 'required|integer|in:0,1,2',
@@ -326,6 +330,13 @@ class PaymentController extends Controller
             ->where('status', Payment::STATUS_CONFIRMED)
             ->sum('amount');
         $event->update(['is_fully_paid' => $paid >= $event->grand_total]);
+    }
+
+    private function authorizeEdit(Payment $payment): void
+    {
+        if (! auth()->user()->isOwner() && $payment->status === Payment::STATUS_CONFIRMED) {
+            abort(403, 'Payment yang sudah dikonfirmasi hanya dapat diedit oleh owner.');
+        }
     }
 
     private function logPaymentChange(Payment $payment, string $message, ?array $before = null, ?array $after = null): void

@@ -290,7 +290,9 @@ export default function Index({ payments, filters, stats, authUser }: PageProps)
                                                     <button onClick={() => handleReject(p.id)} className="text-red-500 hover:text-red-600 font-medium">Tolak</button>
                                                 </>
                                             )}
-                                            <Link href={route('payments.edit', p.id)} className="text-stone-500 hover:text-stone-700 ml-2">Edit</Link>
+                                            {(authUser.is_admin || p.status !== 1) && (
+                                                <Link href={route('payments.edit', p.id)} className="text-stone-500 hover:text-stone-700 ml-2">Edit</Link>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
