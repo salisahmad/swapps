@@ -390,6 +390,7 @@ class EventController extends Controller
         $oldAdditionalCostTotal = $event->additional_cost_total;
         $oldGrandTotal = $event->grand_total;
         $oldDate = $event->date?->format('Y-m-d');
+        $oldStatus = $event->status;
 
         $itemIds = $this->itemIdsForOrder($validated);
         $eventData = collect($validated)->except(['item_ids', 'additional_costs'])->all();
@@ -429,6 +430,22 @@ class EventController extends Controller
         $this->updateEventPaidStatus($event);
 
         $newDate = $event->date?->format('Y-m-d');
+        if ($oldStatus !== $event->status) {
+            $this->logClientActivity(
+                $event,
+                ClientActivityLog::TYPE_STATUS_CHANGED,
+                'Status client diubah.',
+                [
+                    'status' => Event::STATUSES[$oldStatus] ?? $oldStatus,
+                    'date' => $oldDate,
+                ],
+                [
+                    'status' => Event::STATUSES[$event->status] ?? $event->status,
+                    'date' => $newDate,
+                ],
+            );
+        }
+
         if ($oldDate !== $newDate) {
             $this->logClientActivity(
                 $event,

@@ -469,6 +469,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
         if (type === 'payment_changed') return 'bg-emerald-100 text-emerald-700';
         if (type === 'total_changed') return 'bg-amber-100 text-amber-700';
         if (type === 'date_changed') return 'bg-blue-100 text-blue-700';
+        if (type === 'status_changed') return 'bg-orange-100 text-orange-700';
         return 'bg-stone-100 text-stone-700';
     };
 
@@ -477,6 +478,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
         total_changed: 'Total Harga',
         date_changed: 'Tanggal',
         payment_changed: 'Pembayaran',
+        status_changed: 'Status Client',
         delete_requested: 'Minta Hapus',
         deleted: 'Dihapus',
         delete_approved: 'Hapus Disetujui',

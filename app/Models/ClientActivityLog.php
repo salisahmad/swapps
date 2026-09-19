@@ -24,6 +24,7 @@ class ClientActivityLog extends Model
     public const TYPE_CREATED = 'created';
     public const TYPE_TOTAL_CHANGED = 'total_changed';
     public const TYPE_DATE_CHANGED = 'date_changed';
+    public const TYPE_STATUS_CHANGED = 'status_changed';
     public const TYPE_PAYMENT_CHANGED = 'payment_changed';
     public const TYPE_DELETE_REQUESTED = 'delete_requested';
     public const TYPE_DELETE_APPROVED = 'delete_approved';
