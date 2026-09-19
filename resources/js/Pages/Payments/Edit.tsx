@@ -46,7 +46,8 @@ export default function Edit({ payment, events, authUser }: PageProps) {
         amount: String(payment.amount),
         operational_cut: String(payment.operational_cut),
         description: payment.description || '',
-        status: String(authUser.is_admin ? payment.status : 0),
+        // Keep the existing status when a non-owner edits payment details.
+        status: String(payment.status),
         receipt_image: null as File | null,
         _method: 'PUT',
     });
