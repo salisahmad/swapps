@@ -7,7 +7,7 @@ interface EventItem {
     id: number;
     uuid: string;
     name: string;
-    date: string;
+    date: string | null;
     time: string | null;
     mobile_phone: string;
     location: string | null;
@@ -17,6 +17,8 @@ interface EventItem {
     paid_status_name: string | null;
     paid_status_tone: string | null;
     order_type_name: string;
+    status: string;
+    status_name: string;
     has_berita_acara: boolean | number;
     has_photos: boolean | number;
     created_at: string;
@@ -39,6 +41,7 @@ interface PageProps {
         date_to?: string;
         paid?: string;
         order_type?: string;
+        status?: string;
     };
     authUser: {
         id: number;
@@ -56,6 +59,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
         date_to: filters.date_to || '',
         paid: filters.paid || '',
         order_type: filters.order_type || '',
+        status: filters.status || 'active',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -110,6 +114,11 @@ export default function Index({ events, filters, authUser }: PageProps) {
         if (tone === 'paid') return 'badge-green';
         return 'badge-yellow';
     };
+    const clientStatusClass = (status: string) => status === 'postponed'
+        ? 'border-orange-200 bg-orange-50 text-orange-700'
+        : status === 'deleted'
+            ? 'border-red-200 bg-red-50 text-red-700'
+            : 'border-emerald-200 bg-emerald-50 text-emerald-700';
     const beritaAcaraStatusClass = (hasBeritaAcara: boolean | number) => (
         Number(hasBeritaAcara) === 1
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200'
@@ -244,6 +253,15 @@ export default function Index({ events, filters, authUser }: PageProps) {
                             <option value="1">MUA</option>
                             <option value="2">Sewa Gaun</option>
                         </select>
+                        <select
+                            value={data.status}
+                            onChange={(e) => setData('status', e.target.value)}
+                            className="input-field min-w-[144px] pr-9"
+                        >
+                            <option value="active">Aktif</option>
+                            <option value="postponed">Postpone</option>
+                            {authUser.role === 1 && <option value="deleted">Deleted</option>}
+                        </select>
                         <button type="submit" className="btn-primary py-2 px-4">Filter</button>
                         <Link href={route('events.index')} className="btn-secondary py-2 px-4">Reset</Link>
                     </form>
@@ -279,6 +297,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                     <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
                                         {event.order_type_name === 'MUA' ? '💄' : '👗'} {event.order_type_name}
                                     </span>
+                                    <span className={`badge border ${clientStatusClass(event.status)}`}>{event.status_name}</span>
                                     <span className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold ${beritaAcaraStatusClass(event.has_berita_acara)}`}>
                                         {beritaAcaraStatusLabel(event.has_berita_acara)}
                                     </span>
@@ -334,6 +353,7 @@ export default function Index({ events, filters, authUser }: PageProps) {
                                             <span className={`badge ${orderTypeClass(event.order_type_name)}`}>
                                                 {event.order_type_name}
                                             </span>
+                                            <span className={`badge border ${clientStatusClass(event.status)}`}>{event.status_name}</span>
                                         </td>
                                         {!authUser.is_limited_staff && (
                                             <td className="px-4 py-3 text-right font-semibold text-stone-800">{formatRupiah(event.grand_total ?? event.total_amount ?? 0)}</td>

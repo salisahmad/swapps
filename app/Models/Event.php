@@ -23,6 +23,7 @@ class Event extends Model
         'total_amount',
         'discount_amount',
         'order_type',
+        'status',
         'is_fully_paid',
         'uuid',
         'google_event_id',
@@ -39,6 +40,7 @@ class Event extends Model
         'total_amount' => 'double',
         'discount_amount' => 'double',
         'order_type' => 'integer',
+        'status' => 'string',
         'is_fully_paid' => 'boolean',
         'google_sync_attempts' => 'integer',
         'google_synced_at' => 'datetime',
@@ -50,6 +52,7 @@ class Event extends Model
         'grand_total',
         'paid_status_name',
         'paid_status_tone',
+        'status_name',
     ];
 
     public const ORDER_TYPE_MUA = 1;
@@ -66,6 +69,16 @@ class Event extends Model
         self::ORDER_TYPE_MUA => 'MUA',
         self::ORDER_TYPE_GOWN => 'Sewa Gaun',
         self::ORDER_TYPE_TIME_PERIOD => 'Time Period',
+    ];
+
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_POSTPONED = 'postponed';
+    public const STATUS_DELETED = 'deleted';
+
+    public const STATUSES = [
+        self::STATUS_ACTIVE => 'Aktif',
+        self::STATUS_POSTPONED => 'Postpone',
+        self::STATUS_DELETED => 'Deleted',
     ];
 
     public function getRouteKeyName(): string
@@ -116,6 +129,11 @@ class Event extends Model
     public function getOrderTypeNameAttribute(): string
     {
         return self::ORDER_TYPES[(int) $this->order_type] ?? 'Unknown';
+    }
+
+    public function getStatusNameAttribute(): string
+    {
+        return self::STATUSES[$this->status] ?? 'Aktif';
     }
 
     public function getAdditionalCostTotalAttribute(): float

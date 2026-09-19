@@ -31,7 +31,7 @@ interface PageProps {
         uuid: string;
         name: string;
         mobile_phone: string;
-        date: string;
+        date: string | null;
         time: string | null;
         address: string | null;
         location: string | null;
@@ -40,6 +40,7 @@ interface PageProps {
         discount_amount: number;
         additional_costs: EventAdditionalCost[];
         order_type: number;
+        status: string;
         items: EventItem[];
     };
     items: Item[];
@@ -71,7 +72,7 @@ export default function Edit({ event, items }: PageProps) {
     const { data, setData, put, processing, errors } = useForm({
         name: event.name,
         mobile_phone: event.mobile_phone,
-        date: event.date,
+        date: event.date || '',
         time: event.time || '',
         address: event.address || '',
         location: event.location || '',
@@ -80,6 +81,7 @@ export default function Edit({ event, items }: PageProps) {
         discount_amount: String(event.discount_amount || ''),
         additional_costs: initialAdditionalCosts,
         order_type: String(event.order_type),
+        status: event.status || 'active',
         item_ids: event.items.map((i) => i.id),
     });
     const [dateClients, setDateClients] = useState<DateClient[]>([]);
@@ -270,11 +272,26 @@ export default function Edit({ event, items }: PageProps) {
                                     <input
                                         type="date"
                                         value={data.date}
-                                        onChange={(e) => setData('date', e.target.value)}
+                                        onChange={(e) => setData({ date: e.target.value, status: e.target.value ? 'active' : data.status })}
                                         className={inputClass}
-                                        required
+                                        required={data.status === 'active'}
                                     />
                                     {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date}</p>}
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Status Client</label>
+                                    <select
+                                        value={data.status}
+                                        onChange={(e) => setData({
+                                            status: e.target.value,
+                                            date: e.target.value === 'postponed' ? '' : data.date,
+                                        })}
+                                        className={inputClass}
+                                    >
+                                        <option value="active">Aktif</option>
+                                        <option value="postponed">Postpone</option>
+                                    </select>
+                                    {errors.status && <p className="mt-1 text-sm text-red-600">{errors.status}</p>}
                                 </div>
                                 <div>
                                     <label className={labelClass}>Jam</label>

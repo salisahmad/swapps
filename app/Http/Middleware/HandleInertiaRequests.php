@@ -122,6 +122,7 @@ class HandleInertiaRequests extends Middleware
         $items = ClientActivityLog::with(['event:id,uuid,name,date', 'user:id,name'])
             ->whereIn('type', [
                 ClientActivityLog::TYPE_DELETE_REQUESTED,
+                ClientActivityLog::TYPE_CANCEL_REQUESTED,
                 ClientActivityLog::TYPE_TOTAL_CHANGED,
             ])
             ->latest()
@@ -137,6 +138,7 @@ class HandleInertiaRequests extends Middleware
                     'type' => $log->type,
                     'label' => match ($log->type) {
                         ClientActivityLog::TYPE_DELETE_REQUESTED => 'Request Hapus',
+                        ClientActivityLog::TYPE_CANCEL_REQUESTED => 'Cancel Order',
                         ClientActivityLog::TYPE_TOTAL_CHANGED => 'Total Harga',
                         default => 'Notifikasi',
                     },

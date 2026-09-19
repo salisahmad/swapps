@@ -93,6 +93,10 @@ class GoogleCalendarService
             return Event::GOOGLE_SYNC_SKIPPED;
         }
 
+        if ($event->status === Event::STATUS_POSTPONED || ! $event->date) {
+            return $this->deleteEvent($event);
+        }
+
         if (! in_array((int) $event->order_type, [Event::ORDER_TYPE_MUA, Event::ORDER_TYPE_GOWN], true)) {
             return $this->deleteEvent($event);
         }

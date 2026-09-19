@@ -96,6 +96,9 @@ Route::middleware(['dashboard.host', 'auth'])->group(function () {
             ->names('events')
             ->parameters(['clients' => 'event']);
         Route::post('/clients/{event}/approve-delete', [EventController::class, 'approveDelete'])->name('events.approve-delete');
+        Route::post('/clients/{event}/cancel-request', [EventController::class, 'requestCancel'])->name('events.request-cancel');
+        Route::post('/clients/{event}/approve-cancel', [EventController::class, 'approveCancel'])->name('events.approve-cancel');
+        Route::post('/clients/{event}/reject-cancel', [EventController::class, 'rejectCancel'])->name('events.reject-cancel');
 
         Route::get('/items/search', [ItemController::class, 'search'])->name('items.search');
         Route::delete('/items/{item}/photos/{photo}', [ItemController::class, 'destroyPhoto'])->name('items.photos.destroy');
@@ -158,6 +161,7 @@ Route::middleware(['dashboard.host', 'auth'])->group(function () {
 
     Route::get('/clients/{event}', [EventController::class, 'show'])
         ->whereUuid('event')
+        ->withTrashed()
         ->name('events.show');
 });
 

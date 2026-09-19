@@ -246,6 +246,29 @@ class TelegramNotification
         ]);
     }
 
+    public function notifyCancelRequested(Event $event): bool
+    {
+        $settings = TelegramSetting::getInstance();
+        if (!$settings?->notify_event_deleted) return false;
+
+        $message = "<b>⚠️ Request Cancel Order</b>\n\n" .
+            "<b>Client:</b> {$this->escape($event->name)}\n" .
+            "<b>Tanggal:</b> " . ($event->date?->format('Y-m-d') ?: '-') . "\n" .
+            "<b>Jenis:</b> {$this->escape($event->order_type_name)}\n" .
+            "<b>Telepon:</b> " . $this->escape($event->mobile_phone ?: '-') . "\n" .
+            "<b>Total:</b> Rp " . number_format($event->grand_total, 0, ',', '.') . "\n\n" .
+            "🔗 <a href=\"" . route('events.show', $event) . "\">Lihat Detail</a>";
+
+        return $this->sendMessage($message, [
+            'reply_markup' => [
+                'inline_keyboard' => [[
+                    ['text' => 'Konfirmasi Cancel', 'callback_data' => "event_cancel:confirm:{$event->id}"],
+                    ['text' => 'Tolak', 'callback_data' => "event_cancel:reject:{$event->id}"],
+                ]],
+            ],
+        ]);
+    }
+
     public function notifyDailySummary(): bool
     {
         $settings = TelegramSetting::getInstance();

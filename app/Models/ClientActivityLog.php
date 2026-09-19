@@ -29,6 +29,9 @@ class ClientActivityLog extends Model
     public const TYPE_DELETE_APPROVED = 'delete_approved';
     public const TYPE_DELETE_REJECTED = 'delete_rejected';
     public const TYPE_DELETED = 'deleted';
+    public const TYPE_CANCEL_REQUESTED = 'cancel_requested';
+    public const TYPE_CANCEL_APPROVED = 'cancel_approved';
+    public const TYPE_CANCEL_REJECTED = 'cancel_rejected';
 
     public function event(): BelongsTo
     {

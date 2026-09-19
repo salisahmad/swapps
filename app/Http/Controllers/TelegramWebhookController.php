@@ -38,13 +38,17 @@ class TelegramWebhookController extends Controller
         }
 
         [$entity, $action, $id] = array_pad(explode(':', $data), 3, null);
-        if (!in_array($entity, ['payment', 'event_delete', 'leave'], true) || !in_array($action, ['confirm', 'reject'], true) || !$id) {
+        if (!in_array($entity, ['payment', 'event_delete', 'event_cancel', 'leave'], true) || !in_array($action, ['confirm', 'reject'], true) || !$id) {
             $telegram->answerCallbackQuery($callbackId, 'Aksi tidak dikenali.');
             return response()->json(['ok' => true]);
         }
 
         if ($entity === 'event_delete') {
             return $this->handleEventDeleteCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
+        }
+
+        if ($entity === 'event_cancel') {
+            return $this->handleEventCancelCallback($telegram, $callbackId, $chatId, $messageId, $action, (int) $id);
         }
 
         if ($entity === 'leave') {
@@ -144,6 +148,7 @@ class TelegramWebhookController extends Controller
                     'total_amount' => $event->grand_total,
                 ],
             ]);
+            $event->update(['status' => Event::STATUS_DELETED]);
             $event->delete();
 
             $telegram->answerCallbackQuery($callbackId, 'Client dihapus.');
@@ -162,6 +167,71 @@ class TelegramWebhookController extends Controller
         if ($messageId) {
             $telegram->editMessageReplyMarkup($chatId, $messageId);
         }
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function handleEventCancelCallback(
+        TelegramNotification $telegram,
+        string $callbackId,
+        string $chatId,
+        int $messageId,
+        string $action,
+        int $id,
+    ): JsonResponse {
+        $event = Event::find($id);
+        if (!$event) {
+            $telegram->answerCallbackQuery($callbackId, 'Data client tidak ditemukan.');
+            return response()->json(['ok' => true]);
+        }
+
+        $lastCancelLog = $event->activityLogs()
+            ->whereIn('type', [
+                ClientActivityLog::TYPE_CANCEL_REQUESTED,
+                ClientActivityLog::TYPE_CANCEL_APPROVED,
+                ClientActivityLog::TYPE_CANCEL_REJECTED,
+            ])
+            ->latest()
+            ->first();
+
+        if ($lastCancelLog?->type !== ClientActivityLog::TYPE_CANCEL_REQUESTED) {
+            $telegram->answerCallbackQuery($callbackId, 'Request Cancel Order ini sudah diproses.');
+            if ($messageId) $telegram->editMessageReplyMarkup($chatId, $messageId);
+            return response()->json(['ok' => true]);
+        }
+
+        if ($action === 'confirm') {
+            ClientActivityLog::create([
+                'event_id' => $event->id,
+                'user_id' => null,
+                'type' => ClientActivityLog::TYPE_CANCEL_APPROVED,
+                'message' => 'Cancel Order client dikonfirmasi dari Telegram.',
+            ]);
+            ClientActivityLog::create([
+                'event_id' => $event->id,
+                'user_id' => null,
+                'type' => ClientActivityLog::TYPE_DELETED,
+                'message' => 'Client menjadi Deleted setelah Cancel Order disetujui dari Telegram.',
+                'before' => [
+                    'name' => $event->name,
+                    'date' => $event->date?->format('Y-m-d'),
+                    'total_amount' => $event->grand_total,
+                ],
+            ]);
+            $event->update(['status' => Event::STATUS_DELETED]);
+            $event->delete();
+            $telegram->answerCallbackQuery($callbackId, 'Cancel Order disetujui.');
+        } else {
+            ClientActivityLog::create([
+                'event_id' => $event->id,
+                'user_id' => null,
+                'type' => ClientActivityLog::TYPE_CANCEL_REJECTED,
+                'message' => 'Cancel Order client ditolak dari Telegram.',
+            ]);
+            $telegram->answerCallbackQuery($callbackId, 'Cancel Order ditolak.');
+        }
+
+        if ($messageId) $telegram->editMessageReplyMarkup($chatId, $messageId);
 
         return response()->json(['ok' => true]);
     }

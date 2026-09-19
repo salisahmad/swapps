@@ -78,7 +78,7 @@ interface Event {
     uuid: string;
     name: string;
     mobile_phone: string;
-    date: string;
+    date: string | null;
     time: string | null;
     address: string | null;
     location: string | null;
@@ -91,6 +91,8 @@ interface Event {
     paid_status_name: string | null;
     paid_status_tone: string | null;
     order_type_name: string;
+    status: string;
+    status_name: string;
     items: Item[];
     schedules: Schedule[];
     payments: PaymentItem[];
@@ -146,6 +148,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
         return 'badge-yellow';
     };
     const canSeeFinancials = !authUser.is_limited_staff;
+    const canOperateEvent = !authUser.is_limited_staff && event.status !== 'deleted';
 
     const totalPaid = event.payments
         .filter((p) => p.is_expense === 0 && p.status === 1)
@@ -240,17 +243,33 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
 
     const handleDelete = () => {
         const message = authUser.is_admin
-            ? 'Yakin hapus client ini?'
-            : 'Staff tidak bisa langsung menghapus client. Kirim permintaan hapus ke admin?';
+            ? 'Yakin hapus client ini? Client akan berstatus Deleted dan tetap bisa diakses owner.'
+            : 'Kirim permintaan Cancel Order ke owner?';
 
         if (confirm(message)) {
-            destroy(route('events.destroy', event.uuid));
+            if (authUser.is_admin) {
+                destroy(route('events.destroy', event.uuid));
+            } else {
+                post(route('events.request-cancel', event.uuid));
+            }
         }
     };
 
     const handleApproveDelete = () => {
         if (confirm('Setujui request hapus dan hapus client ini?')) {
             post(route('events.approve-delete', event.uuid));
+        }
+    };
+
+    const handleApproveCancel = () => {
+        if (confirm('Setujui Cancel Order dan ubah client menjadi Deleted?')) {
+            post(route('events.approve-cancel', event.uuid));
+        }
+    };
+
+    const handleRejectCancel = () => {
+        if (confirm('Tolak request Cancel Order ini?')) {
+            post(route('events.reject-cancel', event.uuid));
         }
     };
 
@@ -446,7 +465,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
     };
 
     const logTypeClass = (type: string) => {
-        if (type === 'delete_requested' || type === 'delete_approved' || type === 'deleted') return 'bg-red-100 text-red-700';
+        if (type === 'delete_requested' || type === 'delete_approved' || type === 'deleted' || type === 'cancel_requested' || type === 'cancel_approved' || type === 'cancel_rejected') return 'bg-red-100 text-red-700';
         if (type === 'payment_changed') return 'bg-emerald-100 text-emerald-700';
         if (type === 'total_changed') return 'bg-amber-100 text-amber-700';
         if (type === 'date_changed') return 'bg-blue-100 text-blue-700';
@@ -461,6 +480,9 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
         delete_requested: 'Minta Hapus',
         deleted: 'Dihapus',
         delete_approved: 'Hapus Disetujui',
+        cancel_requested: 'Request Cancel Order',
+        cancel_approved: 'Cancel Disetujui',
+        cancel_rejected: 'Cancel Ditolak',
     }[type] || type);
 
     const formatLogValue = (value: Record<string, unknown> | null) => {
@@ -477,10 +499,15 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                         <h2 className="page-title break-words">{event.name}</h2>
-                        <p className="mt-1 text-sm font-medium text-stone-500 dark:text-stone-400">{formatDate(event.date)}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium text-stone-500 dark:text-stone-400">{event.date ? formatDate(event.date) : 'Tanggal belum ditentukan'}</p>
+                            <span className={`badge border ${event.status === 'postponed' ? 'border-orange-200 bg-orange-50 text-orange-700' : event.status === 'deleted' ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
+                                {event.status_name}
+                            </span>
+                        </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        {!authUser.is_limited_staff && (
+                        {canOperateEvent && (
                             <>
                                 <button
                                     type="button"
@@ -500,7 +527,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
                                     Edit
                                 </Link>
                                 <button onClick={handleDelete} disabled={deleteProcessing} className="btn-danger hidden text-sm py-2 px-3 sm:inline-flex">
-                                    Hapus
+                                    {authUser.is_admin ? 'Hapus' : '⚠️ Cancel Order'}
                                 </button>
                             </>
                         )}
@@ -845,7 +872,7 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
                                                 {log.after && <p>Sesudah: {formatLogValue(log.after)}</p>}
                                             </div>
                                         )}
-                                        {log.type === 'delete_requested' && (
+                                        {log.type === 'delete_requested' && authUser.is_admin && (
                                             <div className="mt-3 flex justify-end">
                                                 <button
                                                     onClick={handleApproveDelete}
@@ -853,6 +880,24 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
                                                     className="btn-danger text-xs py-2 px-3 disabled:opacity-50"
                                                 >
                                                     Konfirmasi Hapus
+                                                </button>
+                                            </div>
+                                        )}
+                                        {log.type === 'cancel_requested' && authUser.is_admin && (
+                                            <div className="mt-3 flex justify-end gap-2">
+                                                <button
+                                                    onClick={handleApproveCancel}
+                                                    disabled={deleteProcessing}
+                                                    className="btn-danger text-xs py-2 px-3 disabled:opacity-50"
+                                                >
+                                                    Konfirmasi Cancel
+                                                </button>
+                                                <button
+                                                    onClick={handleRejectCancel}
+                                                    disabled={deleteProcessing}
+                                                    className="btn-secondary text-xs py-2 px-3 disabled:opacity-50"
+                                                >
+                                                    Tolak
                                                 </button>
                                             </div>
                                         )}
@@ -884,14 +929,14 @@ export default function Show({ event, publicClientUrl, authUser }: PageProps) {
                     </div>
                 )}
 
-                {!authUser.is_limited_staff && (
+                {canOperateEvent && (
                     <div className="pb-2 sm:hidden">
                         <button
                             onClick={handleDelete}
                             disabled={deleteProcessing}
                             className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 disabled:opacity-50"
                         >
-                            Hapus Client
+                            {authUser.is_admin ? 'Hapus Client' : '⚠️ Cancel Order'}
                         </button>
                     </div>
                 )}

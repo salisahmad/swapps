@@ -23,6 +23,15 @@ class EventController extends Controller
 {
     public function index(Request $request): Response
     {
+        $statusFilter = $request->input('status', Event::STATUS_ACTIVE);
+        $allowedStatuses = [Event::STATUS_ACTIVE, Event::STATUS_POSTPONED];
+        if (auth()->user()->isOwner()) {
+            $allowedStatuses[] = Event::STATUS_DELETED;
+        }
+        if (! in_array($statusFilter, $allowedStatuses, true)) {
+            $statusFilter = Event::STATUS_ACTIVE;
+        }
+
         $query = Event::with('additionalCosts')
             ->withExists([
                 'dynamicForms as has_berita_acara' => fn ($q) => $q
@@ -30,6 +39,13 @@ class EventController extends Controller
                     ->where('field_value', '!=', ''),
                 'photos as has_photos',
             ]);
+
+        if ($statusFilter === Event::STATUS_DELETED && auth()->user()->isOwner()) {
+            $query->withTrashed();
+        } else {
+            $query->whereNull('deleted_at');
+        }
+        $query->where('status', $statusFilter);
 
         // Search
         if ($request->filled('q')) {
@@ -40,11 +56,13 @@ class EventController extends Controller
             });
         }
 
-        // Date range. Default list starts after today; past clients stay available via range filter.
-        $query->whereDate('date', '>=', $request->filled('date_from') ? $request->date_from : now()->addDay()->toDateString());
+        // Active clients default to upcoming dates. Postponed/deleted clients have no required date.
+        if ($statusFilter === Event::STATUS_ACTIVE) {
+            $query->whereDate('date', '>=', $request->filled('date_from') ? $request->date_from : now()->addDay()->toDateString());
 
-        if ($request->filled('date_to')) {
-            $query->whereDate('date', '<=', $request->date_to);
+            if ($request->filled('date_to')) {
+                $query->whereDate('date', '<=', $request->date_to);
+            }
         }
 
         // Paid status
@@ -58,6 +76,7 @@ class EventController extends Controller
         }
 
         $events = $query
+            ->orderByRaw('case when date is null then 1 else 0 end')
             ->orderBy('date')
             ->orderBy('time')
             ->orderBy('name')
@@ -79,7 +98,10 @@ class EventController extends Controller
 
         return Inertia::render('Events/Index', [
             'events' => $events,
-            'filters' => $request->only(['q', 'date_from', 'date_to', 'paid', 'order_type']),
+            'filters' => [
+                ...$request->only(['q', 'date_from', 'date_to', 'paid', 'order_type']),
+                'status' => $statusFilter,
+            ],
             'authUser' => [
                 'id' => auth()->id(),
                 'role' => auth()->user()->role,
@@ -231,6 +253,10 @@ class EventController extends Controller
 
     public function show(Event $event): Response
     {
+        if ($event->trashed() && ! auth()->user()->isOwner()) {
+            abort(404);
+        }
+
         $relations = [
             'items.type',
             'dynamicForms',
@@ -282,6 +308,10 @@ class EventController extends Controller
 
     public function edit(Event $event): Response
     {
+        if ($event->trashed() || $event->status === Event::STATUS_DELETED) {
+            abort(403, 'Client Deleted hanya dapat dilihat oleh owner.');
+        }
+
         $selectedItemQuery = $event->items()->where('is_sold', false);
         if ($event->order_type === Event::ORDER_TYPE_GOWN) {
             $selectedItemQuery->where('is_rentable', true);
@@ -320,10 +350,15 @@ class EventController extends Controller
 
     public function update(Request $request, Event $event)
     {
+        if ($event->trashed() || $event->status === Event::STATUS_DELETED) {
+            abort(403, 'Client Deleted tidak dapat diedit.');
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
             'mobile_phone' => 'required|string|max:20',
-            'date' => 'required|date',
+            'date' => 'nullable|date',
+            'status' => 'required|string|in:active,postponed',
             'time' => 'nullable',
             'address' => 'nullable|string',
             'location' => 'nullable|string',
@@ -339,8 +374,16 @@ class EventController extends Controller
             'additional_costs.*.notes' => 'nullable|string',
         ]);
 
-        $this->ensureNoDuplicateClient($validated, $event);
-        $this->ensureDateIsBookable($validated['date']);
+        if ($validated['status'] === Event::STATUS_ACTIVE && empty($validated['date'])) {
+            throw ValidationException::withMessages([
+                'date' => 'Tanggal acara wajib diisi untuk mengaktifkan client.',
+            ]);
+        }
+
+        if (! empty($validated['date'])) {
+            $this->ensureNoDuplicateClient($validated, $event);
+            $this->ensureDateIsBookable($validated['date']);
+        }
 
         $oldTotal = $event->total_amount;
         $oldDiscount = $event->discount_amount;
@@ -401,22 +444,7 @@ class EventController extends Controller
 
     public function destroy(Event $event)
     {
-        if (auth()->user()->isStaff()) {
-            if ($this->hasPendingDeleteRequest($event)) {
-                return redirect()->route('events.show', $event)->with('success', 'Permintaan hapus client masih menunggu admin.');
-            }
-
-            $this->logClientActivity(
-                $event,
-                ClientActivityLog::TYPE_DELETE_REQUESTED,
-                'Staff meminta konfirmasi admin untuk menghapus client.',
-            );
-            (new TelegramNotification())->notifyDeleteRequested($event);
-
-            return redirect()->route('events.show', $event)->with('success', 'Permintaan hapus client dikirim ke admin.');
-        }
-
-        if (! auth()->user()->isAdmin()) {
+        if (! auth()->user()->isOwner()) {
             abort(403);
         }
 
@@ -431,6 +459,7 @@ class EventController extends Controller
             ],
         );
 
+        $event->update(['status' => Event::STATUS_DELETED]);
         $event->delete();
 
         return redirect()->route('events.index')->with('success', 'Client berhasil dihapus.');
@@ -463,9 +492,61 @@ class EventController extends Controller
             ],
         );
 
+        $event->update(['status' => Event::STATUS_DELETED]);
         $event->delete();
 
         return redirect()->route('events.index')->with('success', 'Request hapus disetujui. Client berhasil dihapus.');
+    }
+
+    public function requestCancel(Event $event)
+    {
+        if (! auth()->user()->isStaff()) {
+            abort(403);
+        }
+
+        if ($this->hasPendingCancelRequest($event)) {
+            return redirect()->route('events.show', $event)->with('success', 'Permintaan Cancel Order masih menunggu owner.');
+        }
+
+        $this->logClientActivity(
+            $event,
+            ClientActivityLog::TYPE_CANCEL_REQUESTED,
+            'Staff meminta konfirmasi owner untuk Cancel Order client.',
+        );
+        (new TelegramNotification())->notifyCancelRequested($event);
+
+        return redirect()->route('events.show', $event)->with('success', 'Permintaan Cancel Order dikirim ke owner.');
+    }
+
+    public function approveCancel(Event $event)
+    {
+        if (! auth()->user()->isOwner()) {
+            abort(403);
+        }
+
+        if (! $this->hasPendingCancelRequest($event)) {
+            return redirect()->route('events.show', $event)->with('success', 'Tidak ada request Cancel Order yang perlu dikonfirmasi.');
+        }
+
+        $this->logClientActivity($event, ClientActivityLog::TYPE_CANCEL_APPROVED, 'Owner menyetujui Cancel Order client.');
+        $this->cancelEvent($event, 'Client di-cancel setelah request staff disetujui.');
+
+        return redirect()->route('events.index', ['status' => Event::STATUS_DELETED])->with('success', 'Cancel Order disetujui. Client dipindahkan ke status Deleted.');
+    }
+
+    public function rejectCancel(Event $event)
+    {
+        if (! auth()->user()->isOwner()) {
+            abort(403);
+        }
+
+        if (! $this->hasPendingCancelRequest($event)) {
+            return redirect()->route('events.show', $event)->with('success', 'Tidak ada request Cancel Order yang perlu ditolak.');
+        }
+
+        $this->logClientActivity($event, ClientActivityLog::TYPE_CANCEL_REJECTED, 'Owner menolak Cancel Order client.');
+
+        return redirect()->route('events.show', $event)->with('success', 'Request Cancel Order ditolak.');
     }
 
     private function logClientActivity(Event $event, string $type, string $message, ?array $before = null, ?array $after = null): void
@@ -492,6 +573,37 @@ class EventController extends Controller
             ->first();
 
         return $lastDeleteLog?->type === ClientActivityLog::TYPE_DELETE_REQUESTED;
+    }
+
+    private function hasPendingCancelRequest(Event $event): bool
+    {
+        $lastCancelLog = $event->activityLogs()
+            ->whereIn('type', [
+                ClientActivityLog::TYPE_CANCEL_REQUESTED,
+                ClientActivityLog::TYPE_CANCEL_APPROVED,
+                ClientActivityLog::TYPE_CANCEL_REJECTED,
+            ])
+            ->latest()
+            ->first();
+
+        return $lastCancelLog?->type === ClientActivityLog::TYPE_CANCEL_REQUESTED;
+    }
+
+    private function cancelEvent(Event $event, string $message): void
+    {
+        $this->logClientActivity(
+            $event,
+            ClientActivityLog::TYPE_DELETED,
+            $message,
+            [
+                'name' => $event->name,
+                'date' => $event->date?->format('Y-m-d'),
+                'total_amount' => $event->grand_total,
+            ],
+        );
+
+        $event->update(['status' => Event::STATUS_DELETED]);
+        $event->delete();
     }
 
     private function syncAdditionalCosts(Event $event, array $additionalCosts): void
