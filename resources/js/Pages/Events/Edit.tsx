@@ -126,6 +126,21 @@ export default function Edit({ event, items }: PageProps) {
         setItemSearch('');
     };
 
+    const handleStatusChange = (status: string) => {
+        if (status === 'postponed') {
+            setData({
+                ...data,
+                status,
+                date: '',
+            });
+            setDateClients([]);
+            setCheckingDate(false);
+            return;
+        }
+
+        setData('status', 'active');
+    };
+
     const inputClass = 'mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 border-stone-200 bg-white text-stone-800';
     const labelClass = 'block text-sm font-medium text-stone-700 text-stone-500';
     const onlyDigits = (value: string) => value.replace(/\D/g, '');
@@ -282,10 +297,7 @@ export default function Edit({ event, items }: PageProps) {
                                     <label className={labelClass}>Status Client</label>
                                     <select
                                         value={data.status}
-                                        onChange={(e) => setData({
-                                            status: e.target.value,
-                                            date: e.target.value === 'postponed' ? '' : data.date,
-                                        })}
+                                        onChange={(e) => handleStatusChange(e.target.value)}
                                         className={inputClass}
                                     >
                                         <option value="active">Aktif</option>
